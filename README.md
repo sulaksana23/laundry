@@ -1,90 +1,118 @@
 # LaundryOS
 
-Dashboard operasional laundry berbasis **Next.js App Router**, TypeScript, dan Tailwind CSS. Tampilan memakai pola TypeUI yang ringkas: fokus pada data, jarak rapat, navigasi sederhana, dan dark mode sebagai tema awal.
+Sistem operasional laundry berbasis **Next.js App Router**, TypeScript, dan Tailwind CSS. UI memakai pola TypeUI yang ringkas, responsif, serta berfokus pada data dan alur kerja harian.
 
 ![Preview dashboard LaundryOS](./public/readme-preview.svg)
 
-> **Status:** starter MVP untuk pengembangan. Semua nama dan nomor kontak dalam fixture adalah sintetis/masked; data transaksi hanya angka contoh. Dashboard memakai fixture; halaman Pesanan dapat membuat pesanan dan mengubah status yang tersimpan di `localStorage` browser. Belum ada autentikasi, database, multi-cabang, atau transaksi backend. Jangan gunakan data contoh sebagai catatan usaha sungguhan.
+> **Status saat ini:** starter MVP untuk pengembangan. Modul tersedia sebagai UI; sebagian besar memakai fixture. Halaman Pesanan mendukung pembuatan pesanan dan perubahan status di `localStorage` browser. **Autentikasi, backend produksi, dan koneksi PostgreSQL belum diimplementasikan.** Jangan gunakan data contoh sebagai catatan transaksi nyata.
 
-## Fitur antarmuka
+## Cakupan fitur lengkap
 
-- Ringkasan omzet, antrean proses, pesanan terbaru, dan catatan operasional.
-- Pesanan: pencarian, filter status, buat pesanan, validasi form, hitung total berdasarkan katalog, dan lanjutkan status secara berurutan.
-- Pelanggan, katalog layanan, persediaan, keuangan, laporan, dan pengaturan sebagai layar awal dengan data contoh.
-- Layout responsif dengan navigasi desktop dan drawer untuk layar kecil.
-- Komponen UI dasar, label status, format Rupiah/tanggal, dan domain pesanan terpusat.
+Daftar berikut adalah cakupan produk yang dituju. Status implementasi sebenarnya dirangkum setelah tabel ini.
+
+| Modul | Fitur yang dituju |
+| --- | --- |
+| Dashboard | Ringkasan omzet dan jumlah pesanan; antrean per status; pesanan siap diambil dan belum lunas; tren periode; layanan terlaris; stok menipis; ringkasan per cabang. |
+| Pesanan | Penerimaan cucian; data pelanggan dan item/layanan; berat atau satuan; estimasi selesai; harga dan diskon; status pengerjaan; riwayat perubahan; pembayaran penuh/parsial; pencarian, filter, pagination; nota cetak; pembatalan dan refund sesuai kebijakan. |
+| Pelanggan | Profil dan kontak; pencarian; riwayat transaksi; frekuensi dan nilai transaksi; pencegahan duplikasi berdasarkan aturan nomor kontak; catatan preferensi dengan kontrol akses. |
+| Layanan & harga | Katalog layanan per kg atau per item; harga, durasi, status aktif; layanan reguler/express; perubahan harga dengan snapshot agar invoice lama tetap akurat. |
+| Persediaan | Katalog bahan; saldo dan batas minimum; penerimaan/penggunaan/penyesuaian melalui ledger; stok opname; peringatan stok menipis; histori pergerakan. |
+| Keuangan | Pemasukan dan pengeluaran; metode pembayaran; tagihan belum lunas; pembayaran parsial; refund/reversal; rekap kas dan rekonsiliasi berdasarkan periode. |
+| Laporan | Omzet, volume pesanan, status, pembayaran, layanan terlaris, pelanggan, pengeluaran, dan persediaan; filter tanggal/cabang; ekspor setelah hak akses dan definisi metrik ditetapkan. |
+| Pengaturan & akses | Profil usaha dan cabang; jam operasional; konfigurasi layanan dan pembayaran; akun, role, hak akses; audit log; pengaturan notifikasi dan preferensi aplikasi. |
+| Operasional lintas modul | Multi-cabang; notifikasi status/pesanan siap; impor data; backup dan pemulihan; validasi server; aksesibilitas dan tampilan responsif. |
+
+## Status implementasi
+
+| Bagian | Tersedia sekarang | Belum tersedia |
+| --- | --- | --- |
+| Dashboard | Ringkasan visual menggunakan data contoh | Query langsung dari database dan filter periode nyata |
+| Pesanan | Cari/filter sederhana, validasi form, hitung total contoh, buat pesanan dan lanjutkan status di browser | Penyimpanan server, autentikasi, pembayaran, histori audit, pagination, nota |
+| Pelanggan, layanan, persediaan, keuangan, laporan, pengaturan | Layar UI dan data fixture untuk demonstrasi | CRUD persisten, aturan bisnis server, laporan terverifikasi, akses berbasis role |
+| Platform | Layout responsif, komponen UI, TypeScript strict, pola controller/service/repository | PostgreSQL, migrasi, API produksi, login, multi-cabang, backup, notifikasi |
+
+Status rinci dan kriteria penerimaan ada di [docs/modules.md](docs/modules.md) dan [docs/roadmap.md](docs/roadmap.md). Nama serta nomor kontak dalam fixture bersifat sintetis/masked.
 
 ## Teknologi
 
-- Next.js App Router dan React Server Components untuk halaman yang tidak memerlukan interaksi browser.
+- Next.js App Router dan React Server Components.
 - TypeScript strict mode.
 - Tailwind CSS v4 melalui plugin PostCSS.
-- Zod untuk validasi payload domain.
+- Zod untuk validasi domain.
 - Lucide React untuk ikon.
-
-Next.js merekomendasikan App Router untuk aplikasi baru. Setup Tailwind mengikuti panduan resmi integrasi Next.js. Lihat [Next.js Installation](https://nextjs.org/docs/app/getting-started/installation) dan [Tailwind CSS + Next.js](https://tailwindcss.com/docs/installation/framework-guides/nextjs).
+- Pola controller → service → repository disiapkan untuk backend per modul.
 
 ## Menjalankan secara lokal
 
-Persyaratan: Node.js **20.9 atau lebih baru** dan npm/pnpm.
+Persyaratan: Node.js **22** (lihat `.nvmrc`) dan npm.
 
 ```bash
-corepack enable
-pnpm install
-pnpm dev
+npm install
+npm run dev
 ```
 
 Buka `http://localhost:3000`.
 
-Perintah proyek:
+Perintah yang tersedia:
 
 ```bash
-pnpm lint
-pnpm typecheck
-pnpm build
+npm run lint
+npm run typecheck
+npm run build
 ```
 
-File `.nvmrc` meminta Node.js 22. Salin `.env.example` ke `.env.local` hanya saat integrasi backend mulai dibuat. Variabel database belum digunakan oleh aplikasi demo ini.
+`.env.example` berisi contoh `DATABASE_URL`, tetapi aplikasi saat ini **belum membaca variabel tersebut**. Jangan masukkan rahasia atau kredensial ke variabel `NEXT_PUBLIC_*`.
+
+## Deploy ke Vercel + PostgreSQL (Neon)
+
+Next.js dapat di-deploy langsung melalui integrasi Vercel. Untuk database PostgreSQL baru, Vercel menyediakan integrasi provider lewat Marketplace; Vercel Postgres lama tidak lagi tersedia untuk proyek baru. Neon merupakan salah satu pilihan Postgres Marketplace.
+
+### Langkah deployment
+
+1. Hubungkan akun GitHub ke Vercel, lalu impor repository `sulaksana23/laundry` sebagai proyek Next.js.
+2. Gunakan root directory repository. Biarkan preset Next.js dan perintah build terdeteksi otomatis.
+3. Tambahkan Neon Postgres melalui **Vercel → Storage/Marketplace**, lalu buat database dan hubungkan ke proyek.
+4. Pastikan variabel koneksi database tersedia di environment **Production** dan **Preview** sesuai kebutuhan. Simpan rahasia hanya sebagai environment variable server, jangan commit ke Git.
+5. Deploy branch `main`, lalu periksa deployment log dan halaman hasil deploy.
+
+### Catatan penting sebelum memakai data usaha
+
+Menghubungkan database saja belum membuat aplikasi ini menggunakan PostgreSQL. Repository saat ini belum memiliki schema/migrasi database atau implementasi repository PostgreSQL, dan pesanan demo masih disimpan di browser. Integrasi Neon, migrasi, API server, autentikasi, otorisasi, serta penggantian fixture perlu diselesaikan sebelum menerima data pelanggan atau transaksi nyata.
+
+Panduan resmi: [Deploy Next.js di Vercel](https://vercel.com/docs/frameworks/nextjs), [Postgres Marketplace di Vercel](https://vercel.com/docs/marketplace-storage), dan [Neon di Vercel Marketplace](https://vercel.com/marketplace/neon).
 
 ## Struktur direktori
 
 ```text
 src/
 ├── app/                       # route, metadata, layout, global CSS
-│   └── (workspace)/           # layar aplikasi operasional
-├── components/                # komponen UI dan layout lintas fitur
-├── features/                  # domain dan komponen per fitur
+│   └── (workspace)/           # layar operasional
+├── components/                # komponen UI dan layout bersama
+├── features/                  # domain, data demo, dan UI per fitur
 │   └── orders/
 │       ├── domain/            # tipe, schema, aturan transisi
-│       ├── data/              # fixture data demo
+│       ├── data/              # fixture demo
 │       └── components/        # UI interaktif pesanan
 ├── lib/                       # utilitas format dan class name
-└── server/                    # batas penempatan controller/service/repository backend
+└── server/                    # pola controller/service/repository
 docs/                          # spesifikasi dan standar teknis
 ```
 
-Detail dan contoh pola ada di [docs/architecture.md](docs/architecture.md), [docs/pattern-controller-service-repository.md](docs/pattern-controller-service-repository.md), serta [AGENTS.md](AGENTS.md).
-
-## Batas demo dan produksi
-
-Data contoh di `src/features/orders/data/mock-orders.ts` bukan sumber data persisten. Pesanan yang dibuat melalui layar Pesanan disimpan di browser yang sedang dipakai, sehingga tidak muncul di perangkat atau browser lain. Sebelum operasional nyata, implementasikan autentikasi dan otorisasi, PostgreSQL, repository server, audit log, validasi API, migrasi, pencadangan, dan pengujian sesuai dokumentasi.
-
-## Dokumentasi
+## Dokumentasi proyek
 
 | Dokumen | Isi |
 | --- | --- |
 | [Arsitektur](docs/architecture.md) | Batas layer, folder, dan alur request |
 | [Pola controller-service-repository](docs/pattern-controller-service-repository.md) | Template implementasi per fitur |
-| [Modul](docs/modules.md) | Ruang lingkup modul dan acceptance criteria |
+| [Modul dan kriteria penerimaan](docs/modules.md) | Ruang lingkup modul dan definisi fitur |
 | [Aturan domain](docs/domain-rules.md) | Status pesanan, pembayaran, stok, dan aturan yang perlu dikonfirmasi |
-| [Database](docs/database.md) | Usulan relasi PostgreSQL dan strategi migrasi |
+| [Rancangan database](docs/database.md) | Relasi PostgreSQL dan strategi migrasi |
 | [Konvensi API](docs/api-conventions.md) | Bentuk endpoint, request, response, dan error |
 | [UI TypeUI](docs/ui-typeui.md) | Token, tabel, formulir, modal, dan aksesibilitas |
 | [Keamanan](docs/security.md) | Checklist sebelum rilis produksi |
-| [Workflow](docs/development-workflow.md) | Branch, commit, review, dan quality gate |
-| [Roadmap](docs/roadmap.md) | Tahapan dari demo ke sistem produksi |
+| [Workflow pengembangan](docs/development-workflow.md) | Branch, commit, review, dan quality gate |
+| [Roadmap](docs/roadmap.md) | Tahapan dari demo menuju sistem produksi |
 
 ## Lisensi
 
 Belum ditentukan. Tetapkan lisensi sebelum mendistribusikan atau menerima kontribusi eksternal.
-
