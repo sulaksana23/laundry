@@ -53,14 +53,21 @@ export class OrdersService {
       throw new InvalidOrderTransitionError(current.status, input.nextStatus);
     }
 
-    return this.orders.updateStatus({
-      id: input.id,
-      branchId: input.branchId,
-      expectedStatus: current.status,
-      nextStatus: input.nextStatus,
-      actorId: input.actorId,
-      changedAt: this.now().toISOString(),
-    });
+    try {
+      return await this.orders.updateStatus({
+        id: input.id,
+        branchId: input.branchId,
+        expectedStatus: current.status,
+        nextStatus: input.nextStatus,
+        actorId: input.actorId,
+        changedAt: this.now().toISOString(),
+      });
+    } catch (error) {
+      if (error instanceof Error && error.message === "ORDER_CONFLICT") {
+        throw new OrderConflictError();
+      }
+      throw error;
+    }
   }
 }
 

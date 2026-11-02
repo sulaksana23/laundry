@@ -1,6 +1,12 @@
 # Rancangan Database
 
-Belum ada database di starter ini. Berikut rancangan awal PostgreSQL yang harus dicocokkan dengan kebijakan usaha sebelum migrasi pertama.
+## Status implementasi
+
+Migrasi `db/migrations/001_initial.sql` membuat tabel cabang, pelanggan, layanan, pesanan, dan histori status. Modul Pesanan mempunyai repository PostgreSQL dan API baca/tulis. Migrasi dijalankan melalui `npm run db:migrate`; saat build Vercel, script `vercel-build` menjalankannya sebelum Next.js build bila `DATABASE_URL` tersedia.
+
+Mode database aktif untuk local development bila `LAUNDRY_DATABASE_MODE=true`, dan untuk Vercel Preview bila Neon menyediakan `DATABASE_URL`. Mode Production tetap demo sampai autentikasi dan otorisasi selesai. Database awal hanya seed cabang dan katalog layanan sintetis; tidak ada data pelanggan contoh.
+
+Skema yang aktif belum mencakup seluruh rancangan di bawah. Pembayaran, item beragam per pesanan, inventaris, pengeluaran, role, dan multi-cabang operasional masih perlu implementasi.
 
 ## Relasi konseptual
 

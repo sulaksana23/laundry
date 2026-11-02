@@ -14,25 +14,30 @@ import { formatCurrency, formatShortDate } from "@/lib/format";
 const storageKey = "laundryos:orders:v1";
 const filters = ["Semua", "Diterima", "Dicuci", "Dikeringkan", "Disetrika", "Siap diambil", "Selesai"];
 
-export function OrdersView({ initialOrders }: { initialOrders: LaundryOrder[] }) {
+export function OrdersView({ initialOrders, databaseEnabled = false }: { initialOrders: LaundryOrder[]; databaseEnabled?: boolean }) {
   const [orders, setOrders] = useState(initialOrders);
   const [ready, setReady] = useState(false);
   const [query, setQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState("Semua");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [error, setError] = useState("");
+  const [pendingAction, setPendingAction] = useState("");
 
   useEffect(() => {
+    if (databaseEnabled) {
+      setReady(true);
+      return;
+    }
     const saved = window.localStorage.getItem(storageKey);
     if (saved) {
       try { setOrders(JSON.parse(saved) as LaundryOrder[]); } catch { window.localStorage.removeItem(storageKey); }
     }
     setReady(true);
-  }, []);
+  }, [databaseEnabled]);
 
   useEffect(() => {
-    if (ready) window.localStorage.setItem(storageKey, JSON.stringify(orders));
-  }, [orders, ready]);
+    if (ready && !databaseEnabled) window.localStorage.setItem(storageKey, JSON.stringify(orders));
+  }, [orders, ready, databaseEnabled]);
 
   const visibleOrders = useMemo(() => orders.filter((order) => {
     const matchesQuery = `${order.id} ${order.customerName} ${order.customerPhone}`.toLowerCase().includes(query.toLowerCase());
@@ -40,9 +45,10 @@ export function OrdersView({ initialOrders }: { initialOrders: LaundryOrder[] })
     return matchesQuery && matchesFilter;
   }), [orders, query, activeFilter]);
 
-  function handleCreate(event: FormEvent<HTMLFormElement>) {
+  async function handleCreate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     const input: CreateOrderInput = {
       customerName: String(form.get("customerName") ?? ""),
       customerPhone: String(form.get("customerPhone") ?? ""),
@@ -55,10 +61,36 @@ export function OrdersView({ initialOrders }: { initialOrders: LaundryOrder[] })
       setError(parsed.error.issues[0]?.message ?? "Periksa kembali data pesanan.");
       return;
     }
-    const service = serviceCatalog.find((item) => item.name === parsed.data.serviceName);
+    const service = serviceCatalog.find((item) => item.name === parsed.data.serviceName && item.unit === "kg");
     if (!service) { setError("Layanan yang dipilih tidak ditemukan."); return; }
+
+    if (databaseEnabled) {
+      setPendingAction("create");
+      setError("");
+      try {
+        const response = await fetch("/api/orders", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(parsed.data),
+        });
+        const result = await response.json();
+        if (!response.ok) {
+          setError(result.error ?? "Pesanan gagal disimpan ke PostgreSQL.");
+          return;
+        }
+        setOrders((current) => [result.order as LaundryOrder, ...current]);
+        setDialogOpen(false);
+        formElement.reset();
+      } catch {
+        setError("Tidak dapat menghubungi server. Coba lagi.");
+      } finally {
+        setPendingAction("");
+      }
+      return;
+    }
+
     const newOrder: LaundryOrder = {
-      id: `LND-${String(Date.now()).slice(-5)}`,
+      id: "LND-" + String(Date.now()).slice(-5),
       customerName: parsed.data.customerName,
       customerPhone: parsed.data.customerPhone,
       serviceName: service.name,
@@ -68,18 +100,42 @@ export function OrdersView({ initialOrders }: { initialOrders: LaundryOrder[] })
       paymentStatus: "unpaid",
       status: "received",
       receivedAt: new Date().toISOString(),
-      dueAt: new Date(`${parsed.data.dueAt}T18:00:00`).toISOString(),
+      dueAt: new Date(parsed.data.dueAt + "T18:00:00").toISOString(),
     };
     setOrders((current) => [newOrder, ...current]);
     setDialogOpen(false);
     setError("");
-    event.currentTarget.reset();
+    formElement.reset();
   }
 
-  function advanceOrder(orderId: string, currentStatus: OrderStatus) {
+  async function advanceOrder(orderId: string, currentStatus: OrderStatus) {
     const currentIndex = orderStatuses.indexOf(currentStatus);
     const nextStatus = orderStatuses[currentIndex + 1];
     if (!nextStatus) return;
+
+    if (databaseEnabled) {
+      setPendingAction(orderId);
+      setError("");
+      try {
+        const response = await fetch("/api/orders/" + encodeURIComponent(orderId) + "/status", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ nextStatus }),
+        });
+        const result = await response.json();
+        if (!response.ok) {
+          setError(result.error ?? "Status pesanan gagal diperbarui.");
+          return;
+        }
+        setOrders((current) => current.map((order) => order.id === orderId ? result.order as LaundryOrder : order));
+      } catch {
+        setError("Tidak dapat menghubungi server. Coba lagi.");
+      } finally {
+        setPendingAction("");
+      }
+      return;
+    }
+
     setOrders((current) => current.map((order) => order.id === orderId ? { ...order, status: nextStatus } : order));
   }
 
@@ -95,12 +151,13 @@ export function OrdersView({ initialOrders }: { initialOrders: LaundryOrder[] })
         </div>
       </div>
 
+      {error && !dialogOpen && <p role="alert" className="mb-3 rounded-lg border border-danger/20 bg-danger/10 px-3 py-2 text-xs text-danger">{error}</p>}
       <Card className="overflow-hidden">
-        <div className="flex items-center justify-between border-b border-border px-4 py-3"><div><p className="text-sm font-semibold">Daftar pesanan</p><p className="mt-0.5 text-[11px] text-muted">{visibleOrders.length} pesanan ditampilkan</p></div><span className="text-[11px] text-muted">Terakhir diperbarui hari ini</span></div>
+        <div className="flex items-center justify-between border-b border-border px-4 py-3"><div><p className="text-sm font-semibold">Daftar pesanan</p><p className="mt-0.5 text-[11px] text-muted">{visibleOrders.length} pesanan ditampilkan</p></div><span className="text-[11px] text-muted">{databaseEnabled ? "PostgreSQL · Preview" : "Mode demo lokal"}</span></div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[880px] text-left text-xs">
             <thead><tr className="bg-surface-raised/50 text-[10px] uppercase tracking-wide text-muted"><th className="px-4 py-3 font-medium">Pesanan / pelanggan</th><th className="px-3 py-3 font-medium">Layanan</th><th className="px-3 py-3 font-medium">Berat</th><th className="px-3 py-3 font-medium">Jatuh tempo</th><th className="px-3 py-3 font-medium">Status</th><th className="px-3 py-3 font-medium">Pembayaran</th><th className="px-4 py-3 text-right font-medium">Total</th><th className="w-32 px-4 py-3 text-right font-medium">Aksi</th></tr></thead>
-            <tbody>{visibleOrders.map((order) => <tr key={order.id} className="border-t border-border/70 transition hover:bg-surface-raised/50"><td className="px-4 py-3"><p className="font-semibold">{order.id}</p><p className="mt-1 text-[10px] text-muted">{order.customerName} · {order.customerPhone}</p></td><td className="px-3 py-3 text-muted">{order.serviceName}</td><td className="px-3 py-3">{order.weightKg} kg</td><td className="px-3 py-3 text-muted">{formatShortDate(order.dueAt)}</td><td className="px-3 py-3"><OrderStatusBadge status={order.status} /></td><td className="px-3 py-3"><PaymentStatusBadge status={order.paymentStatus} /></td><td className="px-4 py-3 text-right font-semibold">{formatCurrency(order.amount)}</td><td className="px-4 py-3 text-right">{order.status !== "completed" ? <button onClick={() => advanceOrder(order.id, order.status)} className="rounded-md border border-border px-2 py-1 text-[10px] font-medium text-muted hover:border-accent/50 hover:text-accent">Lanjut proses</button> : <span className="text-[10px] text-muted">Selesai</span>}</td></tr>)}</tbody>
+            <tbody>{visibleOrders.map((order) => <tr key={order.id} className="border-t border-border/70 transition hover:bg-surface-raised/50"><td className="px-4 py-3"><p className="font-semibold">{order.id}</p><p className="mt-1 text-[10px] text-muted">{order.customerName} · {order.customerPhone}</p></td><td className="px-3 py-3 text-muted">{order.serviceName}</td><td className="px-3 py-3">{order.weightKg} kg</td><td className="px-3 py-3 text-muted">{formatShortDate(order.dueAt)}</td><td className="px-3 py-3"><OrderStatusBadge status={order.status} /></td><td className="px-3 py-3"><PaymentStatusBadge status={order.paymentStatus} /></td><td className="px-4 py-3 text-right font-semibold">{formatCurrency(order.amount)}</td><td className="px-4 py-3 text-right">{order.status !== "completed" ? <button disabled={pendingAction === order.id} onClick={() => advanceOrder(order.id, order.status)} className="rounded-md border border-border px-2 py-1 text-[10px] font-medium text-muted hover:border-accent/50 hover:text-accent disabled:cursor-wait disabled:opacity-50">{pendingAction === order.id ? "Menyimpan…" : "Lanjut proses"}</button> : <span className="text-[10px] text-muted">Selesai</span>}</td></tr>)}</tbody>
           </table>
           {visibleOrders.length === 0 && <div className="p-12 text-center"><p className="text-sm font-medium">Pesanan tidak ditemukan</p><p className="mt-1 text-xs text-muted">Ubah kata kunci atau filter status.</p></div>}
         </div>
@@ -117,7 +174,7 @@ export function OrdersView({ initialOrders }: { initialOrders: LaundryOrder[] })
             <div className="grid gap-3 sm:grid-cols-2"><label className="block text-xs font-medium">Layanan<Select name="serviceName" required className="mt-1.5"><option value="">Pilih layanan</option>{serviceCatalog.filter((service) => service.unit === "kg").map((service) => <option key={service.id} value={service.name}>{service.name} · {formatCurrency(service.price)}/{service.unit}</option>)}</Select></label><label className="block text-xs font-medium">Berat (kg)<Input name="weightKg" required type="number" min="0.1" step="0.1" placeholder="3.5" className="mt-1.5" /></label></div>
             <label className="block text-xs font-medium">Target selesai<Input name="dueAt" required type="date" className="mt-1.5" /></label>
             {error && <p role="alert" className="rounded-lg border border-danger/20 bg-danger/10 px-3 py-2 text-xs text-danger">{error}</p>}
-            <div className="flex justify-end gap-2 border-t border-border pt-4"><Button type="button" onClick={() => setDialogOpen(false)}>Batal</Button><Button type="submit" variant="primary">Simpan pesanan</Button></div>
+            <div className="flex justify-end gap-2 border-t border-border pt-4"><Button type="button" onClick={() => setDialogOpen(false)}>Batal</Button><Button type="submit" variant="primary" disabled={pendingAction === "create"}>{pendingAction === "create" ? "Menyimpan…" : "Simpan pesanan"}</Button></div>
           </form>
         </div>
       </div>}

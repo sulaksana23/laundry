@@ -40,7 +40,7 @@ export const createOrderSchema = z.object({
   customerPhone: z.string().trim().min(8, "Nomor telepon belum valid"),
   serviceName: z.string().trim().min(1, "Pilih layanan"),
   weightKg: z.coerce.number().positive("Berat harus lebih dari 0"),
-  dueAt: z.string().min(1, "Pilih tanggal selesai"),
+  dueAt: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/, "Pilih tanggal selesai yang valid"),
 });
 
 export type CreateOrderInput = z.infer<typeof createOrderSchema>;
