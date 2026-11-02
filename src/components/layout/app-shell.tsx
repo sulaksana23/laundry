@@ -7,7 +7,7 @@ import { Bell, LogOut, Menu, Plus, Search, Shirt, Sparkles, X } from "lucide-rea
 import { navigation } from "@/components/layout/navigation";
 import { cn } from "@/lib/utils";
 
-function Sidebar({ onNavigate, user }: { onNavigate?: () => void; user: { fullName: string; email: string; branchName: string; isDemo: boolean } }) {
+function Sidebar({ onNavigate, user }: { onNavigate?: () => void; user: { fullName: string; email: string; branchName: string; isDemo?: boolean } }) {
   const pathname = usePathname();
 
   return (
@@ -57,7 +57,7 @@ function Sidebar({ onNavigate, user }: { onNavigate?: () => void; user: { fullNa
   );
 }
 
-export function AppShell({ children, user }: { children: React.ReactNode; user: { fullName: string; email: string; branchName: string } }) {
+export function AppShell({ children, user }: { children: React.ReactNode; user: { fullName: string; email: string; branchName: string; isDemo?: boolean } }) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   async function signOut() {
