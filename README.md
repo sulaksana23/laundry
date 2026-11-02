@@ -2,9 +2,9 @@
 
 Sistem operasional laundry berbasis **Next.js App Router**, TypeScript, dan Tailwind CSS. UI memakai pola TypeUI yang ringkas, responsif, serta berfokus pada data dan alur kerja harian.
 
-![Preview dashboard LaundryOS](./public/readme-preview.svg)
+![Pratinjau fitur LaundryOS](./public/readme-feature-overview.svg)
 
-> **Status saat ini:** starter MVP untuk pengembangan. Modul tersedia sebagai UI; sebagian besar memakai fixture. Halaman Pesanan mendukung pembuatan pesanan dan perubahan status di `localStorage` browser. **Autentikasi, backend produksi, dan koneksi PostgreSQL belum diimplementasikan.** Jangan gunakan data contoh sebagai catatan transaksi nyata.
+> **Status saat ini:** MVP. Modul Pesanan dapat memakai Neon PostgreSQL pada Vercel Preview dan local development setelah migrasi dijalankan; tanpa konfigurasi database, aplikasi memakai data demo di browser. Modul lain masih berupa UI/fixture. **Login dan registrasi email aktif setelah database dan secret sesi dikonfigurasi.** Role terperinci, pemulihan akun, dan akses transaksi produksi masih belum tersedia. Jangan masukkan data pelanggan nyata sebelum kontrol akses siap.
 
 ## Cakupan fitur lengkap
 
@@ -27,9 +27,9 @@ Daftar berikut adalah cakupan produk yang dituju. Status implementasi sebenarnya
 | Bagian | Tersedia sekarang | Belum tersedia |
 | --- | --- | --- |
 | Dashboard | Ringkasan visual menggunakan data contoh | Query langsung dari database dan filter periode nyata |
-| Pesanan | Cari/filter sederhana, validasi form, hitung total contoh, buat pesanan dan lanjutkan status di browser | Penyimpanan server, autentikasi, pembayaran, histori audit, pagination, nota |
+| Pesanan | Cari/filter, validasi server, hitung harga dari katalog, buat pesanan dan lanjutkan status tersimpan di PostgreSQL pada Vercel Preview/local dev | Role terperinci, pembayaran, histori audit lengkap, pagination, nota |
 | Pelanggan, layanan, persediaan, keuangan, laporan, pengaturan | Layar UI dan data fixture untuk demonstrasi | CRUD persisten, aturan bisnis server, laporan terverifikasi, akses berbasis role |
-| Platform | Layout responsif, komponen UI, TypeScript strict, pola controller/service/repository | PostgreSQL, migrasi, API produksi, login, multi-cabang, backup, notifikasi |
+| Platform | Layout responsif, komponen UI, TypeScript strict, pola controller/service/repository, migrasi PostgreSQL untuk pesanan | Role terperinci, API produksi, multi-cabang, backup, notifikasi |
 
 Status rinci dan kriteria penerimaan ada di [docs/modules.md](docs/modules.md) dan [docs/roadmap.md](docs/roadmap.md). Nama serta nomor kontak dalam fixture bersifat sintetis/masked.
 
@@ -61,25 +61,24 @@ npm run typecheck
 npm run build
 ```
 
-`.env.example` berisi contoh `DATABASE_URL`, tetapi aplikasi saat ini **belum membaca variabel tersebut**. Jangan masukkan rahasia atau kredensial ke variabel `NEXT_PUBLIC_*`.
+`.env.example` berisi variabel untuk Neon. Modul Pesanan memakai database di Vercel Preview jika `DATABASE_URL` tersedia; local development juga perlu `LAUNDRY_DATABASE_MODE=true`. Mutasi database Pesanan hanya aktif pada Vercel Preview dan local development. Login/register aktif setelah DATABASE_URL dan AUTH_SECRET disiapkan. Jangan masukkan rahasia ke `NEXT_PUBLIC_*`.
 
 ## Deploy ke Vercel + PostgreSQL (Neon)
 
-Next.js dapat di-deploy langsung melalui integrasi Vercel. Untuk database PostgreSQL baru, Vercel menyediakan integrasi provider lewat Marketplace; Vercel Postgres lama tidak lagi tersedia untuk proyek baru. Neon merupakan salah satu pilihan Postgres Marketplace.
+Repository ini menyiapkan migrasi SQL, autentikasi email/password, dan implementasi PostgreSQL untuk modul Pesanan. Vercel menjalankan `npm run db:migrate` sebelum build jika Neon menyediakan `DATABASE_URL`. API database aktif pada local development yang dikonfigurasi dan Vercel Preview; mode Production tetap demo karena autentikasi belum tersedia.
 
 ### Langkah deployment
 
-1. Hubungkan akun GitHub ke Vercel, lalu impor repository `sulaksana23/laundry` sebagai proyek Next.js.
-2. Gunakan root directory repository. Biarkan preset Next.js dan perintah build terdeteksi otomatis.
-3. Tambahkan Neon Postgres melalui **Vercel → Storage/Marketplace**, lalu buat database dan hubungkan ke proyek.
-4. Pastikan variabel koneksi database tersedia di environment **Production** dan **Preview** sesuai kebutuhan. Simpan rahasia hanya sebagai environment variable server, jangan commit ke Git.
-5. Deploy branch `main`, lalu periksa deployment log dan halaman hasil deploy.
+1. Hubungkan repository `sulaksana23/laundry` ke Vercel dengan framework Next.js dan Node.js 22.
+2. Tambahkan Neon PostgreSQL melalui integrasi Vercel Marketplace dan hubungkan resource ke environment Preview.
+3. Pastikan `DATABASE_URL` dan `AUTH_SECRET` tersedia sebagai environment variable server-side untuk Preview. Buat `AUTH_SECRET` acak minimal 32 karakter; jangan menaruh rahasia di variabel `NEXT_PUBLIC_*`.
+4. Deploy branch `main`. Build menerapkan migrasi SQL dan seed katalog layanan demo.
+5. Akses Preview melalui Vercel Authentication. Preview berisi data uji; jangan memasukkan data pelanggan nyata.
+6. Production belum menggunakan database atau menerima mutasi transaksi sampai login, role, dan perlindungan data selesai.
 
-### Catatan penting sebelum memakai data usaha
+### Lingkup database saat ini
 
-Menghubungkan database saja belum membuat aplikasi ini menggunakan PostgreSQL. Repository saat ini belum memiliki schema/migrasi database atau implementasi repository PostgreSQL, dan pesanan demo masih disimpan di browser. Integrasi Neon, migrasi, API server, autentikasi, otorisasi, serta penggantian fixture perlu diselesaikan sebelum menerima data pelanggan atau transaksi nyata.
-
-Panduan resmi: [Deploy Next.js di Vercel](https://vercel.com/docs/frameworks/nextjs), [Postgres Marketplace di Vercel](https://vercel.com/docs/marketplace-storage), dan [Neon di Vercel Marketplace](https://vercel.com/marketplace/neon).
+Tabel cabang, pengguna, pelanggan, layanan, pesanan, dan histori status dibuat oleh migrasi. Modul Pesanan membaca dan menyimpan pesanan ke PostgreSQL; pembayaran dimulai sebagai belum lunas. Dashboard dan modul lain masih menggunakan fixture/demo. Sebelum penggunaan operasional, lengkapi autentikasi, izin per cabang, audit, pembayaran, backup, dan kebijakan retensi.
 
 ## Struktur direktori
 

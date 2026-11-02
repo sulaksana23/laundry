@@ -1,0 +1,112 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="820" viewBox="0 0 1440 820" role="img" aria-labelledby="title desc">
+  <title id="title">LaundryOS — pratinjau sistem operasional</title>
+  <desc id="desc">Pratinjau dashboard LaundryOS dengan navigasi modul, ringkasan kosong, daftar pesanan, dan cakupan layanan laundry.</desc>
+  <defs>
+    <linearGradient id="lime" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#d7fb85"/><stop offset="1" stop-color="#a7d94c"/></linearGradient>
+    <linearGradient id="panel" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#171d19"/><stop offset="1" stop-color="#111613"/></linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="125%"><feDropShadow dx="0" dy="16" stdDeviation="20" flood-color="#000" flood-opacity=".35"/></filter>
+    <style>
+      text{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+      .muted{fill:#929d95}.soft{fill:#b6c0b7}.white{fill:#f4f7f4}.lime{fill:#d7fb85}
+      .tiny{font-size:10px}.small{font-size:12px}.label{font-size:10px;font-weight:700;letter-spacing:1.35px}
+      .title{font-size:47px;font-weight:720;letter-spacing:-1.8px}.heading{font-size:15px;font-weight:650}
+    </style>
+  </defs>
+  <rect width="1440" height="820" fill="#0d110e"/>
+  <circle cx="1360" cy="36" r="220" fill="#c8f36f" opacity=".035"/>
+  <path d="M0 680C290 620 470 730 740 655s445-125 700-30v195H0Z" fill="#162019" opacity=".45"/>
+  <rect x="72" y="58" width="38" height="38" rx="12" fill="url(#lime)"/>
+  <path d="M83 72h16l-1.5 15h-13zM86 71v-3a5 5 0 0 1 10 0v3" fill="none" stroke="#18210f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="122" y="76" class="white" font-size="15" font-weight="750">LaundryOS</text>
+  <text x="122" y="93" class="muted tiny">OPERASIONAL LAUNDRY</text>
+  <rect x="1222" y="61" width="146" height="30" rx="15" fill="#1a211c" stroke="#344137"/>
+  <circle cx="1240" cy="76" r="4" fill="#d7fb85"/>
+  <text x="1252" y="80" class="soft tiny" font-weight="650">PRATINJAU FITUR</text>
+
+  <text x="72" y="196" class="label lime">SISTEM OPERASIONAL LAUNDRY</text>
+  <text x="72" y="264" class="white title">Semua alur laundry,</text>
+  <text x="72" y="319" class="white title">lebih mudah dipantau.</text>
+  <text x="72" y="362" class="soft" font-size="15">Pesanan, pelanggan, layanan, stok, dan laporan</text>
+  <text x="72" y="386" class="soft" font-size="15">dalam satu antarmuka yang ringkas.</text>
+  <rect x="72" y="426" width="380" height="1" fill="#2a322c"/>
+  <text x="72" y="462" class="label muted">MODUL DI DALAM APLIKASI</text>
+  <g font-size="12" font-weight="600">
+    <rect x="72" y="483" width="134" height="36" rx="9" fill="#19211b" stroke="#344137"/><circle cx="91" cy="501" r="5" fill="#d7fb85"/><text x="105" y="505" class="white">Pesanan</text>
+    <rect x="218" y="483" width="140" height="36" rx="9" fill="#19211b" stroke="#344137"/><circle cx="237" cy="501" r="5" fill="#91c7a0"/><text x="251" y="505" class="white">Pelanggan</text>
+    <rect x="370" y="483" width="129" height="36" rx="9" fill="#19211b" stroke="#344137"/><circle cx="389" cy="501" r="5" fill="#d9b56a"/><text x="403" y="505" class="white">Layanan</text>
+    <rect x="72" y="531" width="134" height="36" rx="9" fill="#19211b" stroke="#344137"/><circle cx="91" cy="549" r="5" fill="#89b7df"/><text x="105" y="553" class="white">Persediaan</text>
+    <rect x="218" y="531" width="140" height="36" rx="9" fill="#19211b" stroke="#344137"/><circle cx="237" cy="549" r="5" fill="#d792b6"/><text x="251" y="553" class="white">Keuangan</text>
+    <rect x="370" y="531" width="129" height="36" rx="9" fill="#19211b" stroke="#344137"/><circle cx="389" cy="549" r="5" fill="#ae9be5"/><text x="403" y="553" class="white">Laporan</text>
+  </g>
+  <text x="72" y="633" class="muted small">Pratinjau antarmuka — angka transaksi tidak ditampilkan.</text>
+
+  <g filter="url(#shadow)">
+    <rect x="548" y="137" width="820" height="596" rx="20" fill="url(#panel)" stroke="#303a32"/>
+  </g>
+  <rect x="549" y="138" width="183" height="594" rx="19" fill="#141a16"/>
+  <path d="M732 138v594" stroke="#2a332c"/>
+  <rect x="568" y="158" width="34" height="34" rx="10" fill="url(#lime)"/>
+  <path d="M578 170h14l-1.2 13h-11.5zM581 169v-2.5a4.5 4.5 0 0 1 9 0v2.5" fill="none" stroke="#18210f" stroke-width="1.7" stroke-linecap="round"/>
+  <text x="612" y="174" class="white" font-size="13" font-weight="700">LaundryOS</text>
+  <text x="612" y="190" class="muted tiny">Workspace</text>
+  <text x="570" y="226" class="muted label">MENU UTAMA</text>
+  <rect x="563" y="242" width="154" height="35" rx="8" fill="#263128"/>
+  <rect x="563" y="242" width="3" height="35" rx="2" fill="#d7fb85"/>
+  <g class="small" font-weight="560">
+    <text x="589" y="264" class="white">Ringkasan</text>
+    <text x="589" y="307" class="soft">Pesanan</text>
+    <text x="589" y="350" class="soft">Pelanggan</text>
+    <text x="589" y="393" class="soft">Layanan</text>
+    <text x="589" y="436" class="soft">Persediaan</text>
+    <text x="589" y="479" class="soft">Keuangan</text>
+    <text x="589" y="522" class="soft">Laporan</text>
+    <text x="589" y="565" class="soft">Pengaturan</text>
+  </g>
+  <g fill="none" stroke="#8b988e" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="575" y="252" width="9" height="9" rx="2" stroke="#d7fb85"/><path d="m577 259 2-2 2 1 2-3" stroke="#d7fb85"/>
+    <rect x="575" y="295" width="9" height="9" rx="2"/><path d="M578 298h4M578 301h4"/>
+    <circle cx="579.5" cy="340" r="4"/><path d="M573 351c1-4 3-6 6.5-6s5.5 2 6.5 6"/>
+    <path d="M575 385h9v9h-9zM577 382h5v3"/>
+    <path d="M575 428h9v9h-9zM577 425h5v3"/>
+    <circle cx="579.5" cy="472" r="4"/><path d="M579.5 468v8M576 472h7"/>
+    <path d="M575 512h9v8h-9zM577 514h5M577 517h5"/>
+    <circle cx="579.5" cy="555" r="4"/><path d="M579.5 552v6M576.5 555h6"/>
+  </g>
+  <text x="770" y="184" class="muted small">Workspace / Ringkasan</text>
+  <text x="770" y="222" class="white" font-size="22" font-weight="700">Ringkasan operasional</text>
+  <text x="770" y="245" class="muted small">Pantau aktivitas laundry dari satu tampilan.</text>
+  <rect x="1269" y="164" width="78" height="30" rx="8" fill="#202820" stroke="#354037"/>
+  <text x="1285" y="183" class="soft tiny" font-weight="650">Hari ini</text>
+
+  <g>
+    <rect x="770" y="270" width="177" height="88" rx="12" fill="#171e19" stroke="#2c352e"/>
+    <text x="786" y="295" class="muted tiny">OMZET HARI INI</text>
+    <text x="786" y="329" class="white" font-size="23" font-weight="700">—</text>
+    <text x="786" y="347" class="muted tiny">Data belum tersedia</text>
+    <rect x="962" y="270" width="177" height="88" rx="12" fill="#171e19" stroke="#2c352e"/>
+    <text x="978" y="295" class="muted tiny">PESANAN HARI INI</text>
+    <text x="978" y="329" class="white" font-size="23" font-weight="700">—</text>
+    <text x="978" y="347" class="muted tiny">Data belum tersedia</text>
+    <rect x="1154" y="270" width="194" height="88" rx="12" fill="#171e19" stroke="#2c352e"/>
+    <text x="1170" y="295" class="muted tiny">SIAP DIAMBIL</text>
+    <text x="1170" y="329" class="white" font-size="23" font-weight="700">—</text>
+    <text x="1170" y="347" class="muted tiny">Data belum tersedia</text>
+  </g>
+
+  <rect x="770" y="379" width="578" height="304" rx="12" fill="#141a16" stroke="#2c352e"/>
+  <text x="790" y="410" class="white heading">Pesanan terbaru</text>
+  <text x="790" y="430" class="muted tiny">Status kerja terlihat sepanjang proses.</text>
+  <rect x="790" y="451" width="538" height="31" rx="6" fill="#1c241e"/>
+  <text x="804" y="471" class="muted tiny" font-weight="650">PESANAN</text>
+  <text x="965" y="471" class="muted tiny" font-weight="650">LAYANAN</text>
+  <text x="1103" y="471" class="muted tiny" font-weight="650">STATUS</text>
+  <text x="1237" y="471" class="muted tiny" font-weight="650">TOTAL</text>
+  <path d="M790 496h538M790 540h538M790 584h538M790 628h538" stroke="#2a322c"/>
+  <g class="soft small">
+    <text x="804" y="523">—</text><text x="965" y="523">—</text><text x="1103" y="523">—</text><text x="1237" y="523">—</text>
+    <text x="804" y="567">—</text><text x="965" y="567">—</text><text x="1103" y="567">—</text><text x="1237" y="567">—</text>
+    <text x="804" y="611">—</text><text x="965" y="611">—</text><text x="1103" y="611">—</text><text x="1237" y="611">—</text>
+  </g>
+  <text x="790" y="657" class="muted tiny">Data transaksi tidak dimuat dalam gambar pratinjau ini.</text>
+  <text x="770" y="710" class="muted tiny">LaundryOS · Tailwind CSS · TypeUI compact</text>
+</svg>

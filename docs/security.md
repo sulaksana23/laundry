@@ -2,8 +2,8 @@
 
 Starter belum memiliki autentikasi dan jangan dipublikasikan sebagai sistem transaksi produksi sebelum checklist berikut dirancang dan diterapkan.
 
-- [ ] Pilih mekanisme autentikasi dan rotasi sesi; pakai cookie `HttpOnly`, `Secure`, dan `SameSite`.
-- [ ] Terapkan role-based access pada server untuk owner, admin, kasir, dan operator sesuai peran final.
+- [x] Implementasikan login/registrasi email-password untuk akun Pemilik dengan cookie sesi `HttpOnly`, `Secure` di production, dan `SameSite=Lax`; secret sesi berasal dari `AUTH_SECRET`.
+- [ ] Terapkan role-based access terperinci pada server untuk owner, admin, kasir, dan operator sesuai peran final.
 - [ ] Pastikan semua query dibatasi tenant/cabang; uji IDOR lintas cabang.
 - [ ] Validasi schema request dan ulangi perhitungan nominal/status di server.
 - [ ] Simpan secret di secret manager/deployment environment; jangan commit `.env`.
