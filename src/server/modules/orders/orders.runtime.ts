@@ -8,7 +8,7 @@ export function getOrdersService() {
   const pricing = {
     async calculate(input: { serviceName: string; weightKg: number }, branchId: string) {
       const rows = await sql`SELECT price_per_unit FROM laundry_services WHERE branch_id = ${branchId} AND name = ${input.serviceName} AND unit = 'kg' AND is_active = true LIMIT 1`;
-      const service = rows[0] as { price_per_unit: number | string } | undefined;
+      const service = (rows as unknown as Array<{ price_per_unit: number | string }>)[0];
       if (!service) throw new Error("Layanan tidak tersedia pada cabang ini.");
       const amount = Math.round(input.weightKg * Number(service.price_per_unit));
       if (!Number.isSafeInteger(amount)) throw new Error("Total pesanan tidak valid.");

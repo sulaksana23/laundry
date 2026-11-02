@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { Bell, ChevronDown, Menu, Plus, Search, Sparkles, X } from "lucide-react";
+import { Bell, ChevronDown, Menu, Plus, Search, Shirt, Sparkles, X } from "lucide-react";
 import { navigation } from "@/components/layout/navigation";
 import { cn } from "@/lib/utils";
 

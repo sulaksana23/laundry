@@ -69,7 +69,7 @@ export class PostgresOrdersRepository implements OrdersRepository {
       "SELECT COUNT(*)::int AS total" + ORDER_JOINS + where,
       parameters,
     );
-    const total = Number((countRows[0] as { total: number | string } | undefined)?.total ?? 0);
+    const total = Number(((countRows as unknown as Array<{ total: number | string }>)[0])?.total ?? 0);
     const pageParameters = [...parameters, query.pageSize, (query.page - 1) * query.pageSize];
     const rows = await sql.query(
       "SELECT " + ORDER_COLUMNS + ORDER_JOINS + where +
