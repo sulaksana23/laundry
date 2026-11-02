@@ -7,7 +7,7 @@ import { Bell, LogOut, Menu, Plus, Search, Shirt, Sparkles, X } from "lucide-rea
 import { navigation } from "@/components/layout/navigation";
 import { cn } from "@/lib/utils";
 
-function Sidebar({ onNavigate, user }: { onNavigate?: () => void; user: { fullName: string; email: string; branchName: string } }) {
+function Sidebar({ onNavigate, user }: { onNavigate?: () => void; user: { fullName: string; email: string; branchName: string; isDemo: boolean } }) {
   const pathname = usePathname();
 
   return (
@@ -45,13 +45,13 @@ function Sidebar({ onNavigate, user }: { onNavigate?: () => void; user: { fullNa
       </nav>
 
       <div className="mt-auto rounded-xl border border-border bg-surface px-3.5 py-3">
-        <div className="mb-1 text-xs font-semibold">Akun pemilik</div>
-        <p className="truncate text-[11px] leading-5 text-muted">{user.email}</p>
+        <div className="mb-1 text-xs font-semibold">{user.isDemo ? "Mode demo" : "Akun pemilik"}</div>
+        <p className="truncate text-[11px] leading-5 text-muted">{user.isDemo ? "Pesanan contoh disimpan di browser ini." : user.email}</p>
         <p className="truncate text-[11px] text-muted">{user.branchName}</p>
       </div>
       <div className="mt-3 flex items-center gap-2.5 rounded-lg px-2.5 py-2">
         <div className="flex size-8 items-center justify-center rounded-full bg-[#314036] text-xs font-bold text-accent">{user.fullName.slice(0, 1).toUpperCase()}</div>
-        <div className="min-w-0 flex-1"><p className="truncate text-xs font-semibold">{user.fullName}</p><p className="truncate text-[10px] text-muted">Pemilik</p></div>
+        <div className="min-w-0 flex-1"><p className="truncate text-xs font-semibold">{user.fullName}</p><p className="truncate text-[10px] text-muted">{user.isDemo ? "Demo" : "Pemilik"}</p></div>
       </div>
     </aside>
   );
@@ -86,7 +86,7 @@ export function AppShell({ children, user }: { children: React.ReactNode; user: 
             <Link href="/orders" className="inline-flex h-8 items-center justify-center gap-2 rounded-lg bg-accent px-2.5 text-xs font-semibold text-accent-foreground transition hover:brightness-95"><Plus size={14} /> <span className="hidden sm:inline">Pesanan baru</span></Link>
             <button type="button" aria-label="Notifikasi (segera tersedia)" disabled className="relative rounded-lg border border-border bg-surface p-2 text-muted opacity-55"><Bell size={15} /></button>
             <div className="ml-1 hidden items-center gap-2 border-l border-border pl-3 sm:flex"><div className="flex size-7 items-center justify-center rounded-full bg-[#314036] text-[10px] font-semibold text-accent">{user.fullName.slice(0, 1).toUpperCase()}</div><span className="max-w-36 truncate text-xs font-medium">{user.fullName}</span></div>
-            <button type="button" onClick={signOut} aria-label="Keluar dari LaundryOS" className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 text-xs text-muted hover:text-foreground"><LogOut size={14} /><span className="hidden sm:inline">Keluar</span></button>
+            {!user.isDemo && <button type="button" onClick={signOut} aria-label="Keluar dari LaundryOS" className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 text-xs text-muted hover:text-foreground"><LogOut size={14} /><span className="hidden sm:inline">Keluar</span></button>}
           </div>
         </header>
         <main className="mx-auto w-full max-w-[1500px] px-4 py-5 sm:px-6 sm:py-6 xl:px-8">{children}</main>

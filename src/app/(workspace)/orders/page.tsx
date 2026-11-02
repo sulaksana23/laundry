@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { OrdersView } from "@/features/orders/components/orders-view";
 import { mockOrders } from "@/features/orders/data/mock-orders";
 import { isOrdersDatabaseEnabled } from "@/server/db/mode";
-import { getAuthSession } from "@/server/modules/auth/auth.session";
+import { getAuthSession, isAuthConfigured } from "@/server/modules/auth/auth.session";
 import { getOrdersService } from "@/server/modules/orders/orders.runtime";
 
 export const metadata: Metadata = { title: "Pesanan" };
@@ -13,9 +13,10 @@ export const dynamic = "force-dynamic";
 
 export default async function OrdersPage() {
   const session = await getAuthSession();
-  if (!session) redirect("/login");
-  const databaseEnabled = isOrdersDatabaseEnabled();
-  const orders = databaseEnabled
+  const productionDemo = process.env.VERCEL_ENV === "production" && !isAuthConfigured();
+  if (!session && !productionDemo) redirect("/login");
+  const databaseEnabled = Boolean(session) && isOrdersDatabaseEnabled();
+  const orders = session && databaseEnabled
     ? (await getOrdersService().list({ branchId: session.branchId, page: 1, pageSize: 100 })).items
     : mockOrders;
   const todayKey = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Makassar" }).format(new Date());
