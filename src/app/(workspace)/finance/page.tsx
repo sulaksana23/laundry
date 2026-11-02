@@ -1,0 +1,21 @@
+import type { Metadata } from "next";
+import { ArrowDownLeft, ArrowUpRight, Download, Plus } from "lucide-react";
+import { PageHeader } from "@/components/layout/page-header";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { expenseItems } from "@/features/orders/data/mock-orders";
+import { formatCurrency, formatShortDate } from "@/lib/format";
+
+export const metadata: Metadata = { title: "Keuangan" };
+
+export default function FinancePage() {
+  return (
+    <>
+      <PageHeader eyebrow="Arus kas" title="Keuangan" description="Pantau pemasukan, pengeluaran, dan pembayaran tertunda." action={<><Button disabled title="Ekspor tersedia setelah backend tersambung"><Download size={14} /> Ekspor</Button><Button disabled variant="primary" title="Tersedia setelah backend tersambung"><Plus size={14} /> Catat pengeluaran</Button></>} />
+      <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4"><Card className="p-3.5"><p className="text-[11px] text-muted">Pendapatan bulan ini</p><p className="mt-2 text-xl font-semibold">Rp 18,45 jt</p><p className="mt-1 text-[10px] text-emerald-200">↗ 12,8% dari bulan lalu</p></Card><Card className="p-3.5"><p className="text-[11px] text-muted">Pengeluaran bulan ini</p><p className="mt-2 text-xl font-semibold">Rp 6,28 jt</p><p className="mt-1 text-[10px] text-muted">Dalam batas anggaran</p></Card><Card className="p-3.5"><p className="text-[11px] text-muted">Laba kotor</p><p className="mt-2 text-xl font-semibold">Rp 12,17 jt</p><p className="mt-1 text-[10px] text-emerald-200">Margin 66%</p></Card><Card className="p-3.5"><p className="text-[11px] text-muted">Tagihan belum lunas</p><p className="mt-2 text-xl font-semibold">Rp 426.000</p><p className="mt-1 text-[10px] text-muted">8 transaksi</p></Card></div>
+      <div className="grid gap-4 xl:grid-cols-[1.3fr_1fr]"><Card className="overflow-hidden"><div className="border-b border-border p-4"><h2 className="text-sm font-semibold">Pengeluaran terbaru</h2><p className="mt-1 text-[11px] text-muted">Catatan operasional cabang</p></div><div className="overflow-x-auto"><table className="w-full min-w-[550px] text-left text-xs"><thead><tr className="bg-surface-raised/50 text-[10px] uppercase tracking-wide text-muted"><th className="px-4 py-3 font-medium">Keterangan</th><th className="px-3 py-3 font-medium">Kategori</th><th className="px-3 py-3 font-medium">Tanggal</th><th className="px-4 py-3 text-right font-medium">Jumlah</th></tr></thead><tbody>{expenseItems.map((item) => <tr key={item.id} className="border-t border-border/70"><td className="px-4 py-3"><p className="font-medium">{item.label}</p><p className="mt-0.5 text-[10px] text-muted">{item.method} · {item.id}</p></td><td className="px-3 py-3 text-muted">{item.category}</td><td className="px-3 py-3 text-muted">{formatShortDate(item.date)}</td><td className="px-4 py-3 text-right font-semibold">{formatCurrency(item.amount)}</td></tr>)}</tbody></table></div></Card>
+        <Card><div className="border-b border-border p-4"><h2 className="text-sm font-semibold">Ringkasan transaksi</h2><p className="mt-1 text-[11px] text-muted">Hari ini · 2 November</p></div><div className="space-y-4 p-4"><div className="flex items-center gap-3"><span className="rounded-lg bg-emerald-300/10 p-2 text-emerald-200"><ArrowDownLeft size={16} /></span><div className="flex-1"><p className="text-xs font-medium">Uang masuk</p><p className="mt-0.5 text-[10px] text-muted">14 pembayaran</p></div><p className="text-sm font-semibold text-emerald-100">+Rp 1.248.000</p></div><div className="flex items-center gap-3"><span className="rounded-lg bg-rose-300/10 p-2 text-rose-200"><ArrowUpRight size={16} /></span><div className="flex-1"><p className="text-xs font-medium">Uang keluar</p><p className="mt-0.5 text-[10px] text-muted">2 pengeluaran</p></div><p className="text-sm font-semibold text-rose-100">−Rp 210.000</p></div><div className="border-t border-border pt-3"><div className="flex justify-between text-xs"><span className="text-muted">Arus kas bersih</span><strong>Rp 1.038.000</strong></div></div></div></Card></div>
+      <p className="mt-4 text-[11px] text-muted">Angka pada halaman ini adalah data contoh dan tidak mewakili laporan keuangan aktual.</p>
+    </>
+  );
+}

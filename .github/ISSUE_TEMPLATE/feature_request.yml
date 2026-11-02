@@ -1,0 +1,23 @@
+name: Usulan fitur
+description: Ajukan kebutuhan operasional atau teknis
+title: "feat: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Masalah yang ingin diselesaikan
+      description: Jelaskan siapa yang mengalami dan kapan masalah terjadi.
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Hasil yang diharapkan
+    validations:
+      required: true
+  - type: textarea
+    id: rules
+    attributes:
+      label: Aturan usaha yang terkait
+      description: Jelaskan kebijakan yang sudah disepakati. Jangan mengirim data pelanggan nyata.
