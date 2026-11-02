@@ -1,18 +1,22 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card } from "@/components/ui/card";
 import { OrdersView } from "@/features/orders/components/orders-view";
 import { mockOrders } from "@/features/orders/data/mock-orders";
-import { getLaundryBranchId, isOrdersDatabaseEnabled } from "@/server/db/mode";
+import { isOrdersDatabaseEnabled } from "@/server/db/mode";
+import { getAuthSession } from "@/server/modules/auth/auth.session";
 import { getOrdersService } from "@/server/modules/orders/orders.runtime";
 
 export const metadata: Metadata = { title: "Pesanan" };
 export const dynamic = "force-dynamic";
 
 export default async function OrdersPage() {
+  const session = await getAuthSession();
+  if (!session) redirect("/login");
   const databaseEnabled = isOrdersDatabaseEnabled();
   const orders = databaseEnabled
-    ? (await getOrdersService().list({ branchId: getLaundryBranchId(), page: 1, pageSize: 100 })).items
+    ? (await getOrdersService().list({ branchId: session.branchId, page: 1, pageSize: 100 })).items
     : mockOrders;
   const todayKey = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Makassar" }).format(new Date());
   const active = orders.filter((order) => order.status !== "completed").length;

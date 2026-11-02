@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 import { orderStatuses, type OrderStatus } from "@/features/orders/domain/order";
-import { getLaundryBranchId, isOrdersDatabaseEnabled } from "@/server/db/mode";
+import { isOrdersDatabaseEnabled } from "@/server/db/mode";
+import { getAuthSession } from "@/server/modules/auth/auth.session";
 import { getOrdersService } from "@/server/modules/orders/orders.runtime";
 
 export const runtime = "nodejs";
@@ -15,6 +16,8 @@ function unavailable() {
 }
 
 export async function GET(request: Request) {
+  const session = await getAuthSession();
+  if (!session) return NextResponse.json({ error: "Silakan masuk untuk melanjutkan." }, { status: 401 });
   if (!isOrdersDatabaseEnabled()) return unavailable();
   const url = new URL(request.url);
   const page = Number(url.searchParams.get("page") ?? 1);
@@ -30,7 +33,7 @@ export async function GET(request: Request) {
 
   try {
     const result = await getOrdersService().list({
-      branchId: getLaundryBranchId(),
+      branchId: session.branchId,
       page,
       pageSize,
       search,
@@ -43,6 +46,8 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const session = await getAuthSession();
+  if (!session) return NextResponse.json({ error: "Silakan masuk untuk melanjutkan." }, { status: 401 });
   if (!isOrdersDatabaseEnabled()) return unavailable();
   let input: unknown;
   try {
@@ -52,7 +57,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const order = await getOrdersService().create(input, getLaundryBranchId());
+    const order = await getOrdersService().create(input, session.branchId);
     return NextResponse.json({ order }, { status: 201 });
   } catch (error) {
     if (error instanceof ZodError) {

@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { orderStatuses } from "@/features/orders/domain/order";
-import { getLaundryBranchId, isOrdersDatabaseEnabled } from "@/server/db/mode";
+import { isOrdersDatabaseEnabled } from "@/server/db/mode";
+import { getAuthSession } from "@/server/modules/auth/auth.session";
 import { getOrdersService } from "@/server/modules/orders/orders.runtime";
 import {
   InvalidOrderTransitionError,
@@ -18,6 +19,8 @@ export async function PATCH(
   request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
+  const session = await getAuthSession();
+  if (!session) return NextResponse.json({ error: "Silakan masuk untuk melanjutkan." }, { status: 401 });
   if (!isOrdersDatabaseEnabled()) {
     return NextResponse.json({ error: "PostgreSQL Pesanan hanya aktif pada local development atau Vercel Preview." }, { status: 503 });
   }
@@ -37,8 +40,8 @@ export async function PATCH(
     const order = await getOrdersService().advanceStatus({
       id,
       nextStatus: parsed.data.nextStatus,
-      branchId: getLaundryBranchId(),
-      actorId: process.env.LAUNDRY_DEMO_ACTOR_ID || "preview-user",
+      branchId: session.branchId,
+      actorId: session.userId,
     });
     return NextResponse.json({ order });
   } catch (error) {

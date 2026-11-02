@@ -18,7 +18,8 @@
 
 ## Tahap 3 — Kesiapan operasional
 
-- [ ] Autentikasi, role-based access, audit log, pembatasan permintaan, dan isolasi cabang.
+- [x] Login/registrasi email-password untuk akun Pemilik dan pembatasan pesanan berdasarkan cabang sesi.
+- [ ] Role-based access terperinci, audit log, rate limit, dan uji isolasi cabang lintas akun.
 - [ ] Nota/cetak, pagination, dan impor/ekspor.
 - [ ] Notifikasi pelanggan untuk status dan pesanan siap, menggunakan provider yang dipilih.
 - [ ] Rekonsiliasi kas, pembayaran digital, refund, dan laporan terdefinisi.
