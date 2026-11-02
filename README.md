@@ -2,6 +2,8 @@
 
 Dashboard operasional laundry berbasis **Next.js App Router**, TypeScript, dan Tailwind CSS. Tampilan memakai pola TypeUI yang ringkas: fokus pada data, jarak rapat, navigasi sederhana, dan dark mode sebagai tema awal.
 
+![Preview dashboard LaundryOS](./public/readme-preview.svg)
+
 > **Status:** starter MVP untuk pengembangan. Semua nama dan nomor kontak dalam fixture adalah sintetis/masked; data transaksi hanya angka contoh. Dashboard memakai fixture; halaman Pesanan dapat membuat pesanan dan mengubah status yang tersimpan di `localStorage` browser. Belum ada autentikasi, database, multi-cabang, atau transaksi backend. Jangan gunakan data contoh sebagai catatan usaha sungguhan.
 
 ## Fitur antarmuka
@@ -85,3 +87,4 @@ Data contoh di `src/features/orders/data/mock-orders.ts` bukan sumber data persi
 ## Lisensi
 
 Belum ditentukan. Tetapkan lisensi sebelum mendistribusikan atau menerima kontribusi eksternal.
+
