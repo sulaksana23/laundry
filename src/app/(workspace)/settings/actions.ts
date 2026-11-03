@@ -1,0 +1,32 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { getAuthSession } from "@/server/modules/auth/auth.session";
+import { isOrdersDatabaseEnabled } from "@/server/db/mode";
+import { getNeonSql } from "@/server/db/neon";
+
+const allowedTimezones = ["Asia/Makassar", "Asia/Jakarta", "Asia/Jayapura"];
+
+export async function updateBranchProfile(formData: FormData) {
+  const session = await getAuthSession();
+  if (!session || !isOrdersDatabaseEnabled()) throw new Error("Silakan masuk untuk mengubah profil usaha.");
+
+  const name = String(formData.get("name") ?? "").trim();
+  const phone = String(formData.get("phone") ?? "").trim();
+  const email = String(formData.get("email") ?? "").trim();
+  const address = String(formData.get("address") ?? "").trim();
+  const timezone = String(formData.get("timezone") ?? "").trim();
+
+  if (name.length < 2 || name.length > 100) throw new Error("Nama usaha tidak valid.");
+  if (phone.length > 32 || (phone && phone.replace(/\D/g, "").length < 8)) throw new Error("Nomor telepon usaha tidak valid.");
+  if (email.length > 254 || (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) throw new Error("Email usaha tidak valid.");
+  if (address.length > 300) throw new Error("Alamat usaha terlalu panjang.");
+  if (!allowedTimezones.includes(timezone)) throw new Error("Zona waktu tidak valid.");
+
+  await getNeonSql().query(
+    "UPDATE laundry_branches SET name = $2, phone = $3, email = $4, address = $5, timezone = $6 WHERE id = $1",
+    [session.branchId, name, phone || null, email || null, address || null, timezone],
+  );
+  revalidatePath("/settings");
+  revalidatePath("/", "layout");
+}

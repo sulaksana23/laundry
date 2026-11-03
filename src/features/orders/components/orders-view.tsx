@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { CreditCard, Download, Plus, Printer, Search, SlidersHorizontal, X } from "lucide-react";
+import { CreditCard, Download, History, MessageCircle, Plus, Printer, Search, SlidersHorizontal, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,20 @@ import { createOrderSchema, orderStatusLabels, orderStatuses, type CreateOrderIn
 import { formatCurrency, formatShortDate } from "@/lib/format";
 
 type OrderServiceOption = { id: string; name: string; unit: string; price: number };
+
+type OrderHistoryEntry = { id: string; previousStatus: string | null; nextStatus: string; changedAt: string };
+
+function whatsappUrl(order: LaundryOrder) {
+  const digits = order.customerPhone.replace(/\D/g, "");
+  if (digits.length < 9 || digits.length > 15) return null;
+  const international = digits.startsWith("62") ? digits : digits.startsWith("0") ? "62" + digits.slice(1) : digits;
+  const remaining = Math.max(0, order.amount - order.paidAmount);
+  const message =
+    `Halo ${order.customerName}, cucian Anda (pesanan ${order.id} · ${order.serviceName}) sudah selesai dan siap diambil. ` +
+    (remaining > 0 ? `Sisa pembayaran ${formatCurrency(remaining)}. ` : "Pembayaran sudah lunas. ") +
+    "Terima kasih sudah menggunakan layanan kami.";
+  return `https://wa.me/${international}?text=${encodeURIComponent(message)}`;
+}
 
 const storageKey = "laundryos:orders:v1";
 const filters = ["Semua", "Diterima", "Dicuci", "Dikeringkan", "Disetrika", "Siap diambil", "Selesai"];
@@ -34,6 +48,31 @@ export function OrdersView({ initialOrders, initialTotal = initialOrders.length,
   const [pendingAction, setPendingAction] = useState("");
   const [paymentOrder, setPaymentOrder] = useState<LaundryOrder | null>(null);
   const [receiptOrder, setReceiptOrder] = useState<LaundryOrder | null>(null);
+  const [historyOrder, setHistoryOrder] = useState<LaundryOrder | null>(null);
+  const [historyEntries, setHistoryEntries] = useState<OrderHistoryEntry[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState("");
+
+  async function openHistory(order: LaundryOrder) {
+    setHistoryOrder(order);
+    setHistoryEntries([]);
+    setHistoryError("");
+    if (!databaseEnabled) return;
+    setHistoryLoading(true);
+    try {
+      const response = await fetch(`/api/orders/${encodeURIComponent(order.id)}/history`, { credentials: "same-origin" });
+      const result = await response.json() as { history?: OrderHistoryEntry[]; error?: string };
+      if (!response.ok || !Array.isArray(result.history)) {
+        setHistoryError(result.error ?? "Riwayat pesanan gagal dimuat.");
+        return;
+      }
+      setHistoryEntries(result.history);
+    } catch {
+      setHistoryError("Tidak dapat memuat riwayat pesanan. Coba lagi.");
+    } finally {
+      setHistoryLoading(false);
+    }
+  }
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -279,7 +318,7 @@ export function OrdersView({ initialOrders, initialTotal = initialOrders.length,
         <div className="overflow-x-auto" aria-busy={loadingList}>
           <table className="w-full min-w-[880px] text-left text-xs">
             <thead><tr className="bg-surface-raised/50 text-[10px] uppercase tracking-wide text-muted"><th className="px-4 py-3 font-medium">Pesanan / pelanggan</th><th className="px-3 py-3 font-medium">Layanan</th><th className="px-3 py-3 font-medium">Berat</th><th className="px-3 py-3 font-medium">Jatuh tempo</th><th className="px-3 py-3 font-medium">Status</th><th className="px-3 py-3 font-medium">Pembayaran</th><th className="px-4 py-3 text-right font-medium">Total</th><th className="w-40 px-4 py-3 text-right font-medium">Aksi</th></tr></thead>
-            <tbody>{visibleOrders.map((order) => <tr key={order.id} className="border-t border-border/70 transition hover:bg-surface-raised/50"><td className="px-4 py-3"><p className="font-semibold">{order.id}</p><p className="mt-1 text-[10px] text-muted">{order.customerName} · {order.customerPhone}</p></td><td className="px-3 py-3 text-muted">{order.serviceName}</td><td className="px-3 py-3">{order.weightKg} kg</td><td className="px-3 py-3 text-muted">{formatShortDate(order.dueAt)}</td><td className="px-3 py-3"><OrderStatusBadge status={order.status} /></td><td className="px-3 py-3"><PaymentStatusBadge status={order.paymentStatus} /></td><td className="px-4 py-3 text-right font-semibold">{formatCurrency(order.amount)}</td><td className="px-4 py-3 text-right"><div className="flex flex-col items-end gap-1"><button type="button" aria-label={"Cetak nota pesanan " + order.id} title="Cetak nota" onClick={() => setReceiptOrder(order)} className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[10px] font-medium text-muted hover:border-accent/50 hover:text-accent"><Printer size={12} /> Nota</button>{order.paymentStatus !== "paid" && <button onClick={() => { setPaymentOrder(order); setError(""); }} className="inline-flex items-center gap-1 rounded-md border border-accent/40 px-2 py-1 text-[10px] font-medium text-accent hover:bg-accent/10"><CreditCard size={12} /> Catat bayar</button>}{order.status !== "completed" ? <button aria-busy={pendingAction === order.id} disabled={pendingAction === order.id} onClick={() => advanceOrder(order.id, order.status)} className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[10px] font-medium text-muted transition hover:border-accent/50 hover:text-accent disabled:cursor-wait disabled:opacity-50">{pendingAction === order.id ? <><Spinner className="size-3" /> Menyimpan…</> : "Lanjut proses"}</button> : <span className="text-[10px] text-muted">Selesai</span>}</div></td></tr>)}</tbody>
+            <tbody>{visibleOrders.map((order) => <tr key={order.id} className="border-t border-border/70 transition hover:bg-surface-raised/50"><td className="px-4 py-3"><p className="font-semibold">{order.id}</p><p className="mt-1 text-[10px] text-muted">{order.customerName} · {order.customerPhone}</p></td><td className="px-3 py-3 text-muted">{order.serviceName}</td><td className="px-3 py-3">{order.weightKg} kg</td><td className="px-3 py-3 text-muted">{formatShortDate(order.dueAt)}</td><td className="px-3 py-3"><OrderStatusBadge status={order.status} /></td><td className="px-3 py-3"><PaymentStatusBadge status={order.paymentStatus} /></td><td className="px-4 py-3 text-right font-semibold">{formatCurrency(order.amount)}</td><td className="px-4 py-3 text-right"><div className="flex flex-col items-end gap-1"><button type="button" aria-label={"Cetak nota pesanan " + order.id} title="Cetak nota" onClick={() => setReceiptOrder(order)} className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[10px] font-medium text-muted hover:border-accent/50 hover:text-accent"><Printer size={12} /> Nota</button><button type="button" aria-label={"Riwayat status pesanan " + order.id} title="Riwayat status" onClick={() => openHistory(order)} className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[10px] font-medium text-muted hover:border-accent/50 hover:text-accent"><History size={12} /> Riwayat</button>{order.status === "ready" && whatsappUrl(order) && <a href={whatsappUrl(order)!} target="_blank" rel="noopener noreferrer" aria-label={"Kabari pelanggan lewat WhatsApp untuk pesanan " + order.id} title="Kabari pelanggan lewat WhatsApp" className="inline-flex items-center gap-1 rounded-md border border-emerald-300/40 px-2 py-1 text-[10px] font-medium text-emerald-200 hover:bg-emerald-300/10"><MessageCircle size={12} /> WhatsApp</a>}{order.paymentStatus !== "paid" && <button onClick={() => { setPaymentOrder(order); setError(""); }} className="inline-flex items-center gap-1 rounded-md border border-accent/40 px-2 py-1 text-[10px] font-medium text-accent hover:bg-accent/10"><CreditCard size={12} /> Catat bayar</button>}{order.status !== "completed" ? <button aria-busy={pendingAction === order.id} disabled={pendingAction === order.id} onClick={() => advanceOrder(order.id, order.status)} className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[10px] font-medium text-muted transition hover:border-accent/50 hover:text-accent disabled:cursor-wait disabled:opacity-50">{pendingAction === order.id ? <><Spinner className="size-3" /> Menyimpan…</> : "Lanjut proses"}</button> : <span className="text-[10px] text-muted">Selesai</span>}</div></td></tr>)}</tbody>
           </table>
           {visibleOrders.length === 0 && <div className="p-12 text-center"><p className="text-sm font-medium">Pesanan tidak ditemukan</p><p className="mt-1 text-xs text-muted">Ubah kata kunci atau filter status.</p></div>}
         </div>
@@ -306,6 +345,17 @@ export function OrdersView({ initialOrders, initialTotal = initialOrders.length,
             {error && <p role="alert" className="rounded-lg border border-danger/20 bg-danger/10 px-3 py-2 text-xs text-danger">{error}</p>}
             <div className="flex justify-end gap-2 border-t border-border pt-4"><Button type="button" onClick={() => setPaymentOrder(null)}>Batal</Button><Button type="submit" variant="primary" isLoading={pendingAction === paymentOrder.id} loadingText="Menyimpan…">Simpan pembayaran</Button></div>
           </form>
+        </div>
+      </div>}
+      {historyOrder && <div className="animate-overlay-enter fixed inset-0 z-[60] flex items-center justify-center p-4">
+        <button type="button" aria-label="Tutup dialog" className="absolute inset-0 bg-black/65" onClick={() => setHistoryOrder(null)} />
+        <div role="dialog" aria-modal="true" aria-labelledby="history-title" className="animate-dialog-enter relative z-10 w-full max-w-md rounded-2xl border border-border bg-surface p-5 shadow-2xl">
+          <div className="mb-4 flex items-start justify-between"><div><p className="text-[10px] font-semibold uppercase tracking-widest text-accent">Riwayat status</p><h2 id="history-title" className="mt-1 text-lg font-semibold">{historyOrder.id}</h2><p className="mt-1 text-xs text-muted">{historyOrder.customerName} · {historyOrder.serviceName}</p></div><button onClick={() => setHistoryOrder(null)} aria-label="Tutup dialog" className="rounded-md p-1.5 text-muted hover:bg-surface-hover"><X size={16} /></button></div>
+          {historyLoading ? <p className="flex items-center gap-2 py-4 text-xs text-muted"><Spinner className="size-3.5" /> Memuat riwayat…</p>
+            : historyError ? <p role="alert" className="rounded-lg border border-danger/20 bg-danger/10 px-3 py-2 text-xs text-danger">{historyError}</p>
+            : !databaseEnabled ? <p className="py-2 text-xs leading-5 text-muted">Mode demo: riwayat perubahan status tersimpan hanya tersedia saat database aktif. Status saat ini: <span className="font-medium text-foreground">{orderStatusLabels[historyOrder.status]}</span>.</p>
+            : historyEntries.length === 0 ? <p className="py-2 text-xs text-muted">Belum ada riwayat perubahan status untuk pesanan ini.</p>
+            : <ol className="space-y-0">{historyEntries.map((entry, index) => <li key={entry.id} className="relative flex gap-3 pb-4 last:pb-0">{index < historyEntries.length - 1 && <span className="absolute left-[5px] top-3 h-full w-px bg-border" />}<span className="relative z-10 mt-1 size-[11px] shrink-0 rounded-full border-2 border-accent bg-surface" /><div className="min-w-0"><p className="text-xs font-medium">{entry.previousStatus ? `${orderStatusLabels[entry.previousStatus as OrderStatus] ?? entry.previousStatus} → ` : ""}{orderStatusLabels[entry.nextStatus as OrderStatus] ?? entry.nextStatus}</p><p className="mt-0.5 text-[10px] text-muted">{formatShortDate(entry.changedAt)} · {new Date(entry.changedAt).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Makassar" })} WITA</p></div></li>)}</ol>}
         </div>
       </div>}
       {dialogOpen && <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">

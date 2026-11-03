@@ -162,6 +162,50 @@ export async function getFinanceSummary(branchId: string): Promise<FinanceSummar
   };
 }
 
+export interface BranchProfile {
+  name: string;
+  phone: string;
+  email: string;
+  address: string;
+  timezone: string;
+}
+
+export async function getBranchProfile(branchId: string): Promise<BranchProfile | null> {
+  const rows = resultRows<{
+    name: string; phone: string | null; email: string | null; address: string | null; timezone: string;
+  }>(await getNeonSql().query(
+    "SELECT name, phone, email, address, timezone FROM laundry_branches WHERE id = $1",
+    [branchId],
+  ));
+  const row = rows[0];
+  if (!row) return null;
+  return {
+    name: row.name, phone: row.phone ?? "", email: row.email ?? "",
+    address: row.address ?? "", timezone: row.timezone,
+  };
+}
+
+export interface OrderHistoryEntry {
+  id: string;
+  previousStatus: string | null;
+  nextStatus: string;
+  changedAt: string;
+}
+
+export async function listOrderHistory(branchId: string, orderId: string): Promise<OrderHistoryEntry[]> {
+  const rows = resultRows<{
+    id: string; previous_status: string | null; next_status: string; changed_at: string | Date;
+  }>(await getNeonSql().query(
+    "SELECT id::text, previous_status, next_status, changed_at FROM laundry_order_status_history " +
+    "WHERE branch_id = $1 AND order_id = $2 ORDER BY changed_at ASC",
+    [branchId, orderId],
+  ));
+  return rows.map((row) => ({
+    id: row.id, previousStatus: row.previous_status, nextStatus: row.next_status,
+    changedAt: new Date(String(row.changed_at)).toISOString(),
+  }));
+}
+
 export interface DashboardData {
   statusCounts: Record<string, number>;
   dailyIncome: { date: string; amount: number }[];

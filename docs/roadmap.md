@@ -16,7 +16,7 @@
 - [x] Implementasikan operasi pelanggan, layanan, pembayaran, persediaan, pengeluaran, dan laporan pada Neon.
 - [x] Hubungkan modul operasional tersebut ke data cabang.
 - [x] Hubungkan Dashboard ke data tersimpan.
-- [ ] Hubungkan profil Pengaturan ke data tersimpan.
+- [x] Hubungkan profil Pengaturan ke data tersimpan (migrasi 006: telepon, email, alamat cabang).
 
 ## Tahap 3 — Kesiapan operasional
 
@@ -24,6 +24,10 @@
 - [ ] Role-based access terperinci, audit log, rate limit, dan uji isolasi cabang lintas akun.
 - [x] Cetak nota ringkasan pesanan dari daftar.
 - [x] Pagination server-side untuk daftar pesanan, pencarian, dan filter status.
+- [x] Riwayat perubahan status pesanan dapat dilihat dari daftar pesanan.
+- [x] Kabari pelanggan lewat WhatsApp (tautan wa.me) saat pesanan siap diambil.
+- [x] Rate limit percobaan login dan registrasi.
+- [x] Endpoint health check di `/api/health`.
 - [ ] Impor massal dan ekspor lintas halaman.
 - [ ] Notifikasi pelanggan untuk status dan pesanan siap, menggunakan provider yang dipilih.
 - [ ] Rekonsiliasi kas, pembayaran digital, refund, dan laporan terdefinisi.
