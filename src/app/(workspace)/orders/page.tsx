@@ -7,6 +7,7 @@ import { mockOrders, serviceCatalog } from "@/features/orders/data/mock-orders";
 import { isOrdersDatabaseEnabled } from "@/server/db/mode";
 import { getAuthSession, isAuthConfigured } from "@/server/modules/auth/auth.session";
 import { getOrdersService } from "@/server/modules/orders/orders.runtime";
+import { getOrderSummary } from "@/server/modules/workspace/operations";
 import { getServicesService } from "@/server/modules/services/services.runtime";
 
 export const metadata: Metadata = { title: "Pesanan" };
@@ -17,30 +18,33 @@ export default async function OrdersPage() {
   const productionDemo = process.env.VERCEL_ENV === "production" && !isAuthConfigured();
   if (!session && !productionDemo) redirect("/login");
   const databaseEnabled = Boolean(session) && isOrdersDatabaseEnabled();
-  const [ordersResult, servicesResult] = session && databaseEnabled
+  const [ordersResult, servicesResult, databaseSummary] = session && databaseEnabled
     ? await Promise.all([
-        getOrdersService().list({ branchId: session.branchId, page: 1, pageSize: 100 }),
+        getOrdersService().list({ branchId: session.branchId, page: 1, pageSize: 25 }),
         getServicesService().list(session.branchId),
+        getOrderSummary(session.branchId),
       ])
-    : [null, null];
+    : [null, null, null];
   const orders = ordersResult?.items ?? mockOrders;
   const availableServices = (servicesResult ?? serviceCatalog).filter((service) => service.isActive && service.unit === "kg").map(({ id, name, unit, price }) => ({ id, name, unit, price }));
   const todayKey = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Makassar" }).format(new Date());
-  const active = orders.filter((order) => order.status !== "completed").length;
-  const ready = orders.filter((order) => order.status === "ready").length;
-  const today = orders.filter((order) => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Makassar" }).format(new Date(order.receivedAt)) === todayKey).length;
-  const unpaid = orders.filter((order) => order.paymentStatus !== "paid").length;
+  const summary = databaseSummary ?? {
+    active: orders.filter((order) => order.status !== "completed").length,
+    ready: orders.filter((order) => order.status === "ready").length,
+    today: orders.filter((order) => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Makassar" }).format(new Date(order.receivedAt)) === todayKey).length,
+    unpaid: orders.filter((order) => order.paymentStatus !== "paid").length,
+  };
 
   return (
     <>
       <PageHeader eyebrow="Operasional" title="Pesanan" description="Pantau alur cucian dari penerimaan hingga siap diambil." />
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Card className="p-3.5"><p className="text-[11px] text-muted">Total hari ini</p><p className="mt-1 text-xl font-semibold">{today}</p></Card>
-        <Card className="p-3.5"><p className="text-[11px] text-muted">Sedang diproses</p><p className="mt-1 text-xl font-semibold">{active}</p></Card>
-        <Card className="p-3.5"><p className="text-[11px] text-muted">Siap diambil</p><p className="mt-1 text-xl font-semibold">{ready}</p></Card>
-        <Card className="p-3.5"><p className="text-[11px] text-muted">Belum lunas</p><p className="mt-1 text-xl font-semibold">{unpaid}</p></Card>
+        <Card className="p-3.5"><p className="text-[11px] text-muted">Total hari ini</p><p className="mt-1 text-xl font-semibold">{summary.today}</p></Card>
+        <Card className="p-3.5"><p className="text-[11px] text-muted">Sedang diproses</p><p className="mt-1 text-xl font-semibold">{summary.active}</p></Card>
+        <Card className="p-3.5"><p className="text-[11px] text-muted">Siap diambil</p><p className="mt-1 text-xl font-semibold">{summary.ready}</p></Card>
+        <Card className="p-3.5"><p className="text-[11px] text-muted">Belum lunas</p><p className="mt-1 text-xl font-semibold">{summary.unpaid}</p></Card>
       </div>
-      <OrdersView initialOrders={orders} databaseEnabled={databaseEnabled} availableServices={availableServices} />
+      <OrdersView initialOrders={orders} initialTotal={ordersResult?.total ?? orders.length} databaseEnabled={databaseEnabled} availableServices={availableServices} />
     </>
   );
 }

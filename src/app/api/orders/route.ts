@@ -57,7 +57,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const order = await getOrdersService().create(input, session.branchId);
+    const order = await getOrdersService().create(input, session.branchId, session.userId);
     return NextResponse.json({ order }, { status: 201 });
   } catch (error) {
     if (error instanceof ZodError) {

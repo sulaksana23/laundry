@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
-import { Bell, ExternalLink, Heart, LogOut, Menu, Plus, Search, Shirt, Sparkles, X } from "lucide-react";
+import { Bell, ExternalLink, Heart, LogOut, Menu, Plus, Search, Shirt, X } from "lucide-react";
 import { navigation } from "@/components/layout/navigation";
 import { cn } from "@/lib/utils";
 
@@ -64,11 +64,12 @@ function Sidebar({ onNavigate, user }: { onNavigate?: () => void; user: { fullNa
 
 export function AppShell({ children, user }: { children: React.ReactNode; user: { fullName: string; email: string; branchName: string; isDemo?: boolean } }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   async function signOut() {
     await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" });
-    window.location.assign("/login");
+    router.replace("/login");
   }
 
   return (

@@ -13,15 +13,17 @@
 - [ ] Tetapkan role dan alur beberapa cabang.
 - [x] Buat migrasi PostgreSQL awal dan seed katalog layanan sintetis.
 - [x] Implementasikan repository/API pesanan untuk local development dan Preview.
-- [ ] Implementasikan repository untuk pelanggan, layanan, pembayaran, stok, dan pengeluaran.
-- [ ] Pindahkan modul selain Pesanan dari fixture ke API.
+- [x] Implementasikan operasi pelanggan, layanan, pembayaran, persediaan, pengeluaran, dan laporan pada Neon.
+- [x] Hubungkan modul operasional tersebut ke data cabang.
+- [ ] Hubungkan Dashboard dan profil Pengaturan ke data tersimpan.
 
 ## Tahap 3 — Kesiapan operasional
 
 - [x] Login/registrasi email-password untuk akun Pemilik dan pembatasan pesanan berdasarkan cabang sesi.
 - [ ] Role-based access terperinci, audit log, rate limit, dan uji isolasi cabang lintas akun.
 - [x] Cetak nota ringkasan pesanan dari daftar.
-- [ ] Pagination dan impor/ekspor lanjutan.
+- [x] Pagination server-side untuk daftar pesanan, pencarian, dan filter status.
+- [ ] Impor massal dan ekspor lintas halaman.
 - [ ] Notifikasi pelanggan untuk status dan pesanan siap, menggunakan provider yang dipilih.
 - [ ] Rekonsiliasi kas, pembayaran digital, refund, dan laporan terdefinisi.
 - [ ] Backup/restore, observability, aksesibilitas, dan uji end-to-end.

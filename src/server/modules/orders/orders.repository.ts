@@ -17,6 +17,7 @@ export interface OrderListResult {
 
 export interface NewOrderRecord extends CreateOrderInput {
   branchId: string;
+  actorId: string;
   amount: number;
   receivedAt: string;
 }

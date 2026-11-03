@@ -95,9 +95,8 @@ export class PostgresOrdersRepository implements OrdersRepository {
   }
 
   async create(input: NewOrderRecord): Promise<LaundryOrder> {
-    const id = "LND-" + new Date().toISOString().slice(0, 10).replaceAll("-", "") + "-" + randomUUID().slice(0, 4).toUpperCase();
+    const id = "LND-" + new Date().toISOString().slice(0, 10).replaceAll("-", "") + "-" + randomUUID().replaceAll("-", "").slice(0, 12).toUpperCase();
     const historyId = randomUUID();
-    const actorId = process.env.LAUNDRY_DEMO_ACTOR_ID || "preview-user";
     const dueDate = input.dueAt.slice(0, 10);
     const sql = getNeonSql();
     const rows = await sql.query(
@@ -118,7 +117,7 @@ export class PostgresOrdersRepository implements OrdersRepository {
       ") " +
       "SELECT " + ORDER_COLUMNS +
       " FROM inserted_order o JOIN laundry_customers c ON c.id = o.customer_id AND c.branch_id = o.branch_id",
-      [randomUUID(), input.branchId, input.customerName, input.customerPhone, id, input.weightKg, input.amount, dueDate, input.serviceName, historyId, actorId],
+      [randomUUID(), input.branchId, input.customerName, input.customerPhone, id, input.weightKg, input.amount, dueDate, input.serviceName, historyId, input.actorId],
     );
     const row = (rows as OrderRow[])[0];
     if (!row) throw new Error("Layanan tidak tersedia pada cabang ini.");
@@ -127,7 +126,7 @@ export class PostgresOrdersRepository implements OrdersRepository {
 
   async updateStatus(input: UpdateOrderStatusRecord): Promise<LaundryOrder> {
     const historyId = randomUUID();
-    const actorId = input.actorId || process.env.LAUNDRY_DEMO_ACTOR_ID || "preview-user";
+    const actorId = input.actorId;
     const rows = await getNeonSql().query(
       "WITH updated_order AS (" +
         "UPDATE laundry_orders SET status = $1, updated_at = $2::timestamptz " +

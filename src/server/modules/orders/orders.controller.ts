@@ -10,8 +10,8 @@ export class OrdersController {
     return this.service.list(query);
   }
 
-  create(payload: unknown, actor: { branchId: string }) {
-    return this.service.create(payload, actor.branchId);
+  create(payload: unknown, actor: { branchId: string; userId: string }) {
+    return this.service.create(payload, actor.branchId, actor.userId);
   }
 
   advanceStatus(input: { id: string; nextStatus: OrderStatus }, actor: { branchId: string; userId: string }) {

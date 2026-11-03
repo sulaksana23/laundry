@@ -30,10 +30,10 @@ export class OrdersService {
     return this.orders.list(query);
   }
 
-  async create(rawInput: unknown, branchId: string) {
+  async create(rawInput: unknown, branchId: string, actorId: string) {
     const parsed = createOrderSchema.safeParse(rawInput);
     if (!parsed.success) throw parsed.error;
-    if (!branchId) throw new Error("Branch context wajib tersedia.");
+    if (!branchId || !actorId) throw new Error("Branch dan pengguna wajib tersedia.");
 
     const amount = await this.pricing.calculate(parsed.data, branchId);
     if (!Number.isSafeInteger(amount) || amount < 0) throw new Error("Kebijakan harga mengembalikan nominal yang tidak valid.");
@@ -41,6 +41,7 @@ export class OrdersService {
     return this.orders.create({
       ...parsed.data,
       branchId,
+      actorId,
       amount,
       receivedAt: this.now().toISOString(),
     });

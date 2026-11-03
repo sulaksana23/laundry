@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
 import { CreditCard, Download, Plus, Printer, Search, SlidersHorizontal, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
@@ -15,9 +16,16 @@ type OrderServiceOption = { id: string; name: string; unit: string; price: numbe
 
 const storageKey = "laundryos:orders:v1";
 const filters = ["Semua", "Diterima", "Dicuci", "Dikeringkan", "Disetrika", "Siap diambil", "Selesai"];
+const orderPageSize = 25;
 
-export function OrdersView({ initialOrders, databaseEnabled = false, availableServices }: { initialOrders: LaundryOrder[]; databaseEnabled?: boolean; availableServices: OrderServiceOption[] }) {
+export function OrdersView({ initialOrders, initialTotal = initialOrders.length, databaseEnabled = false, availableServices }: { initialOrders: LaundryOrder[]; initialTotal?: number; databaseEnabled?: boolean; availableServices: OrderServiceOption[] }) {
+  const router = useRouter();
   const [orders, setOrders] = useState(initialOrders);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalOrders, setTotalOrders] = useState(initialTotal);
+  const [loadingList, setLoadingList] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const lastRequest = useRef({ page: 1, query: "", activeFilter: "Semua", refreshKey: 0 });
   const [ready, setReady] = useState(false);
   const [query, setQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState("Semua");
@@ -28,26 +36,80 @@ export function OrdersView({ initialOrders, databaseEnabled = false, availableSe
   const [receiptOrder, setReceiptOrder] = useState<LaundryOrder | null>(null);
 
   useEffect(() => {
-    if (databaseEnabled) {
+    const timer = window.setTimeout(() => {
+      if (!databaseEnabled) {
+        const saved = window.localStorage.getItem(storageKey);
+        if (saved) {
+          try {
+            const parsed: unknown = JSON.parse(saved);
+            if (Array.isArray(parsed)) setOrders(parsed as LaundryOrder[]);
+            else window.localStorage.removeItem(storageKey);
+          } catch {
+            window.localStorage.removeItem(storageKey);
+          }
+        }
+      }
       setReady(true);
-      return;
-    }
-    const saved = window.localStorage.getItem(storageKey);
-    if (saved) {
-      try { setOrders(JSON.parse(saved) as LaundryOrder[]); } catch { window.localStorage.removeItem(storageKey); }
-    }
-    setReady(true);
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [databaseEnabled]);
 
   useEffect(() => {
     if (ready && !databaseEnabled) window.localStorage.setItem(storageKey, JSON.stringify(orders));
   }, [orders, ready, databaseEnabled]);
 
-  const visibleOrders = useMemo(() => orders.filter((order) => {
-    const matchesQuery = `${order.id} ${order.customerName} ${order.customerPhone}`.toLowerCase().includes(query.toLowerCase());
-    const matchesFilter = activeFilter === "Semua" || orderStatusLabels[order.status] === activeFilter;
-    return matchesQuery && matchesFilter;
-  }), [orders, query, activeFilter]);
+  useEffect(() => {
+    if (!databaseEnabled) return;
+    const previous = lastRequest.current;
+    if (previous.page === currentPage && previous.query === query && previous.activeFilter === activeFilter && previous.refreshKey === refreshKey) return;
+    lastRequest.current = { page: currentPage, query, activeFilter, refreshKey };
+
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      setLoadingList(true);
+      setError("");
+      try {
+        const params = new URLSearchParams({ page: String(currentPage), pageSize: String(orderPageSize) });
+        if (query.trim()) params.set("search", query.trim());
+        const status = orderStatuses.find((value) => orderStatusLabels[value] === activeFilter);
+        if (status) params.set("status", status);
+        const response = await fetch("/api/orders?" + params.toString(), { credentials: "same-origin", signal: controller.signal });
+        const result = await response.json() as { items?: LaundryOrder[]; total?: number; error?: string };
+        if (!response.ok || !Array.isArray(result.items) || !Number.isSafeInteger(result.total) || (result.total ?? -1) < 0) {
+          setError(result.error ?? "Daftar pesanan gagal dimuat.");
+          return;
+        }
+        setTotalOrders(result.total!);
+        const lastPage = Math.max(1, Math.ceil(result.total! / orderPageSize));
+        if (currentPage > lastPage) {
+          setCurrentPage(lastPage);
+          return;
+        }
+        setOrders(result.items);
+      } catch {
+        if (!controller.signal.aborted) setError("Tidak dapat memuat halaman pesanan. Coba lagi.");
+      } finally {
+        if (!controller.signal.aborted) setLoadingList(false);
+      }
+    }, 180);
+
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [databaseEnabled, currentPage, query, activeFilter, refreshKey]);
+
+  const visibleOrders = useMemo(() => {
+    if (databaseEnabled) return orders;
+    return orders.filter((order) => {
+      const matchesQuery = `${order.id} ${order.customerName} ${order.customerPhone}`.toLowerCase().includes(query.toLowerCase());
+      const matchesFilter = activeFilter === "Semua" || orderStatusLabels[order.status] === activeFilter;
+      return matchesQuery && matchesFilter;
+    });
+  }, [orders, query, activeFilter, databaseEnabled]);
+  const totalPages = databaseEnabled ? Math.max(1, Math.ceil(totalOrders / orderPageSize)) : 1;
+  const rangeStart = totalOrders > 0 ? (currentPage - 1) * orderPageSize + 1 : 0;
+  const rangeEnd = Math.min(currentPage * orderPageSize, totalOrders);
 
   async function handleCreate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -82,7 +144,11 @@ export function OrdersView({ initialOrders, databaseEnabled = false, availableSe
           setError(result.error ?? "Pesanan gagal disimpan ke PostgreSQL.");
           return;
         }
-        setOrders((current) => [result.order as LaundryOrder, ...current]);
+        setCurrentPage(1);
+        setQuery("");
+        setActiveFilter("Semua");
+        setRefreshKey((current) => current + 1);
+        router.refresh();
         setDialogOpen(false);
         formElement.reset();
       } catch {
@@ -132,6 +198,7 @@ export function OrdersView({ initialOrders, databaseEnabled = false, availableSe
           return;
         }
         setOrders((current) => current.map((order) => order.id === orderId ? result.order as LaundryOrder : order));
+        router.refresh();
       } catch {
         setError("Tidak dapat menghubungi server. Coba lagi.");
       } finally {
@@ -166,6 +233,7 @@ export function OrdersView({ initialOrders, databaseEnabled = false, availableSe
         const result = await response.json();
         if (!response.ok) { setError(result.error ?? "Pembayaran gagal disimpan."); return; }
         setOrders((current) => current.map((order) => order.id === paymentOrder.id ? { ...order, paidAmount: result.paidAmount, paymentStatus: result.paymentStatus } : order));
+        router.refresh();
         setPaymentOrder(null);
       } catch {
         setError("Tidak dapat menghubungi server. Coba lagi.");
@@ -188,7 +256,7 @@ export function OrdersView({ initialOrders, databaseEnabled = false, availableSe
     ];
     const link = document.createElement("a");
     link.href = URL.createObjectURL(new Blob(["\uFEFF" + rows.map((row) => row.map(quote).join(",")).join("\r\n")], { type: "text/csv;charset=utf-8" }));
-    link.download = "pesanan-laundry.csv";
+    link.download = databaseEnabled ? "pesanan-halaman-" + currentPage + ".csv" : "pesanan-laundry.csv";
     link.click();
     window.setTimeout(() => URL.revokeObjectURL(link.href), 1000);
   }
@@ -196,26 +264,35 @@ export function OrdersView({ initialOrders, databaseEnabled = false, availableSe
   return (
     <>
       <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex flex-wrap gap-1.5">{filters.map((filter) => <button key={filter} onClick={() => setActiveFilter(filter)} className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${activeFilter === filter ? "bg-accent text-accent-foreground" : "bg-surface text-muted hover:bg-surface-hover hover:text-foreground"}`}>{filter}</button>)}</div>
+        <div className="flex flex-wrap gap-1.5">{filters.map((filter) => <button key={filter} onClick={() => { setActiveFilter(filter); setCurrentPage(1); }} className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${activeFilter === filter ? "bg-accent text-accent-foreground" : "bg-surface text-muted hover:bg-surface-hover hover:text-foreground"}`}>{filter}</button>)}</div>
         <div className="flex flex-wrap gap-2">
-          <div className="relative min-w-[220px] flex-1 lg:flex-none"><Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" /><Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Cari nomor atau pelanggan" className="pl-9" /></div>
+          <div className="relative min-w-[220px] flex-1 lg:flex-none"><Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" /><Input value={query} onChange={(event) => { setQuery(event.target.value); setCurrentPage(1); }} placeholder="Cari nomor atau pelanggan" className="pl-9" /></div>
           <Button variant="secondary" disabled title="Filter lanjutan segera tersedia" className="h-9 px-2.5 text-xs"><SlidersHorizontal size={14} /> <span className="hidden sm:inline">Filter</span></Button>
-          <Button variant="secondary" onClick={exportOrders} className="h-9 px-2.5 text-xs"><Download size={14} /> <span className="hidden sm:inline">Ekspor</span></Button>
+          <Button variant="secondary" onClick={exportOrders} title="Ekspor pesanan yang ditampilkan pada halaman ini sebagai CSV" aria-label="Ekspor pesanan halaman ini sebagai CSV" className="h-9 px-2.5 text-xs"><Download size={14} /> <span className="hidden sm:inline">Ekspor halaman</span></Button>
           <Button variant="primary" onClick={() => setDialogOpen(true)}><Plus size={14} /> Pesanan baru</Button>
         </div>
       </div>
 
       {error && !dialogOpen && <p role="alert" className="mb-3 rounded-lg border border-danger/20 bg-danger/10 px-3 py-2 text-xs text-danger">{error}</p>}
       <Card className="overflow-hidden">
-        <div className="flex items-center justify-between border-b border-border px-4 py-3"><div><p className="text-sm font-semibold">Daftar pesanan</p><p className="mt-0.5 text-[11px] text-muted">{visibleOrders.length} pesanan ditampilkan</p></div><span className="text-[11px] text-muted">{databaseEnabled ? "Neon · Tersambung" : "Mode demo lokal"}</span></div>
-        <div className="overflow-x-auto">
+        <div className="flex items-center justify-between border-b border-border px-4 py-3"><div><p className="text-sm font-semibold">Daftar pesanan</p><p className="mt-0.5 text-[11px] text-muted">{loadingList ? "Memuat data pesanan…" : visibleOrders.length + " pesanan pada halaman ini"}</p></div><span className="text-[11px] text-muted">{databaseEnabled ? "Neon · Tersambung" : "Mode demo lokal"}</span></div>
+        <div className="overflow-x-auto" aria-busy={loadingList}>
           <table className="w-full min-w-[880px] text-left text-xs">
             <thead><tr className="bg-surface-raised/50 text-[10px] uppercase tracking-wide text-muted"><th className="px-4 py-3 font-medium">Pesanan / pelanggan</th><th className="px-3 py-3 font-medium">Layanan</th><th className="px-3 py-3 font-medium">Berat</th><th className="px-3 py-3 font-medium">Jatuh tempo</th><th className="px-3 py-3 font-medium">Status</th><th className="px-3 py-3 font-medium">Pembayaran</th><th className="px-4 py-3 text-right font-medium">Total</th><th className="w-40 px-4 py-3 text-right font-medium">Aksi</th></tr></thead>
             <tbody>{visibleOrders.map((order) => <tr key={order.id} className="border-t border-border/70 transition hover:bg-surface-raised/50"><td className="px-4 py-3"><p className="font-semibold">{order.id}</p><p className="mt-1 text-[10px] text-muted">{order.customerName} · {order.customerPhone}</p></td><td className="px-3 py-3 text-muted">{order.serviceName}</td><td className="px-3 py-3">{order.weightKg} kg</td><td className="px-3 py-3 text-muted">{formatShortDate(order.dueAt)}</td><td className="px-3 py-3"><OrderStatusBadge status={order.status} /></td><td className="px-3 py-3"><PaymentStatusBadge status={order.paymentStatus} /></td><td className="px-4 py-3 text-right font-semibold">{formatCurrency(order.amount)}</td><td className="px-4 py-3 text-right"><div className="flex flex-col items-end gap-1"><button type="button" aria-label={"Cetak nota pesanan " + order.id} title="Cetak nota" onClick={() => setReceiptOrder(order)} className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[10px] font-medium text-muted hover:border-accent/50 hover:text-accent"><Printer size={12} /> Nota</button>{order.paymentStatus !== "paid" && <button onClick={() => { setPaymentOrder(order); setError(""); }} className="inline-flex items-center gap-1 rounded-md border border-accent/40 px-2 py-1 text-[10px] font-medium text-accent hover:bg-accent/10"><CreditCard size={12} /> Catat bayar</button>}{order.status !== "completed" ? <button aria-busy={pendingAction === order.id} disabled={pendingAction === order.id} onClick={() => advanceOrder(order.id, order.status)} className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[10px] font-medium text-muted transition hover:border-accent/50 hover:text-accent disabled:cursor-wait disabled:opacity-50">{pendingAction === order.id ? <><Spinner className="size-3" /> Menyimpan…</> : "Lanjut proses"}</button> : <span className="text-[10px] text-muted">Selesai</span>}</div></td></tr>)}</tbody>
           </table>
           {visibleOrders.length === 0 && <div className="p-12 text-center"><p className="text-sm font-medium">Pesanan tidak ditemukan</p><p className="mt-1 text-xs text-muted">Ubah kata kunci atau filter status.</p></div>}
         </div>
-        <div className="flex items-center justify-between border-t border-border px-4 py-3 text-[11px] text-muted"><span>Menampilkan {visibleOrders.length} dari {orders.length} pesanan</span><span className="text-[10px]">{databaseEnabled ? "Neon" : "Data demo"}</span></div>
+        <div className="flex flex-col gap-3 border-t border-border px-4 py-3 text-[11px] text-muted sm:flex-row sm:items-center sm:justify-between">
+          <span>{databaseEnabled ? `Menampilkan ${rangeStart}-${rangeEnd} dari ${totalOrders} pesanan` : `Menampilkan ${visibleOrders.length} dari ${orders.length} pesanan`}</span>
+          {databaseEnabled ? (
+            <nav className="flex items-center justify-between gap-3 sm:justify-end" aria-label="Navigasi halaman pesanan">
+              <button type="button" onClick={() => setCurrentPage((page) => Math.max(1, page - 1))} disabled={loadingList || currentPage <= 1} aria-label="Halaman sebelumnya" className="rounded-md border border-border px-2.5 py-1.5 hover:border-accent/50 hover:text-accent disabled:cursor-not-allowed disabled:opacity-50">Sebelumnya</button>
+              <span aria-live="polite">Halaman {currentPage} dari {totalPages}</span>
+              <button type="button" onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))} disabled={loadingList || currentPage >= totalPages} aria-label="Halaman berikutnya" className="rounded-md border border-border px-2.5 py-1.5 hover:border-accent/50 hover:text-accent disabled:cursor-not-allowed disabled:opacity-50">Berikutnya</button>
+            </nav>
+          ) : <span className="text-[10px]">Data demo</span>}
+        </div>
       </Card>
 
       {paymentOrder && <div className="animate-overlay-enter fixed inset-0 z-[60] flex items-center justify-center p-4">

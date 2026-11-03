@@ -12,7 +12,10 @@ const expenseSchema = z.object({
   category: z.string().trim().min(2).max(80),
   amount: z.coerce.number().int().positive().safe(),
   method: z.enum(["cash", "transfer", "qris", "other"]),
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine((value) => {
+    const date = new Date(value + "T00:00:00.000Z");
+    return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value;
+  }, "Tanggal pengeluaran tidak valid."),
 });
 
 export async function createExpense(formData: FormData) {

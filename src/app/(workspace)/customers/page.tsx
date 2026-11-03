@@ -25,8 +25,10 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
   const rows = databaseEnabled
     ? await listCustomers(session!.branchId, query)
     : allCustomers.filter((customer) => (customer.name + " " + customer.phone).toLowerCase().includes(query.toLowerCase()));
-  const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
-  const activeCustomers = allCustomers.filter((customer) => customer.lastOrder && new Date(customer.lastOrder).getTime() >= cutoff).length;
+  // Halaman ini force-dynamic; jendela aktivitas dihitung dari waktu permintaan ini.
+  // eslint-disable-next-line react-hooks/purity
+  const cutoff = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Makassar" }).format(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const activeCustomers = allCustomers.filter((customer) => customer.lastOrder && customer.lastOrder >= cutoff).length;
   const transactions = allCustomers.reduce((total, customer) => total + customer.orders, 0);
   const revenue = allCustomers.reduce((total, customer) => total + customer.totalSpent, 0);
   const average = transactions ? Math.round(revenue / transactions) : 0;

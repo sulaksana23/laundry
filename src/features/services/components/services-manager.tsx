@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { Spinner } from "@/components/ui/spinner";
 import type { LaundryService } from "@/features/services/domain/service";
 import { formatCurrency } from "@/lib/format";
 

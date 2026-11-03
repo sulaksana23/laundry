@@ -1,11 +1,9 @@
 import type { Metadata } from "next";
 import { AlertTriangle, Boxes, Plus } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
-import { Button } from "@/components/ui/button";
 import { FormSubmitButton } from "@/components/ui/form-submit-button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
 import { inventoryItems as demoInventory } from "@/features/orders/data/mock-orders";
 import { formatCurrency } from "@/lib/format";
 import { isOrdersDatabaseEnabled } from "@/server/db/mode";

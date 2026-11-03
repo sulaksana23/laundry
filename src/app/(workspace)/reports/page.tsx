@@ -30,7 +30,7 @@ export default async function ReportsPage() {
       counts[order.serviceName] = (counts[order.serviceName] ?? 0) + 1; return counts;
     }, {})).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count),
   };
-  const month = new Intl.DateTimeFormat("id-ID", { month: "long", year: "numeric" }).format(new Date());
+  const month = new Intl.DateTimeFormat("id-ID", { month: "long", year: "numeric", timeZone: "Asia/Makassar" }).format(new Date());
   const maxIncome = Math.max(1, ...report.weeks.map((week) => week.income));
   const maxOrders = Math.max(1, ...report.weeks.map((week) => week.orders));
 

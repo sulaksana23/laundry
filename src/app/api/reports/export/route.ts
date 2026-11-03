@@ -16,10 +16,18 @@ export async function GET() {
   if (!isOrdersDatabaseEnabled()) return NextResponse.json({ error: "Laporan CSV tersedia setelah database aktif." }, { status: 503 });
 
   const result = await getNeonSql().query(
-    "SELECT to_char(date_trunc('day', p.received_at), 'YYYY-MM-DD') AS date, COUNT(*)::int AS payments, " +
-    "COALESCE(SUM(p.amount), 0)::bigint AS income " +
-    "FROM laundry_payments p WHERE p.branch_id = $1 " +
-    "AND p.received_at >= date_trunc('month', now()) GROUP BY date_trunc('day', p.received_at) ORDER BY date_trunc('day', p.received_at)",
+    "WITH branch_clock AS (" +
+    "SELECT id, timezone, now() AT TIME ZONE timezone AS local_now FROM laundry_branches WHERE id = $1" +
+    "), bounds AS (" +
+    "SELECT id, timezone, date_trunc('month', local_now) AS month_start, " +
+    "(date_trunc('month', local_now) + interval '1 month') AS next_month_start FROM branch_clock" +
+    ") SELECT to_char((p.received_at AT TIME ZONE b.timezone)::date, 'YYYY-MM-DD') AS date, " +
+    "COUNT(*)::int AS payments, COALESCE(SUM(p.amount), 0)::bigint AS income " +
+    "FROM laundry_payments p CROSS JOIN bounds b WHERE p.branch_id = b.id " +
+    "AND p.received_at >= (b.month_start AT TIME ZONE b.timezone) " +
+    "AND p.received_at < (b.next_month_start AT TIME ZONE b.timezone) " +
+    "GROUP BY (p.received_at AT TIME ZONE b.timezone)::date " +
+    "ORDER BY (p.received_at AT TIME ZONE b.timezone)::date",
     [session.branchId],
   );
   const rows = Array.isArray(result) ? result as Array<{ date: string; payments: number | string; income: number | string }> : [];

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowRight, Banknote, CircleCheck, Clock3, ClipboardList, Plus, Sparkles } from "lucide-react";
 import { MetricCard } from "@/components/dashboard/metric-card";
 import { PageHeader } from "@/components/layout/page-header";
-import { OrderStatusBadge, PaymentStatusBadge } from "@/components/ui/status-badge";
+import { OrderStatusBadge } from "@/components/ui/status-badge";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { mockOrders } from "@/features/orders/data/mock-orders";
 import { formatCurrency, formatShortDate } from "@/lib/format";

@@ -30,15 +30,47 @@ export async function listCustomers(branchId: string, search = ""): Promise<Cust
   }>(await getNeonSql().query(
     "SELECT c.id::text AS id, c.name, c.phone, COUNT(o.id)::int AS orders, " +
     "COALESCE(SUM(o.amount), 0)::bigint AS total_spent, " +
-    "to_char(MAX(o.received_at), 'YYYY-MM-DD') AS last_order " +
-    "FROM laundry_customers c LEFT JOIN laundry_orders o ON o.customer_id = c.id AND o.branch_id = c.branch_id " +
-    "WHERE c.branch_id = $1" + filter + " GROUP BY c.id, c.name, c.phone ORDER BY c.name ASC",
+    "to_char(MAX(o.received_at AT TIME ZONE b.timezone), 'YYYY-MM-DD') AS last_order " +
+    "FROM laundry_customers c JOIN laundry_branches b ON b.id = c.branch_id " +
+    "LEFT JOIN laundry_orders o ON o.customer_id = c.id AND o.branch_id = c.branch_id " +
+    "WHERE c.branch_id = $1" + filter + " GROUP BY c.id, c.name, c.phone, b.timezone ORDER BY c.name ASC",
     parameters,
   ));
   return rows.map((row) => ({
     id: row.id, name: row.name, phone: row.phone, orders: Number(row.orders),
     totalSpent: Number(row.total_spent), lastOrder: row.last_order,
   }));
+}
+
+export interface OrderSummary {
+  today: number;
+  active: number;
+  ready: number;
+  unpaid: number;
+}
+
+export async function getOrderSummary(branchId: string): Promise<OrderSummary> {
+  const rows = resultRows<Record<string, number | string>>(await getNeonSql().query(
+    "WITH branch_clock AS (" +
+    "SELECT id, timezone, now() AT TIME ZONE timezone AS local_now FROM laundry_branches WHERE id = $1" +
+    "), bounds AS (" +
+    "SELECT id, timezone, ((local_now::date)::timestamp AT TIME ZONE timezone) AS day_start, " +
+    "(((local_now::date + 1)::timestamp) AT TIME ZONE timezone) AS next_day_start FROM branch_clock" +
+    ") SELECT " +
+    "(COUNT(o.id) FILTER (WHERE o.received_at >= b.day_start AND o.received_at < b.next_day_start))::int AS today, " +
+    "(COUNT(o.id) FILTER (WHERE o.status <> 'completed'))::int AS active, " +
+    "(COUNT(o.id) FILTER (WHERE o.status = 'ready'))::int AS ready, " +
+    "(COUNT(o.id) FILTER (WHERE o.paid_amount < o.amount))::int AS unpaid " +
+    "FROM bounds b LEFT JOIN laundry_orders o ON o.branch_id = b.id",
+    [branchId],
+  ));
+  const row = rows[0] ?? {};
+  return {
+    today: Number(row.today ?? 0),
+    active: Number(row.active ?? 0),
+    ready: Number(row.ready ?? 0),
+    unpaid: Number(row.unpaid ?? 0),
+  };
 }
 
 export interface InventoryItem {
@@ -103,15 +135,22 @@ export interface FinanceSummary {
 
 export async function getFinanceSummary(branchId: string): Promise<FinanceSummary> {
   const rows = resultRows<Record<string, number | string>>(await getNeonSql().query(
-    "SELECT " +
-    "COALESCE((SELECT SUM(amount) FROM laundry_payments WHERE branch_id = $1 AND received_at >= date_trunc('month', now())), 0) AS income_month, " +
-    "COALESCE((SELECT SUM(amount) FROM laundry_expenses WHERE branch_id = $1 AND incurred_at >= date_trunc('month', now())), 0) AS expense_month, " +
-    "COALESCE((SELECT SUM(amount - paid_amount) FROM laundry_orders WHERE branch_id = $1 AND paid_amount < amount), 0) AS outstanding, " +
-    "(SELECT COUNT(*) FROM laundry_orders WHERE branch_id = $1 AND paid_amount < amount) AS unpaid_count, " +
-    "COALESCE((SELECT SUM(amount) FROM laundry_payments WHERE branch_id = $1 AND received_at >= CURRENT_DATE), 0) AS income_today, " +
-    "COALESCE((SELECT SUM(amount) FROM laundry_expenses WHERE branch_id = $1 AND incurred_at = CURRENT_DATE), 0) AS expenses_today, " +
-    "(SELECT COUNT(*) FROM laundry_payments WHERE branch_id = $1 AND received_at >= CURRENT_DATE) AS payments_today, " +
-    "(SELECT COUNT(*) FROM laundry_expenses WHERE branch_id = $1 AND incurred_at = CURRENT_DATE) AS expenses_today_count",
+    "WITH branch_clock AS (" +
+    "SELECT id, timezone, now() AT TIME ZONE timezone AS local_now FROM laundry_branches WHERE id = $1" +
+    "), bounds AS (" +
+    "SELECT id, timezone, local_now, date_trunc('month', local_now) AS month_start, " +
+    "(date_trunc('month', local_now) + interval '1 month') AS next_month_start, " +
+    "((local_now::date)::timestamp AT TIME ZONE timezone) AS day_start, " +
+    "(((local_now::date + 1)::timestamp) AT TIME ZONE timezone) AS next_day_start FROM branch_clock" +
+    ") SELECT " +
+    "COALESCE((SELECT SUM(p.amount) FROM laundry_payments p CROSS JOIN bounds b WHERE p.branch_id = b.id AND p.received_at >= (b.month_start AT TIME ZONE b.timezone) AND p.received_at < (b.next_month_start AT TIME ZONE b.timezone)), 0) AS income_month, " +
+    "COALESCE((SELECT SUM(e.amount) FROM laundry_expenses e CROSS JOIN bounds b WHERE e.branch_id = b.id AND e.incurred_at >= b.month_start::date AND e.incurred_at < b.next_month_start::date), 0) AS expense_month, " +
+    "COALESCE((SELECT SUM(o.amount - o.paid_amount) FROM laundry_orders o CROSS JOIN bounds b WHERE o.branch_id = b.id AND o.paid_amount < o.amount), 0) AS outstanding, " +
+    "(SELECT COUNT(*) FROM laundry_orders o CROSS JOIN bounds b WHERE o.branch_id = b.id AND o.paid_amount < o.amount) AS unpaid_count, " +
+    "COALESCE((SELECT SUM(p.amount) FROM laundry_payments p CROSS JOIN bounds b WHERE p.branch_id = b.id AND p.received_at >= b.day_start AND p.received_at < b.next_day_start), 0) AS income_today, " +
+    "COALESCE((SELECT SUM(e.amount) FROM laundry_expenses e CROSS JOIN bounds b WHERE e.branch_id = b.id AND e.incurred_at = b.local_now::date), 0) AS expenses_today, " +
+    "(SELECT COUNT(*) FROM laundry_payments p CROSS JOIN bounds b WHERE p.branch_id = b.id AND p.received_at >= b.day_start AND p.received_at < b.next_day_start) AS payments_today, " +
+    "(SELECT COUNT(*) FROM laundry_expenses e CROSS JOIN bounds b WHERE e.branch_id = b.id AND e.incurred_at = b.local_now::date) AS expenses_today_count",
     [branchId],
   ));
   const row = rows[0] ?? {};
@@ -144,26 +183,52 @@ export async function getReportData(branchId: string) {
   const sql = getNeonSql();
   const [summaryResult, weeklyResult, servicesResult] = await Promise.all([
     sql.query(
-      "SELECT " +
-      "(SELECT COUNT(*) FROM laundry_orders WHERE branch_id = $1 AND received_at >= date_trunc('month', now())) AS orders_month, " +
-      "COALESCE((SELECT SUM(amount) FROM laundry_payments WHERE branch_id = $1 AND received_at >= date_trunc('month', now())), 0) AS income_month, " +
-      "(SELECT COALESCE(SUM(weight_kg), 0) FROM laundry_orders WHERE branch_id = $1 AND received_at >= date_trunc('month', now())) AS weight_month, " +
-      "(SELECT COUNT(*) FROM laundry_customers WHERE branch_id = $1 AND created_at >= date_trunc('month', now())) AS new_customers, " +
-      "(SELECT COUNT(*) FROM laundry_orders WHERE branch_id = $1 AND received_at >= date_trunc('month', now()) - interval '1 month' AND received_at < date_trunc('month', now())) AS orders_previous, " +
-      "COALESCE((SELECT SUM(amount) FROM laundry_payments WHERE branch_id = $1 AND received_at >= date_trunc('month', now()) - interval '1 month' AND received_at < date_trunc('month', now())), 0) AS income_previous",
+      "WITH branch_clock AS (" +
+      "SELECT id, timezone, now() AT TIME ZONE timezone AS local_now FROM laundry_branches WHERE id = $1" +
+      "), bounds AS (" +
+      "SELECT id, timezone, date_trunc('month', local_now) AS month_start, " +
+      "(date_trunc('month', local_now) - interval '1 month') AS previous_month_start, " +
+      "(date_trunc('month', local_now) + interval '1 month') AS next_month_start FROM branch_clock" +
+      ") SELECT " +
+      "(SELECT COUNT(*) FROM laundry_orders o CROSS JOIN bounds b WHERE o.branch_id = b.id AND o.received_at >= (b.month_start AT TIME ZONE b.timezone) AND o.received_at < (b.next_month_start AT TIME ZONE b.timezone)) AS orders_month, " +
+      "COALESCE((SELECT SUM(p.amount) FROM laundry_payments p CROSS JOIN bounds b WHERE p.branch_id = b.id AND p.received_at >= (b.month_start AT TIME ZONE b.timezone) AND p.received_at < (b.next_month_start AT TIME ZONE b.timezone)), 0) AS income_month, " +
+      "(SELECT COALESCE(SUM(o.weight_kg), 0) FROM laundry_orders o CROSS JOIN bounds b WHERE o.branch_id = b.id AND o.received_at >= (b.month_start AT TIME ZONE b.timezone) AND o.received_at < (b.next_month_start AT TIME ZONE b.timezone)) AS weight_month, " +
+      "(SELECT COUNT(*) FROM laundry_customers c CROSS JOIN bounds b WHERE c.branch_id = b.id AND c.created_at >= (b.month_start AT TIME ZONE b.timezone) AND c.created_at < (b.next_month_start AT TIME ZONE b.timezone)) AS new_customers, " +
+      "(SELECT COUNT(*) FROM laundry_orders o CROSS JOIN bounds b WHERE o.branch_id = b.id AND o.received_at >= (b.previous_month_start AT TIME ZONE b.timezone) AND o.received_at < (b.month_start AT TIME ZONE b.timezone)) AS orders_previous, " +
+      "COALESCE((SELECT SUM(p.amount) FROM laundry_payments p CROSS JOIN bounds b WHERE p.branch_id = b.id AND p.received_at >= (b.previous_month_start AT TIME ZONE b.timezone) AND p.received_at < (b.month_start AT TIME ZONE b.timezone)), 0) AS income_previous",
       [branchId],
     ),
     sql.query(
-      "SELECT floor((extract(day FROM p.received_at) - 1) / 7)::int + 1 AS week, COUNT(DISTINCT p.order_id)::int AS orders, " +
-      "COALESCE(SUM(p.amount), 0)::bigint AS income FROM laundry_payments p " +
-      "WHERE p.branch_id = $1 AND p.received_at >= date_trunc('month', now()) " +
-      "GROUP BY week ORDER BY week",
+      "WITH branch_clock AS (" +
+      "SELECT id, timezone, now() AT TIME ZONE timezone AS local_now FROM laundry_branches WHERE id = $1" +
+      "), bounds AS (" +
+      "SELECT id, timezone, date_trunc('month', local_now) AS month_start, " +
+      "(date_trunc('month', local_now) + interval '1 month') AS next_month_start FROM branch_clock" +
+      "), weekly_orders AS (" +
+      "SELECT floor((extract(day FROM (o.received_at AT TIME ZONE b.timezone)) - 1) / 7)::int + 1 AS week, COUNT(*)::int AS orders " +
+      "FROM laundry_orders o CROSS JOIN bounds b WHERE o.branch_id = b.id " +
+      "AND o.received_at >= (b.month_start AT TIME ZONE b.timezone) " +
+      "AND o.received_at < (b.next_month_start AT TIME ZONE b.timezone) GROUP BY 1" +
+      "), weekly_income AS (" +
+      "SELECT floor((extract(day FROM (p.received_at AT TIME ZONE b.timezone)) - 1) / 7)::int + 1 AS week, " +
+      "COALESCE(SUM(p.amount), 0)::bigint AS income FROM laundry_payments p CROSS JOIN bounds b " +
+      "WHERE p.branch_id = b.id AND p.received_at >= (b.month_start AT TIME ZONE b.timezone) " +
+      "AND p.received_at < (b.next_month_start AT TIME ZONE b.timezone) GROUP BY 1" +
+      ") SELECT COALESCE(weekly_orders.week, weekly_income.week)::int AS week, " +
+      "COALESCE(weekly_orders.orders, 0)::int AS orders, COALESCE(weekly_income.income, 0)::bigint AS income " +
+      "FROM weekly_orders FULL OUTER JOIN weekly_income ON weekly_orders.week = weekly_income.week ORDER BY week",
       [branchId],
     ),
     sql.query(
-      "SELECT service_name_snapshot AS name, COUNT(*)::int AS count FROM laundry_orders " +
-      "WHERE branch_id = $1 AND received_at >= date_trunc('month', now()) " +
-      "GROUP BY service_name_snapshot ORDER BY count DESC LIMIT 5",
+      "WITH branch_clock AS (" +
+      "SELECT id, timezone, now() AT TIME ZONE timezone AS local_now FROM laundry_branches WHERE id = $1" +
+      "), bounds AS (" +
+      "SELECT id, timezone, date_trunc('month', local_now) AS month_start, " +
+      "(date_trunc('month', local_now) + interval '1 month') AS next_month_start FROM branch_clock" +
+      ") SELECT o.service_name_snapshot AS name, COUNT(*)::int AS count FROM laundry_orders o CROSS JOIN bounds b " +
+      "WHERE o.branch_id = b.id AND o.received_at >= (b.month_start AT TIME ZONE b.timezone) " +
+      "AND o.received_at < (b.next_month_start AT TIME ZONE b.timezone) " +
+      "GROUP BY o.service_name_snapshot ORDER BY count DESC LIMIT 5",
       [branchId],
     ),
   ]);
