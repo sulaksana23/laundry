@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import Link from "next/link";
 import { ArrowRight, Banknote, CircleCheck, ClipboardList, Plus, Sparkles, Wallet } from "lucide-react";
+import { DashboardSkeleton } from "@/components/dashboard/dashboard-skeleton";
 import { MetricCard } from "@/components/dashboard/metric-card";
 import { PageHeader } from "@/components/layout/page-header";
 import { OrderStatusBadge } from "@/components/ui/status-badge";
@@ -54,15 +56,38 @@ function greeting() {
 export default async function DashboardPage() {
   const session = await getAuthSession();
   const databaseEnabled = Boolean(session) && isOrdersDatabaseEnabled();
+  const firstName = session ? session.fullName.split(" ")[0] : "Admin";
+  const branchName = session ? session.branchName : "Cabang Bangli";
+  const todayLabel = new Intl.DateTimeFormat("id-ID", {
+    weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: TIME_ZONE,
+  }).format(new Date());
 
-  const [orderSummary, financeSummary, dashboardData, recentResult, inventory, reportData] = databaseEnabled
+  return (
+    <>
+      <PageHeader
+        eyebrow={`${todayLabel} · ${branchName}`}
+        title={`${greeting()}, ${firstName} 👋`}
+        description={databaseEnabled
+          ? "Berikut ringkasan operasional laundry hari ini dari data tersimpan."
+          : "Berikut ringkasan operasional laundry hari ini. Mode demo memakai data contoh."}
+        action={<Link href="/orders" className="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-accent px-3.5 text-sm font-semibold text-accent-foreground transition hover:brightness-95"><Plus size={15} /> Buat pesanan</Link>}
+      />
+      <Suspense fallback={<DashboardSkeleton />}>
+        <DashboardContent branchId={session?.branchId ?? null} databaseEnabled={databaseEnabled} branchName={branchName} />
+      </Suspense>
+    </>
+  );
+}
+
+async function DashboardContent({ branchId, databaseEnabled, branchName }: { branchId: string | null; databaseEnabled: boolean; branchName: string }) {
+  const [orderSummary, financeSummary, dashboardData, recentResult, inventory, reportData] = databaseEnabled && branchId
     ? await Promise.all([
-        getOrderSummary(session!.branchId),
-        getFinanceSummary(session!.branchId),
-        getDashboardData(session!.branchId),
-        getOrdersService().list({ branchId: session!.branchId, page: 1, pageSize: 5 }),
-        listInventory(session!.branchId),
-        getReportData(session!.branchId),
+        getOrderSummary(branchId),
+        getFinanceSummary(branchId),
+        getDashboardData(branchId),
+        getOrdersService().list({ branchId, page: 1, pageSize: 5 }),
+        listInventory(branchId),
+        getReportData(branchId),
       ])
     : [null, null, null, null, null, null];
 
@@ -94,23 +119,9 @@ export default async function DashboardPage() {
   const unpaidCount = financeSummary?.unpaidCount ?? mockOrders.filter((order) => order.paymentStatus !== "paid").length;
   const outstanding = financeSummary?.outstanding ?? mockOrders.reduce((total, order) => total + (order.amount - order.paidAmount), 0);
   const lowStock = (inventory ?? demoInventory).filter((item) => item.stock <= item.minStock);
-  const firstName = session ? session.fullName.split(" ")[0] : "Admin";
-  const branchName = session ? session.branchName : "Cabang Bangli";
-  const todayLabel = new Intl.DateTimeFormat("id-ID", {
-    weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: TIME_ZONE,
-  }).format(new Date());
 
   return (
     <>
-      <PageHeader
-        eyebrow={`${todayLabel} · ${branchName}`}
-        title={`${greeting()}, ${firstName} 👋`}
-        description={databaseEnabled
-          ? "Berikut ringkasan operasional laundry hari ini dari data tersimpan."
-          : "Berikut ringkasan operasional laundry hari ini. Mode demo memakai data contoh."}
-        action={<Link href="/orders" className="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-accent px-3.5 text-sm font-semibold text-accent-foreground transition hover:brightness-95"><Plus size={15} /> Buat pesanan</Link>}
-      />
-
       <section aria-label="Ringkasan performa" className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard label="Pendapatan bulan ini" value={formatCurrency(incomeMonth)} change={incomeChange} positive={incomePositive} icon={Banknote} />
         <MetricCard label="Pesanan aktif" value={String(activeOrders)} change={databaseEnabled ? `${ordersToday} hari ini` : "data demo"} trend={false} note="Sedang dalam antrean proses" icon={ClipboardList} />
