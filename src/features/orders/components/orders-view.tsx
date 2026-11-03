@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { CreditCard, Download, Plus, Search, SlidersHorizontal, X } from "lucide-react";
+import { Download, Plus, Search, SlidersHorizontal, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -22,7 +22,6 @@ export function OrdersView({ initialOrders, databaseEnabled = false }: { initial
   const [dialogOpen, setDialogOpen] = useState(false);
   const [error, setError] = useState("");
   const [pendingAction, setPendingAction] = useState("");
-  const [paymentOrder, setPaymentOrder] = useState<LaundryOrder | null>(null);
 
   useEffect(() => {
     if (databaseEnabled) {
@@ -140,56 +139,6 @@ export function OrdersView({ initialOrders, databaseEnabled = false }: { initial
     setOrders((current) => current.map((order) => order.id === orderId ? { ...order, status: nextStatus } : order));
   }
 
-  async function recordPayment(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!paymentOrder) return;
-    const form = new FormData(event.currentTarget);
-    const amount = Number(form.get("amount"));
-    const method = String(form.get("method") ?? "cash");
-    const remaining = paymentOrder.amount - paymentOrder.paidAmount;
-    if (!Number.isSafeInteger(amount) || amount < 1 || amount > remaining) {
-      setError("Nominal pembayaran harus sesuai sisa tagihan.");
-      return;
-    }
-    setPendingAction(paymentOrder.id);
-    setError("");
-    if (databaseEnabled) {
-      try {
-        const response = await fetch("/api/orders/" + encodeURIComponent(paymentOrder.id) + "/payments", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ amount, method }),
-        });
-        const result = await response.json();
-        if (!response.ok) { setError(result.error ?? "Pembayaran gagal disimpan."); return; }
-        setOrders((current) => current.map((order) => order.id === paymentOrder.id ? { ...order, paidAmount: result.paidAmount, paymentStatus: result.paymentStatus } : order));
-        setPaymentOrder(null);
-      } catch {
-        setError("Tidak dapat menghubungi server. Coba lagi.");
-      } finally {
-        setPendingAction("");
-      }
-      return;
-    }
-    const paidAmount = paymentOrder.paidAmount + amount;
-    setOrders((current) => current.map((order) => order.id === paymentOrder.id ? { ...order, paidAmount, paymentStatus: paidAmount >= order.amount ? "paid" : "partial" } : order));
-    setPaymentOrder(null);
-    setPendingAction("");
-  }
-
-  function exportOrders() {
-    const quote = (value: unknown) => "\"" + String(value ?? "").replaceAll("\"", "\"\"") + "\"";
-    const rows = [
-      ["Pesanan", "Pelanggan", "Telepon", "Layanan", "Berat (kg)", "Status", "Total (Rp)", "Dibayar (Rp)", "Sisa (Rp)"],
-      ...visibleOrders.map((order) => [order.id, order.customerName, order.customerPhone, order.serviceName, order.weightKg, order.status, order.amount, order.paidAmount, order.amount - order.paidAmount]),
-    ];
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(new Blob(["\uFEFF" + rows.map((row) => row.map(quote).join(",")).join("\r\n")], { type: "text/csv;charset=utf-8" }));
-    link.download = "pesanan-laundry.csv";
-    link.click();
-    window.setTimeout(() => URL.revokeObjectURL(link.href), 1000);
-  }
-
   return (
     <>
       <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -197,7 +146,7 @@ export function OrdersView({ initialOrders, databaseEnabled = false }: { initial
         <div className="flex flex-wrap gap-2">
           <div className="relative min-w-[220px] flex-1 lg:flex-none"><Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" /><Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Cari nomor atau pelanggan" className="pl-9" /></div>
           <Button variant="secondary" disabled title="Filter lanjutan segera tersedia" className="h-9 px-2.5 text-xs"><SlidersHorizontal size={14} /> <span className="hidden sm:inline">Filter</span></Button>
-          <Button variant="secondary" onClick={exportOrders} className="h-9 px-2.5 text-xs"><Download size={14} /> <span className="hidden sm:inline">Ekspor</span></Button>
+          <Button variant="secondary" disabled title="Ekspor tersedia setelah backend tersambung" className="h-9 px-2.5 text-xs"><Download size={14} /> <span className="hidden sm:inline">Ekspor</span></Button>
           <Button variant="primary" onClick={() => setDialogOpen(true)}><Plus size={14} /> Pesanan baru</Button>
         </div>
       </div>
@@ -208,26 +157,13 @@ export function OrdersView({ initialOrders, databaseEnabled = false }: { initial
         <div className="overflow-x-auto">
           <table className="w-full min-w-[880px] text-left text-xs">
             <thead><tr className="bg-surface-raised/50 text-[10px] uppercase tracking-wide text-muted"><th className="px-4 py-3 font-medium">Pesanan / pelanggan</th><th className="px-3 py-3 font-medium">Layanan</th><th className="px-3 py-3 font-medium">Berat</th><th className="px-3 py-3 font-medium">Jatuh tempo</th><th className="px-3 py-3 font-medium">Status</th><th className="px-3 py-3 font-medium">Pembayaran</th><th className="px-4 py-3 text-right font-medium">Total</th><th className="w-32 px-4 py-3 text-right font-medium">Aksi</th></tr></thead>
-            <tbody>{visibleOrders.map((order) => <tr key={order.id} className="border-t border-border/70 transition hover:bg-surface-raised/50"><td className="px-4 py-3"><p className="font-semibold">{order.id}</p><p className="mt-1 text-[10px] text-muted">{order.customerName} · {order.customerPhone}</p></td><td className="px-3 py-3 text-muted">{order.serviceName}</td><td className="px-3 py-3">{order.weightKg} kg</td><td className="px-3 py-3 text-muted">{formatShortDate(order.dueAt)}</td><td className="px-3 py-3"><OrderStatusBadge status={order.status} /></td><td className="px-3 py-3"><PaymentStatusBadge status={order.paymentStatus} /></td><td className="px-4 py-3 text-right font-semibold">{formatCurrency(order.amount)}</td><td className="px-4 py-3 text-right"><div className="flex flex-col items-end gap-1">{order.paymentStatus !== "paid" && <button onClick={() => { setPaymentOrder(order); setError(""); }} className="inline-flex items-center gap-1 rounded-md border border-accent/40 px-2 py-1 text-[10px] font-medium text-accent hover:bg-accent/10"><CreditCard size={12} /> Catat bayar</button>}{order.status !== "completed" ? <button disabled={pendingAction === order.id} onClick={() => advanceOrder(order.id, order.status)} className="rounded-md border border-border px-2 py-1 text-[10px] font-medium text-muted hover:border-accent/50 hover:text-accent disabled:cursor-wait disabled:opacity-50">{pendingAction === order.id ? "Menyimpan…" : "Lanjut proses"}</button> : <span className="text-[10px] text-muted">Selesai</span>}</div></td></tr>)}</tbody>
+            <tbody>{visibleOrders.map((order) => <tr key={order.id} className="border-t border-border/70 transition hover:bg-surface-raised/50"><td className="px-4 py-3"><p className="font-semibold">{order.id}</p><p className="mt-1 text-[10px] text-muted">{order.customerName} · {order.customerPhone}</p></td><td className="px-3 py-3 text-muted">{order.serviceName}</td><td className="px-3 py-3">{order.weightKg} kg</td><td className="px-3 py-3 text-muted">{formatShortDate(order.dueAt)}</td><td className="px-3 py-3"><OrderStatusBadge status={order.status} /></td><td className="px-3 py-3"><PaymentStatusBadge status={order.paymentStatus} /></td><td className="px-4 py-3 text-right font-semibold">{formatCurrency(order.amount)}</td><td className="px-4 py-3 text-right">{order.status !== "completed" ? <button disabled={pendingAction === order.id} onClick={() => advanceOrder(order.id, order.status)} className="rounded-md border border-border px-2 py-1 text-[10px] font-medium text-muted hover:border-accent/50 hover:text-accent disabled:cursor-wait disabled:opacity-50">{pendingAction === order.id ? "Menyimpan…" : "Lanjut proses"}</button> : <span className="text-[10px] text-muted">Selesai</span>}</td></tr>)}</tbody>
           </table>
           {visibleOrders.length === 0 && <div className="p-12 text-center"><p className="text-sm font-medium">Pesanan tidak ditemukan</p><p className="mt-1 text-xs text-muted">Ubah kata kunci atau filter status.</p></div>}
         </div>
-        <div className="flex items-center justify-between border-t border-border px-4 py-3 text-[11px] text-muted"><span>Menampilkan {visibleOrders.length} dari {orders.length} pesanan</span><span className="text-[10px]">{databaseEnabled ? "Neon" : "Data demo"}</span></div>
+        <div className="flex items-center justify-between border-t border-border px-4 py-3 text-[11px] text-muted"><span>Menampilkan {visibleOrders.length} dari {orders.length} pesanan</span><span className="text-[10px]">Data demo</span></div>
       </Card>
 
-      {paymentOrder && <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-        <button type="button" aria-label="Tutup dialog" className="absolute inset-0 bg-black/65" onClick={() => { setPaymentOrder(null); setError(""); }} />
-        <div role="dialog" aria-modal="true" aria-labelledby="payment-title" className="relative z-10 w-full max-w-md rounded-2xl border border-border bg-surface p-5 shadow-2xl">
-          <div className="mb-4 flex items-start justify-between"><div><p className="text-[10px] font-semibold uppercase tracking-widest text-accent">Pembayaran pesanan</p><h2 id="payment-title" className="mt-1 text-lg font-semibold">Catat pembayaran</h2><p className="mt-1 text-xs text-muted">{paymentOrder.id} · {paymentOrder.customerName}</p></div><button onClick={() => { setPaymentOrder(null); setError(""); }} aria-label="Tutup dialog" className="rounded-md p-1.5 text-muted hover:bg-surface-hover"><X size={16} /></button></div>
-          <div className="mb-3 rounded-lg bg-surface-raised p-3 text-xs"><div className="flex justify-between"><span className="text-muted">Total tagihan</span><strong>{formatCurrency(paymentOrder.amount)}</strong></div><div className="mt-1 flex justify-between"><span className="text-muted">Sudah dibayar</span><span>{formatCurrency(paymentOrder.paidAmount)}</span></div><div className="mt-2 flex justify-between border-t border-border pt-2"><span className="font-medium">Sisa tagihan</span><strong>{formatCurrency(paymentOrder.amount - paymentOrder.paidAmount)}</strong></div></div>
-          <form onSubmit={recordPayment} className="space-y-3">
-            <label className="block text-xs font-medium">Nominal pembayaran<Input name="amount" required type="number" min="1" max={paymentOrder.amount - paymentOrder.paidAmount} step="1" defaultValue={paymentOrder.amount - paymentOrder.paidAmount} className="mt-1.5" /></label>
-            <label className="block text-xs font-medium">Metode pembayaran<Select name="method" defaultValue="cash" className="mt-1.5"><option value="cash">Tunai</option><option value="transfer">Transfer</option><option value="qris">QRIS</option><option value="other">Lainnya</option></Select></label>
-            {error && <p role="alert" className="rounded-lg border border-danger/20 bg-danger/10 px-3 py-2 text-xs text-danger">{error}</p>}
-            <div className="flex justify-end gap-2 border-t border-border pt-4"><Button type="button" onClick={() => setPaymentOrder(null)}>Batal</Button><Button type="submit" variant="primary" disabled={pendingAction === paymentOrder.id}>{pendingAction === paymentOrder.id ? "Menyimpan…" : "Simpan pembayaran"}</Button></div>
-          </form>
-        </div>
-      </div>}
       {dialogOpen && <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
         <button type="button" aria-label="Tutup dialog" className="absolute inset-0 bg-black/65" onClick={() => setDialogOpen(false)} />
         <div role="dialog" aria-modal="true" aria-labelledby="new-order-title" className="relative z-10 w-full max-w-lg rounded-2xl border border-border bg-surface p-5 shadow-2xl">
