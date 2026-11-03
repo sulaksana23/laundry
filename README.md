@@ -56,6 +56,14 @@ Flowchart tersedia sebagai berkas **[draw.io](docs/flowcharts/laundryos-flowchar
 
 ![Arsitektur sistem](docs/flowcharts/arsitektur-sistem.svg)
 
+## Dukungan
+
+LaundryOS dikembangkan oleh **Bali Tech Solution**. Jika aplikasi ini membantu operasional laundry Anda dan Anda ingin mendukung pengembangannya, silakan beri dukungan melalui Trakteer:
+
+**[Dukung pengembangan LaundryOS di Trakteer](https://trakteer.id/bali_techsolution/support)**
+
+Tautan yang sama juga tersedia sebagai tombol "Dukung pengembangan" di sidebar aplikasi.
+
 ## Teknologi
 
 - Next.js App Router dan React Server Components.
