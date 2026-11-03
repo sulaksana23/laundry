@@ -11,6 +11,7 @@ import { isOrdersDatabaseEnabled } from "@/server/db/mode";
 import { getAuthSession } from "@/server/modules/auth/auth.session";
 import { listCustomers, type CustomerSummary } from "@/server/modules/workspace/operations";
 import { createCustomer } from "./actions";
+import { ImportCard } from "./import-card";
 
 export const metadata: Metadata = { title: "Pelanggan" };
 export const dynamic = "force-dynamic";
@@ -51,6 +52,7 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
           </form>
         </Card>
       ) : <p className="mb-4 rounded-lg border border-border bg-surface px-3 py-2 text-xs text-muted">Mode demo: daftar contoh hanya untuk pratinjau dan tidak disimpan ke Neon.</p>}
+      <ImportCard mode={databaseEnabled ? "db" : "demo"} demoPhones={allCustomers.map((customer) => customer.phone)} />
       <Card className="overflow-hidden">
         <div className="flex flex-col gap-3 border-b border-border p-4 sm:flex-row sm:items-center sm:justify-between">
           <div><h2 className="text-sm font-semibold">Daftar pelanggan</h2><p className="mt-1 text-[11px] text-muted">{databaseEnabled ? "Data cabang tersimpan di Neon" : "Data contoh"} · {rows.length} pelanggan</p></div>
