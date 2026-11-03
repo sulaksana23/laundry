@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { Check, MessageCircle, PackageSearch, Search, Shirt } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Check, CircleAlert, MessageCircle, PackageSearch, Search, Shirt, X } from "lucide-react";
 
 import { OrderStatusBadge } from "@/components/ui/status-badge";
 import { orderStatusLabels, type OrderStatus } from "@/features/orders/domain/order";
@@ -45,7 +45,19 @@ export function TrackForm() {
   const [phone, setPhone] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [toastKey, setToastKey] = useState(0);
   const [order, setOrder] = useState<TrackedOrderView | null>(null);
+
+  useEffect(() => {
+    if (!error) return;
+    const timer = setTimeout(() => setError(null), 5000);
+    return () => clearTimeout(timer);
+  }, [error, toastKey]);
+
+  function showError(message: string) {
+    setError(message);
+    setToastKey((key) => key + 1);
+  }
 
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -60,12 +72,12 @@ export function TrackForm() {
       });
       const data = (await response.json()) as { order?: TrackedOrderView; error?: string };
       if (!response.ok || !data.order) {
-        setError(data.error ?? "Pesanan tidak ditemukan.");
+        showError(data.error ?? "Pesanan tidak ditemukan.");
       } else {
         setOrder(data.order);
       }
     } catch {
-      setError("Koneksi bermasalah. Periksa internet Anda lalu coba lagi.");
+      showError("Koneksi bermasalah. Periksa internet Anda lalu coba lagi.");
     } finally {
       setBusy(false);
     }
@@ -96,7 +108,6 @@ export function TrackForm() {
             Nomor HP terdaftar
             <input className={fieldClass} value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="Contoh: 0812 3456 7890" type="tel" autoComplete="tel" maxLength={20} required />
           </label>
-          {error && <p role="alert" className="rounded-lg border border-danger/30 bg-danger/10 px-3 py-2.5 text-xs leading-5 text-danger">{error}</p>}
           <button type="submit" disabled={busy} aria-busy={busy} className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-accent px-4 text-sm font-semibold text-accent-foreground transition hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-50">
             <Search size={16} />{busy ? "Mencari..." : "Lacak pesanan"}
           </button>
@@ -172,6 +183,16 @@ export function TrackForm() {
         Pemilik atau staf laundry?{" "}
         <Link href="/login" className="font-semibold text-accent hover:underline">Masuk ke LaundryOS</Link>
       </p>
+
+      {error && (
+        <div key={toastKey} role="alert" className="toast-enter fixed inset-x-4 bottom-4 z-50 flex items-start gap-2.5 rounded-xl border border-danger/40 bg-[#2a1719] px-3.5 py-3 shadow-2xl shadow-black/50 sm:inset-x-auto sm:right-6 sm:w-full sm:max-w-sm">
+          <CircleAlert size={17} className="mt-0.5 shrink-0 text-danger" />
+          <p className="min-w-0 flex-1 text-xs leading-5 text-rose-100">{error}</p>
+          <button type="button" onClick={() => setError(null)} aria-label="Tutup notifikasi" className="shrink-0 rounded-md p-1 text-rose-200/70 transition hover:bg-white/5 hover:text-rose-100">
+            <X size={14} />
+          </button>
+        </div>
+      )}
     </main>
   );
 }
