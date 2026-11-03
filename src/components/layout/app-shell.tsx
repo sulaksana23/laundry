@@ -63,6 +63,7 @@ function Sidebar({ onNavigate, user }: { onNavigate?: () => void; user: { fullNa
 }
 
 export function AppShell({ children, user }: { children: React.ReactNode; user: { fullName: string; email: string; branchName: string; isDemo?: boolean } }) {
+  const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   async function signOut() {
@@ -94,7 +95,7 @@ export function AppShell({ children, user }: { children: React.ReactNode; user: 
             {!user.isDemo && <button type="button" onClick={signOut} aria-label="Keluar dari LaundryOS" className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 text-xs text-muted hover:text-foreground"><LogOut size={14} /><span className="hidden sm:inline">Keluar</span></button>}
           </div>
         </header>
-        <main className="animate-page-enter mx-auto w-full max-w-[1500px] px-4 py-5 sm:px-6 sm:py-6 xl:px-8">{children}</main>
+        <main className="mx-auto w-full max-w-[1500px] px-4 py-5 sm:px-6 sm:py-6 xl:px-8"><div key={pathname} className="page-motion">{children}</div></main>
         <footer className="px-6 pb-5 text-center text-[10px] text-muted/70">LaundryOS · Demo operasional · © 2026</footer>
       </div>
     </div>

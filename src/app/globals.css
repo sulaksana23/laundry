@@ -122,3 +122,99 @@ textarea {
     animation-iteration-count: 1 !important;
   }
 }
+
+
+@keyframes laundry-section-enter {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes laundry-row-enter {
+  from { opacity: 0; transform: translateY(3px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.page-motion {
+  animation: laundry-page-enter 220ms ease-out both;
+}
+
+.page-motion > * {
+  animation: laundry-section-enter 260ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.page-motion > *:nth-child(2) { animation-delay: 35ms; }
+.page-motion > *:nth-child(3) { animation-delay: 70ms; }
+.page-motion > *:nth-child(4) { animation-delay: 105ms; }
+.page-motion > *:nth-child(5) { animation-delay: 140ms; }
+.page-motion > *:nth-child(6) { animation-delay: 175ms; }
+
+.page-motion .motion-card {
+  transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.page-motion .motion-card:hover {
+  transform: translateY(-2px);
+  border-color: rgb(197 243 107 / 26%);
+  box-shadow: 0 10px 24px rgb(0 0 0 / 14%);
+}
+
+.page-motion tbody tr {
+  animation: laundry-row-enter 220ms ease-out both;
+}
+
+.page-motion tbody tr:nth-child(1) { animation-delay: 45ms; }
+.page-motion tbody tr:nth-child(2) { animation-delay: 75ms; }
+.page-motion tbody tr:nth-child(3) { animation-delay: 105ms; }
+.page-motion tbody tr:nth-child(4) { animation-delay: 135ms; }
+.page-motion tbody tr:nth-child(5) { animation-delay: 165ms; }
+.page-motion tbody tr:nth-child(6) { animation-delay: 195ms; }
+.page-motion tbody tr:nth-child(7) { animation-delay: 225ms; }
+.page-motion tbody tr:nth-child(8) { animation-delay: 255ms; }
+
+.page-motion button:not(:disabled) {
+  transition: transform 140ms ease, background-color 140ms ease, border-color 140ms ease, color 140ms ease, opacity 140ms ease;
+}
+
+.page-motion button:not(:disabled):active {
+  transform: scale(0.98);
+}
+
+.page-motion input,
+.page-motion select,
+.page-motion textarea {
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.page-motion [role="alert"] {
+  animation: laundry-overlay-enter 160ms ease-out both;
+}
+
+.status-badge {
+  animation: laundry-overlay-enter 180ms ease-out both;
+  transition: color 150ms ease, background-color 150ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-motion,
+  .page-motion > *,
+  .page-motion tbody tr,
+  .page-motion [role="alert"],
+  .status-badge {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+  }
+
+  .page-motion .motion-card,
+  .page-motion button:not(:disabled),
+  .page-motion input,
+  .page-motion select,
+  .page-motion textarea {
+    transition-duration: 0.01ms !important;
+  }
+
+  .page-motion .motion-card:hover,
+  .page-motion button:not(:disabled):active {
+    transform: none;
+  }
+}
