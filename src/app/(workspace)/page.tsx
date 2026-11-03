@@ -122,19 +122,19 @@ async function DashboardContent({ branchId, databaseEnabled, branchName }: { bra
 
   return (
     <>
-      <section aria-label="Ringkasan performa" className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <MetricCard label="Pendapatan bulan ini" value={formatCurrency(incomeMonth)} change={incomeChange} positive={incomePositive} icon={Banknote} />
+      <section aria-label="Ringkasan performa" className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+        <MetricCard className="col-span-2 sm:col-span-1" label="Pendapatan bulan ini" value={formatCurrency(incomeMonth)} change={incomeChange} positive={incomePositive} icon={Banknote} />
         <MetricCard label="Pesanan aktif" value={String(activeOrders)} change={databaseEnabled ? `${ordersToday} hari ini` : "data demo"} trend={false} note="Sedang dalam antrean proses" icon={ClipboardList} />
         <MetricCard label="Siap diambil" value={String(readyOrders)} change={readyOrders ? "perlu diambil" : "tidak ada"} trend={false} note="Menunggu diserahkan ke pelanggan" icon={CircleCheck} />
         <MetricCard label="Belum lunas" value={String(unpaidCount)} change={formatCurrency(outstanding)} trend={false} note="Total tagihan belum lunas" icon={Wallet} />
       </section>
 
-      <section className="mt-4 grid gap-4 xl:grid-cols-[1.55fr_1fr]">
+      <section className="mt-4 grid gap-4 lg:grid-cols-[1.55fr_1fr]">
         <Card className="min-w-0">
           <CardHeader><div><CardTitle>Ringkasan pendapatan</CardTitle><p className="mt-1 text-[11px] text-muted">Tren 7 hari terakhir · {databaseEnabled ? "data tersimpan" : "data demo"}</p></div><span className="rounded-md bg-surface-raised px-2 py-1.5 text-[10px] text-muted">7 hari</span></CardHeader>
           <div className="px-4 pb-4 pt-3">
-            <div className="mb-3 flex items-baseline gap-2"><p className="text-2xl font-semibold">{formatCurrency(incomeWeek)}</p><span className="text-[11px] font-medium text-muted">total 7 hari</span></div>
-            <div className="relative flex h-[175px] items-end gap-1.5 border-b border-border pb-0">
+            <div className="mb-3 flex flex-wrap items-baseline gap-2"><p className="text-xl font-semibold sm:text-2xl">{formatCurrency(incomeWeek)}</p><span className="text-[11px] font-medium text-muted">total 7 hari</span></div>
+            <div className="relative flex h-[150px] items-end gap-1.5 border-b border-border pb-0 sm:h-[175px]">
               <div className="absolute inset-0 flex flex-col justify-between pb-6 pt-2 text-[9px] text-muted/70"><div className="border-t border-dashed border-border/70" /><div className="border-t border-dashed border-border/70" /><div className="border-t border-dashed border-border/70" /><div className="border-t border-dashed border-border/70" /></div>
               {dailyIncome.map((day, index) => <div key={day.key} className="relative z-10 flex h-full flex-1 items-end"><div className={`chart-bar w-full rounded-t-sm ${index === dailyIncome.length - 1 ? "bg-accent" : "bg-[#657d49]/70 hover:bg-accent/70"}`} style={{ height: `${Math.max((day.amount / maxDailyIncome) * 100, day.amount ? 4 : 1.5)}%`, animationDelay: `${index * 70}ms` }} title={`${day.label}: ${formatCurrency(day.amount)}`} /></div>)}
             </div>
@@ -144,17 +144,27 @@ async function DashboardContent({ branchId, databaseEnabled, branchName }: { bra
 
         <Card className="min-w-0">
           <CardHeader><div><CardTitle>Proses hari ini</CardTitle><p className="mt-1 text-[11px] text-muted">Status antrean pesanan aktif</p></div><span className="rounded-lg bg-surface-raised p-2 text-accent"><Sparkles size={15} /></span></CardHeader>
-          <div className="space-y-4 px-4 py-4">
+          <div className="grid grid-cols-2 gap-2.5 p-4">
             {queueStatuses.map(({ status, color }) => {
               const count = statusCounts[status] ?? 0;
-              return <div key={status}><div className="mb-1.5 flex justify-between text-xs"><span className="text-muted">{orderStatusLabels[status]}</span><span className="font-medium">{count}<span className="text-muted"> / {activeOrders}</span></span></div><div className="h-1.5 overflow-hidden rounded-full bg-surface-raised"><div className={`progress-bar h-full rounded-full ${color}`} style={{ width: `${activeOrders ? (count / activeOrders) * 100 : 0}%` }} /></div></div>;
+              return (
+                <div key={status} className="min-w-0 rounded-xl border border-border bg-surface-raised/50 p-3">
+                  <div className="flex items-center gap-1.5 text-[11px] leading-4 text-muted"><span className={`size-1.5 shrink-0 rounded-full ${color}`} /><span className="min-w-0">{orderStatusLabels[status]}</span></div>
+                  <p className="mt-1.5 text-lg font-semibold leading-6 tabular-nums">{count}<span className="ml-1 text-[11px] font-normal text-muted">dari {activeOrders}</span></p>
+                  <div className="mt-2 h-1 overflow-hidden rounded-full bg-surface-raised"><div className={`progress-bar h-full rounded-full ${color}`} style={{ width: `${activeOrders ? (count / activeOrders) * 100 : 0}%` }} /></div>
+                </div>
+              );
             })}
+            <Link href="/orders" className="group flex min-w-0 flex-col rounded-xl border border-accent/25 bg-accent/5 p-3 transition hover:bg-accent/10">
+              <span className="text-[11px] font-medium leading-4 text-accent">Semua pesanan</span>
+              <span className="mt-1.5 inline-flex items-center gap-1 text-lg font-semibold leading-6 text-accent">{activeOrders} aktif<ArrowRight size={15} className="shrink-0 transition group-hover:translate-x-0.5" /></span>
+              <span className="mt-2 text-[10px] leading-4 text-muted">Buka daftar pesanan lengkap</span>
+            </Link>
           </div>
-          <div className="border-t border-border px-4 py-3"><Link href="/orders" className="inline-flex items-center gap-1 text-xs font-semibold text-accent hover:underline">Lihat semua pesanan <ArrowRight size={13} /></Link></div>
         </Card>
       </section>
 
-      <section className="mt-4 grid gap-4 xl:grid-cols-[1.55fr_1fr]">
+      <section className="mt-4 grid gap-4 2xl:grid-cols-[1.55fr_1fr]">
         <Card className="min-w-0">
           <CardHeader><div><CardTitle>Pesanan terbaru</CardTitle><p className="mt-1 text-[11px] text-muted">Aktivitas terakhir di {branchName}</p></div><Link href="/orders" className="inline-flex items-center gap-1 text-xs font-semibold text-accent">Semua <ArrowRight size={13} /></Link></CardHeader>
           {recentOrders.length === 0 ? (
