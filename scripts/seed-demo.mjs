@@ -2,8 +2,8 @@ import { neon } from "@neondatabase/serverless";
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) {
-  console.error("DATABASE_URL belum tersedia. Seeder demo tidak dijalankan.");
-  process.exit(1);
+  console.info("DATABASE_URL tidak tersedia; seeder demo dilewati.");
+  process.exit(0);
 }
 
 const email = (process.env.LAUNDRY_DEMO_EMAIL || "demo@laundry.test").trim().toLowerCase();
@@ -16,8 +16,8 @@ try {
   );
   const account = accounts[0];
   if (!account) {
-    console.error("Akun demo belum terdaftar. Daftarkan " + email + " melalui halaman Register terlebih dahulu.");
-    process.exit(1);
+    console.info("Akun demo belum terdaftar; seeder demo dilewati.");
+    process.exit(0);
   }
 
   const migrations = await sql.query(

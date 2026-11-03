@@ -72,7 +72,7 @@ Repository ini menyiapkan migrasi SQL, autentikasi email/password, dan implement
 1. Hubungkan repository `sulaksana23/laundry` ke Vercel dengan framework Next.js dan Node.js 22.
 2. Tambahkan Neon PostgreSQL melalui integrasi Vercel Marketplace dan hubungkan resource ke environment Preview.
 3. Pastikan `DATABASE_URL` dan `AUTH_SECRET` tersedia sebagai environment variable server-side untuk Preview. Buat `AUTH_SECRET` acak minimal 32 karakter; jangan menaruh rahasia di variabel `NEXT_PUBLIC_*`.
-4. Build Vercel menerapkan migrasi SQL. Cabang akun baru otomatis mendapat katalog layanan.
+4. Build Vercel menjalankan migrasi SQL, lalu seeder demo secara idempoten sebelum build. Seeder dilewati jika akun demo belum terdaftar atau DATABASE_URL tidak tersedia; akun demo baru juga otomatis mendapat data saat registrasi.
 5. Akses Preview melalui Vercel Authentication. Gunakan data uji sampai kebijakan backup dan audit siap.
 6. Setelah deploy Production, akun dengan sesi valid memakai data Neon yang terisolasi menurut cabang.
 
