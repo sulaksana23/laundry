@@ -117,6 +117,12 @@ export function AuthForm({ mode, authReady }: { mode: AuthMode; authReady: boole
               {isRegister ? "Masuk" : "Daftar"}
             </Link>
           </p>
+          <p className="mt-3 text-center text-xs text-muted">
+            Pelanggan laundry?{" "}
+            <Link className="font-semibold text-accent hover:underline" href="/lacak">
+              Lacak status pesanan
+            </Link>
+          </p>
           <p className="mt-4 border-t border-border pt-3 text-center text-[10px] leading-5 text-muted">
             Akun baru mendapat akses Pemilik untuk satu cabang. Data demo tidak dipakai sebagai akun.
           </p>
