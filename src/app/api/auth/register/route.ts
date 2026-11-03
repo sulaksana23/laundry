@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { AuthService } from "@/server/modules/auth/auth.service";
 import { isAuthConfigured, setAuthSession } from "@/server/modules/auth/auth.session";
+import { getClientIp, isRateLimited, recordAttempt } from "@/server/modules/auth/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -31,6 +32,12 @@ export async function POST(request: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Data pendaftaran tidak valid." }, { status: 400 });
   }
+
+  const rateLimitKey = `register:${getClientIp(request)}:${parsed.data.email.toLowerCase()}`;
+  if (isRateLimited(rateLimitKey)) {
+    return NextResponse.json({ error: "Terlalu banyak percobaan pendaftaran. Coba lagi dalam beberapa menit." }, { status: 429 });
+  }
+  recordAttempt(rateLimitKey);
 
   try {
     const user = await new AuthService().register(parsed.data);
