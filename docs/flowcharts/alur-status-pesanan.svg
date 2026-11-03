@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="300" viewBox="0 0 1120 300" role="img" aria-label="Alur Status Pesanan LaundryOS">
+<rect width="1120" height="300" fill="#ffffff"/>
+<text x="24" y="36" font-family="Inter, Arial, sans-serif" font-size="17" font-weight="700" fill="#1e293b">Alur Status Pesanan LaundryOS</text>
+<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#94a3b8"/></marker></defs>
+<rect x="24" y="84" width="158" height="58" rx="10" fill="#ecfccb" stroke="#65a30d" stroke-width="1.5"/>
+<text x="103.0" y="109.0" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="700" fill="#1e293b">Pesanan Diterima</text>
+<text x="103.0" y="127.0" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="10.5" fill="#64748b">kode &amp; nota terbit</text>
+<line x1="184" y1="113.0" x2="196" y2="113.0" stroke="#94a3b8" stroke-width="1.8" marker-end="url(#ah)"/>
+<rect x="198" y="84" width="158" height="58" rx="10" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.5"/>
+<text x="277.0" y="117.0" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="700" fill="#1e293b">Dicuci</text>
+<line x1="358" y1="113.0" x2="370" y2="113.0" stroke="#94a3b8" stroke-width="1.8" marker-end="url(#ah)"/>
+<rect x="372" y="84" width="158" height="58" rx="10" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.5"/>
+<text x="451.0" y="117.0" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="700" fill="#1e293b">Dikeringkan</text>
+<line x1="532" y1="113.0" x2="544" y2="113.0" stroke="#94a3b8" stroke-width="1.8" marker-end="url(#ah)"/>
+<rect x="546" y="84" width="158" height="58" rx="10" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.5"/>
+<text x="625.0" y="117.0" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="700" fill="#1e293b">Disetrika</text>
+<line x1="706" y1="113.0" x2="718" y2="113.0" stroke="#94a3b8" stroke-width="1.8" marker-end="url(#ah)"/>
+<rect x="720" y="84" width="158" height="58" rx="10" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.5"/>
+<text x="799.0" y="109.0" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="700" fill="#1e293b">Siap Diambil</text>
+<text x="799.0" y="127.0" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="10.5" fill="#64748b">kabar via WhatsApp</text>
+<line x1="880" y1="113.0" x2="892" y2="113.0" stroke="#94a3b8" stroke-width="1.8" marker-end="url(#ah)"/>
+<rect x="894" y="84" width="158" height="58" rx="10" fill="#ecfccb" stroke="#65a30d" stroke-width="1.5"/>
+<text x="973.0" y="109.0" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="700" fill="#1e293b">Selesai</text>
+<text x="973.0" y="127.0" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="10.5" fill="#64748b">diserahkan ke pelanggan</text>
+<rect x="24" y="190" width="1072" height="64" rx="10" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="560.0" y="218.0" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="700" fill="#1e293b">Pembayaran dicatat kapan pun selama proses: lunas atau sebagian.</text>
+<text x="560.0" y="236.0" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="10.5" fill="#64748b">Sisa tagihan tampil di Ringkasan, daftar pesanan, dan halaman lacak pelanggan.</text>
+</svg>

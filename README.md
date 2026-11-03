@@ -38,6 +38,24 @@ Daftar berikut adalah cakupan produk yang dituju. Status implementasi sebenarnya
 
 Status rinci dan kriteria penerimaan ada di [docs/modules.md](docs/modules.md) dan [docs/roadmap.md](docs/roadmap.md). Nama serta nomor kontak dalam fixture bersifat sintetis/masked.
 
+## PRD dan flowchart
+
+Dokumen kebutuhan produk lengkap tersedia di **[docs/prd.md](docs/prd.md)** — latar belakang, persona, kebutuhan fungsional (FR-01 s.d. FR-17), kebutuhan non-fungsional, model data ringkas, keputusan terbuka, dan riwayat versi.
+
+Flowchart tersedia sebagai berkas **[draw.io](docs/flowcharts/laundryos-flowcharts.drawio)** (3 halaman diagram; buka dan edit di [app.diagrams.net](https://app.diagrams.net) atau ekstensi Draw.io Integration di VS Code). Pratinjau statisnya:
+
+### Alur status pesanan
+
+![Alur status pesanan](docs/flowcharts/alur-status-pesanan.svg)
+
+### Alur lacak pesanan publik
+
+![Alur lacak pesanan publik](docs/flowcharts/alur-lacak-publik.svg)
+
+### Arsitektur sistem
+
+![Arsitektur sistem](docs/flowcharts/arsitektur-sistem.svg)
+
 ## Teknologi
 
 - Next.js App Router dan React Server Components.
