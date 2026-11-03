@@ -30,3 +30,22 @@ export async function updateBranchProfile(formData: FormData) {
   revalidatePath("/settings");
   revalidatePath("/", "layout");
 }
+
+import { saveLicense, verifyLicenseKey } from "@/server/modules/license/license";
+
+export async function activateLicense(licenseKey: string) {
+  const session = await getAuthSession();
+  if (!session || !isOrdersDatabaseEnabled()) throw new Error("Silakan masuk untuk mengaktifkan LaundryOS Pro.");
+  const result = verifyLicenseKey(licenseKey);
+  if (!result.valid) throw new Error(result.reason);
+  await saveLicense(session.branchId, licenseKey, result.payload);
+  revalidatePath("/settings");
+  revalidatePath("/finance");
+  revalidatePath("/reports");
+  return {
+    active: true,
+    holderName: result.payload.name,
+    holderEmail: result.payload.email,
+    expiresAt: result.payload.expiresAt,
+  };
+}

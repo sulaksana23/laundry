@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Building2, CreditCard, Info, Store } from "lucide-react";
+import { Building2, CreditCard, Crown, Info, Store } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { APP_NAME, APP_VERSION_LABEL } from "@/lib/app-info";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,10 @@ import { Select } from "@/components/ui/select";
 import { isOrdersDatabaseEnabled } from "@/server/db/mode";
 import { getAuthSession } from "@/server/modules/auth/auth.session";
 import { getBranchProfile } from "@/server/modules/workspace/operations";
-import { updateBranchProfile } from "./actions";
+import { getLicenseStatus } from "@/server/modules/license/license";
+import { INACTIVE_LICENSE } from "@/lib/pro-features";
+import { activateLicense, updateBranchProfile } from "./actions";
+import { ProActivationCard } from "./pro-activation-card";
 
 export const metadata: Metadata = { title: "Pengaturan" };
 export const dynamic = "force-dynamic";
@@ -19,11 +22,12 @@ export default async function SettingsPage() {
   const session = await getAuthSession();
   const databaseEnabled = Boolean(session) && isOrdersDatabaseEnabled();
   const profile = databaseEnabled ? await getBranchProfile(session!.branchId) : null;
+  const licenseStatus = databaseEnabled ? await getLicenseStatus(session!.branchId) : INACTIVE_LICENSE;
 
   return (
     <>
       <PageHeader eyebrow="Preferensi bisnis" title="Pengaturan" description="Kelola profil usaha dan preferensi operasional." />
-      <div className="grid gap-4 xl:grid-cols-[220px_1fr]"><nav className="space-y-1"><a href="#business" className="flex h-9 items-center gap-2 rounded-lg bg-surface-hover px-3 text-xs font-medium"><Store size={14} className="text-accent" /> Profil bisnis</a><a href="#branch" className="flex h-9 items-center gap-2 rounded-lg px-3 text-xs text-muted hover:bg-surface-hover"><Building2 size={14} /> Cabang</a><a href="#payment" className="flex h-9 items-center gap-2 rounded-lg px-3 text-xs text-muted hover:bg-surface-hover"><CreditCard size={14} /> Pembayaran</a><a href="#system" className="flex h-9 items-center gap-2 rounded-lg px-3 text-xs text-muted hover:bg-surface-hover"><Info size={14} /> Sistem</a></nav>
+      <div className="grid gap-4 xl:grid-cols-[220px_1fr]"><nav className="space-y-1"><a href="#business" className="flex h-9 items-center gap-2 rounded-lg bg-surface-hover px-3 text-xs font-medium"><Store size={14} className="text-accent" /> Profil bisnis</a><a href="#branch" className="flex h-9 items-center gap-2 rounded-lg px-3 text-xs text-muted hover:bg-surface-hover"><Building2 size={14} /> Cabang</a><a href="#payment" className="flex h-9 items-center gap-2 rounded-lg px-3 text-xs text-muted hover:bg-surface-hover"><CreditCard size={14} /> Pembayaran</a><a href="#system" className="flex h-9 items-center gap-2 rounded-lg px-3 text-xs text-muted hover:bg-surface-hover"><Info size={14} /> Sistem</a><a href="#pro" className="flex h-9 items-center gap-2 rounded-lg px-3 text-xs text-muted hover:bg-surface-hover"><Crown size={14} /> LaundryOS Pro</a></nav>
         <div className="space-y-4"><Card id="business" className="p-4 sm:p-5"><div className="mb-4 border-b border-border pb-3"><h2 className="text-sm font-semibold">Profil bisnis</h2><p className="mt-1 text-[11px] text-muted">Informasi yang tampil pada nota dan laporan.</p></div>
           {profile ? (
             <form action={updateBranchProfile}>
@@ -36,7 +40,8 @@ export default async function SettingsPage() {
           </Card>
           <Card id="branch" className="p-4 sm:p-5"><div className="mb-3"><h2 className="text-sm font-semibold">Cabang aktif</h2><p className="mt-1 text-[11px] text-muted">Cabang yang sedang digunakan pada tampilan.</p></div><div className="flex items-center gap-3 rounded-lg border border-border bg-surface-raised p-3"><span className="rounded-lg bg-surface-hover p-2 text-accent"><Building2 size={16} /></span><div className="flex-1"><p className="text-xs font-semibold">{profile ? profile.name : "Laundry Demo · Bangli"}</p><p className="mt-0.5 text-[10px] text-muted">{profile ? (profile.address || "Alamat belum diisi") + " · " + profile.timezone : "Alamat contoh · Bangli, Bali"}</p></div><span className="rounded-md bg-emerald-300/10 px-2 py-1 text-[10px] text-emerald-200">Aktif</span></div></Card>
           <Card id="payment" className="p-4 sm:p-5"><div className="mb-3"><h2 className="text-sm font-semibold">Pembayaran</h2><p className="mt-1 text-[11px] text-muted">Metode yang dapat dicatat pada transaksi.</p></div><div className="flex flex-wrap gap-2"><span className="rounded-md border border-border bg-surface-raised px-2.5 py-1.5 text-[11px]">Tunai</span><span className="rounded-md border border-border bg-surface-raised px-2.5 py-1.5 text-[11px]">Transfer bank</span><span className="rounded-md border border-border bg-surface-raised px-2.5 py-1.5 text-[11px]">QRIS</span></div></Card>
-          <Card id="system" className="p-4 sm:p-5"><div className="mb-3"><h2 className="text-sm font-semibold">Sistem</h2><p className="mt-1 text-[11px] text-muted">Informasi aplikasi yang sedang digunakan.</p></div><div className="space-y-2 text-xs"><div className="flex items-center justify-between gap-3"><span className="text-muted">Nama aplikasi</span><span className="font-medium">{APP_NAME}</span></div><div className="flex items-center justify-between gap-3"><span className="text-muted">Versi aplikasi</span><span className="rounded-md bg-surface-hover px-2 py-1 text-[11px] font-semibold">{APP_VERSION_LABEL}</span></div></div></Card></div>
+          <Card id="system" className="p-4 sm:p-5"><div className="mb-3"><h2 className="text-sm font-semibold">Sistem</h2><p className="mt-1 text-[11px] text-muted">Informasi aplikasi yang sedang digunakan.</p></div><div className="space-y-2 text-xs"><div className="flex items-center justify-between gap-3"><span className="text-muted">Nama aplikasi</span><span className="font-medium">{APP_NAME}</span></div><div className="flex items-center justify-between gap-3"><span className="text-muted">Versi aplikasi</span><span className="rounded-md bg-surface-hover px-2 py-1 text-[11px] font-semibold">{APP_VERSION_LABEL}</span></div></div></Card>
+          <Card id="pro" className="p-4 sm:p-5"><div className="mb-3"><h2 className="flex items-center gap-2 text-sm font-semibold"><Crown size={15} className="text-accent" /> LaundryOS Pro</h2><p className="mt-1 text-[11px] text-muted">Fitur lanjutan bagi pendukung Bali Tech Solution di Trakteer. Fitur inti LaundryOS selalu gratis.</p></div><ProActivationCard mode={databaseEnabled ? "db" : "demo"} initialStatus={licenseStatus} activateAction={databaseEnabled ? activateLicense : undefined} /></Card></div>
       </div>
     </>
   );

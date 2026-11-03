@@ -7,6 +7,7 @@ import { getAuthSession } from "@/server/modules/auth/auth.session";
 import { isOrdersDatabaseEnabled } from "@/server/db/mode";
 import { getNeonSql } from "@/server/db/neon";
 import { getExpectedCash } from "@/server/modules/workspace/operations";
+import { isProActive } from "@/server/modules/license/license";
 
 const expenseSchema = z.object({
   description: z.string().trim().min(2).max(140),
@@ -51,6 +52,7 @@ const cashClosingSchema = z.object({
 export async function saveCashClosing(formData: FormData) {
   const session = await getAuthSession();
   if (!session || !isOrdersDatabaseEnabled()) throw new Error("Silakan masuk untuk melakukan tutup kasir.");
+  if (!(await isProActive(session.branchId))) throw new Error("Tutup kasir adalah fitur LaundryOS Pro. Aktifkan Pro di Pengaturan untuk memakai fitur ini.");
   const parsed = cashClosingSchema.safeParse({
     countedAmount: formData.get("countedAmount"),
     note: formData.get("note") || undefined,

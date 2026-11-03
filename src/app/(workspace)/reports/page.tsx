@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { Download, TrendingUp } from "lucide-react";
+import Link from "next/link";
+import { Download, Lock, TrendingUp } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,6 +8,7 @@ import { mockOrders } from "@/features/orders/data/mock-orders";
 import { formatCurrency } from "@/lib/format";
 import { isOrdersDatabaseEnabled } from "@/server/db/mode";
 import { getAuthSession } from "@/server/modules/auth/auth.session";
+import { isProActive } from "@/server/modules/license/license";
 import { getReportData } from "@/server/modules/workspace/operations";
 
 export const metadata: Metadata = { title: "Laporan" };
@@ -21,6 +23,7 @@ function change(current: number, previous: number) {
 export default async function ReportsPage() {
   const session = await getAuthSession();
   const databaseEnabled = Boolean(session) && isOrdersDatabaseEnabled();
+  const proActive = databaseEnabled ? await isProActive(session!.branchId) : false;
   const report = databaseEnabled ? await getReportData(session!.branchId) : {
     orders: mockOrders.length, income: mockOrders.reduce((sum, order) => sum + order.paidAmount, 0),
     weight: mockOrders.reduce((sum, order) => sum + order.weightKg, 0), newCustomers: 6,
@@ -36,7 +39,7 @@ export default async function ReportsPage() {
 
   return (
     <>
-      <PageHeader eyebrow="Analisis usaha" title="Laporan" description="Ringkasan pesanan, pemasukan, dan layanan untuk bulan berjalan." action={databaseEnabled ? <a href="/api/reports/export" className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-surface-raised px-3 text-xs font-semibold hover:bg-surface-hover"><Download size={14} /> Unduh CSV</a> : <Button disabled title="Ekspor tersedia saat data cabang tersambung"><Download size={14} /> Unduh CSV</Button>} />
+      <PageHeader eyebrow="Analisis usaha" title="Laporan" description="Ringkasan pesanan, pemasukan, dan layanan untuk bulan berjalan." action={databaseEnabled ? (proActive ? <a href="/api/reports/export" className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-surface-raised px-3 text-xs font-semibold hover:bg-surface-hover"><Download size={14} /> Unduh CSV</a> : <Link href="/settings#pro" className="inline-flex h-9 items-center gap-2 rounded-lg border border-amber-300/30 bg-amber-300/5 px-3 text-xs font-semibold text-amber-200 hover:bg-amber-300/10"><Lock size={14} /> Unduh CSV · Pro</Link>) : <Button disabled title="Ekspor tersedia saat data cabang tersambung"><Download size={14} /> Unduh CSV</Button>} />
       <div className="mb-4 flex flex-wrap gap-2"><span className="rounded-lg border border-border bg-surface px-3 py-2 text-xs text-muted">{month}</span><span className="rounded-lg border border-border bg-surface px-3 py-2 text-xs text-muted">{databaseEnabled ? "Data aktual cabang" : "Mode demo"}</span></div>
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Card className="p-4"><p className="text-[11px] text-muted">Total pesanan</p><p className="mt-2 text-2xl font-semibold">{report.orders.toLocaleString("id-ID")}</p><p className="mt-1 flex items-center gap-1 text-[10px] text-muted"><TrendingUp size={12} /> {change(report.orders, report.previousOrders)} vs bulan lalu</p></Card>
