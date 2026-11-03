@@ -12,6 +12,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "db:migrate": "node scripts/migrate.mjs",
+    "db:seed:demo": "node scripts/seed-demo.mjs",
     "vercel-build": "npm run db:migrate && npm run build"
   },
   "dependencies": {

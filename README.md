@@ -84,6 +84,8 @@ Tabel cabang, pengguna, pelanggan, layanan, pesanan, histori status, pembayaran,
 
 Daftarkan email `demo@laundry.test` melalui halaman registrasi dan pilih password sendiri. Saat akun demo dibuat, aplikasi mengisi cabangnya dengan pelanggan, pesanan, pembayaran, persediaan, dan pengeluaran sintetis. Akun serta password tidak ditanam sebagai kredensial bawaan di source code. Email lain mendapat cabang baru tanpa data contoh.
 
+Jika akun demo sudah terdaftar sebelum fitur seed aktif, isi datanya sekali dengan `npm run db:seed:demo` setelah `DATABASE_URL` tersedia dan migrasi dijalankan. Seeder tidak menyimpan password dan tidak mengubah cabang yang sudah berisi data.
+
 ## Struktur direktori
 
 ```text
