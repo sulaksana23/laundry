@@ -1,6 +1,6 @@
 {
   "name": "laundry-management-nextjs",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "private": true,
   "description": "Sistem operasional laundry berbasis Next.js dengan pola UI TypeUI yang ringkas.",
   "scripts": {

@@ -135,12 +135,41 @@ textarea {
 
 .chart-bar {
   transform-origin: bottom;
-  animation: laundry-bar-grow 560ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation: laundry-bar-grow 720ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
   transition: background-color 160ms ease;
 }
 
 .progress-bar {
   animation: laundry-progress-grow 640ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes laundry-skeleton-wave {
+  0%, 100% { transform: scaleY(0.55); opacity: 0.45; }
+  50% { transform: scaleY(1); opacity: 0.95; }
+}
+
+@keyframes laundry-skeleton-pulse {
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 1; }
+}
+
+@keyframes laundry-skeleton-progress {
+  0% { width: 8%; }
+  55% { width: 72%; }
+  100% { width: 38%; }
+}
+
+.skeleton-bar {
+  transform-origin: bottom;
+  animation: laundry-skeleton-wave 1100ms ease-in-out infinite;
+}
+
+.skeleton-pulse {
+  animation: laundry-skeleton-pulse 1400ms ease-in-out infinite;
+}
+
+.skeleton-progress {
+  animation: laundry-skeleton-progress 1500ms ease-in-out infinite alternate;
 }
 
 @keyframes laundry-section-enter {
@@ -220,13 +249,17 @@ textarea {
   .page-motion [role="alert"],
   .status-badge,
   .chart-bar,
-  .progress-bar {
+  .progress-bar,
+  .skeleton-bar,
+  .skeleton-pulse,
+  .skeleton-progress {
     animation-duration: 0.01ms !important;
     animation-delay: 0ms !important;
     animation-iteration-count: 1 !important;
   }
 
-  .chart-bar {
+  .chart-bar,
+  .skeleton-bar {
     transform: none;
   }
 
