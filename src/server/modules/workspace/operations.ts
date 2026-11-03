@@ -136,7 +136,7 @@ export async function listRecentPayments(branchId: string) {
   ));
   return rows.map((row) => ({
     id: row.id, orderId: row.order_id, customerName: row.customer_name,
-    amount: Number(row.amount), method: row.method, date: new Date(row.received_at).toISOString(),
+    amount: Number(row.amount), method: row.method, date: new Date(String(row.received_at)).toISOString(),
   }));
 }
 

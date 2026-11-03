@@ -26,7 +26,10 @@ export async function createInventoryItem(formData: FormData) {
   }
   await getNeonSql().query(
     "INSERT INTO laundry_inventory_items (id, branch_id, name, category, unit, quantity, min_quantity, unit_price) " +
-    "VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8)",
+    "VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8) " +
+    "ON CONFLICT (branch_id, name) DO UPDATE SET category = EXCLUDED.category, unit = EXCLUDED.unit, " +
+    "quantity = laundry_inventory_items.quantity + EXCLUDED.quantity, min_quantity = EXCLUDED.min_quantity, " +
+    "unit_price = EXCLUDED.unit_price, updated_at = now()",
     [randomUUID(), session.branchId, name, category, unit, stock, minStock, price],
   );
   revalidatePath("/inventory");
@@ -36,7 +39,7 @@ export async function adjustInventory(formData: FormData) {
   const session = requireDatabase(await getAuthSession());
   const id = String(formData.get("id") ?? "");
   const delta = Number(formData.get("delta"));
-  if (!/^[0-9a-f-]{36}$/i.test(id) || !Number.isFinite(delta) || delta === 0 || Math.abs(delta) > 100000) {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id) || !Number.isFinite(delta) || delta === 0 || Math.abs(delta) > 100000) {
     throw new Error("Penyesuaian stok tidak valid.");
   }
   const result = await getNeonSql().query(

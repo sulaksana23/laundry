@@ -4,7 +4,6 @@ import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
 import { customers as demoCustomers } from "@/features/orders/data/mock-orders";
 import { formatCurrency, formatShortDate } from "@/lib/format";
 import { isOrdersDatabaseEnabled } from "@/server/db/mode";
