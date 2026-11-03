@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ArrowDownLeft, ArrowUpRight, Download, Plus } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
+import { FormSubmitButton } from "@/components/ui/form-submit-button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -51,7 +52,7 @@ export default async function FinancePage() {
             <Input name="amount" required type="number" min="1" step="1" placeholder="Jumlah (Rp)" aria-label="Jumlah pengeluaran" />
             <Select name="method" defaultValue="cash" aria-label="Metode pembayaran"><option value="cash">Tunai</option><option value="transfer">Transfer</option><option value="qris">QRIS</option><option value="other">Lainnya</option></Select>
             <Input name="date" required type="date" defaultValue={new Date().toISOString().slice(0, 10)} aria-label="Tanggal pengeluaran" />
-            <Button type="submit" variant="primary"><Plus size={14} /> Simpan</Button>
+            <FormSubmitButton variant="primary" pendingText="Menyimpan…"><Plus size={14} /> Simpan</FormSubmitButton>
           </form>
         </Card>
       ) : <p className="mb-4 rounded-lg border border-border bg-surface px-3 py-2 text-xs text-muted">Mode demo: transaksi contoh tidak tersimpan ke Neon.</p>}

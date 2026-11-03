@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
+import { Spinner } from "@/components/ui/spinner";
 import { Shirt } from "lucide-react";
 
 type AuthMode = "login" | "register";
@@ -51,7 +52,7 @@ export function AuthForm({ mode, authReady }: { mode: AuthMode; authReady: boole
     "mt-1.5 h-10 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground outline-none transition placeholder:text-muted focus:border-accent focus:ring-2 focus:ring-accent/20";
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
+    <main className="animate-page-enter flex min-h-screen items-center justify-center bg-background px-4 py-10">
       <section className="w-full max-w-[420px]">
         <Link href="/" className="mb-7 inline-flex items-center gap-2.5" aria-label="LaundryOS">
           <span className="flex size-9 items-center justify-center rounded-xl bg-accent text-accent-foreground">
@@ -103,9 +104,10 @@ export function AuthForm({ mode, authReady }: { mode: AuthMode; authReady: boole
             <button
               type="submit"
               disabled={busy || !authReady}
+              aria-busy={busy}
               className="mt-1 inline-flex h-10 w-full items-center justify-center rounded-lg bg-accent px-4 text-sm font-semibold text-accent-foreground transition hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-surface disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {busy ? "Memproses..." : !authReady ? "Menunggu koneksi database" : isRegister ? "Buat akun" : "Masuk"}
+              {busy && <Spinner />}{busy ? "Memproses..." : !authReady ? "Menunggu koneksi database" : isRegister ? "Buat akun" : "Masuk"}
             </button>
           </form>
 

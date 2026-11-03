@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Search, UserPlus } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
+import { FormSubmitButton } from "@/components/ui/form-submit-button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { customers as demoCustomers } from "@/features/orders/data/mock-orders";
@@ -44,7 +45,7 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
           <form action={createCustomer} className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
             <Input name="name" required minLength={2} maxLength={100} placeholder="Nama pelanggan" aria-label="Nama pelanggan" />
             <Input name="phone" required minLength={8} maxLength={32} placeholder="Nomor telepon" aria-label="Nomor telepon" />
-            <Button type="submit" variant="primary"><UserPlus size={14} /> Simpan pelanggan</Button>
+            <FormSubmitButton variant="primary" pendingText="Menyimpan…"><UserPlus size={14} /> Simpan pelanggan</FormSubmitButton>
           </form>
         </Card>
       ) : <p className="mb-4 rounded-lg border border-border bg-surface px-3 py-2 text-xs text-muted">Mode demo: daftar contoh hanya untuk pratinjau dan tidak disimpan ke Neon.</p>}

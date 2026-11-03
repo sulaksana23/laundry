@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { AlertTriangle, Boxes, Plus } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
+import { FormSubmitButton } from "@/components/ui/form-submit-button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -41,7 +42,7 @@ export default async function InventoryPage() {
             <Input name="unit" required maxLength={24} placeholder="Satuan (kg, liter, pak)" aria-label="Satuan" />
             <Input name="stock" required type="number" min="0" step="0.001" placeholder="Stok awal" aria-label="Stok awal" />
             <Input name="minStock" required type="number" min="0" step="0.001" placeholder="Batas minimum" aria-label="Batas minimum" />
-            <div className="flex gap-2"><Input name="price" required type="number" min="0" step="1" placeholder="Harga satuan" aria-label="Harga satuan" /><Button type="submit" variant="primary"><Plus size={14} /> Tambah</Button></div>
+            <div className="flex gap-2"><Input name="price" required type="number" min="0" step="1" placeholder="Harga satuan" aria-label="Harga satuan" /><FormSubmitButton variant="primary" pendingText="Menambah…"><Plus size={14} /> Tambah</FormSubmitButton></div>
           </form>
         </Card>
       ) : <p className="mb-4 rounded-lg border border-border bg-surface px-3 py-2 text-xs text-muted">Mode demo: daftar contoh hanya untuk pratinjau dan tidak disimpan ke Neon.</p>}
@@ -52,7 +53,7 @@ export default async function InventoryPage() {
           <thead><tr className="bg-surface-raised/50 text-[10px] uppercase tracking-wide text-muted"><th className="px-4 py-3 font-medium">Barang</th><th className="px-3 py-3 font-medium">Kategori</th><th className="px-3 py-3 font-medium">Stok</th><th className="px-3 py-3 font-medium">Minimum</th><th className="px-3 py-3 font-medium">Harga satuan</th><th className="px-3 py-3 font-medium">Kondisi</th><th className="px-4 py-3 font-medium">Penyesuaian</th></tr></thead>
           <tbody>{items.map((item) => { const low = item.stock <= item.minStock; return <tr key={item.id} className="border-t border-border/70 hover:bg-surface-raised/50">
             <td className="px-4 py-3"><p className="font-semibold">{item.name}</p><p className="mt-0.5 text-[10px] text-muted">{item.id}</p></td><td className="px-3 py-3 text-muted">{item.category}</td><td className="px-3 py-3 font-medium">{item.stock} {item.unit}</td><td className="px-3 py-3 text-muted">{item.minStock} {item.unit}</td><td className="px-3 py-3">{formatCurrency(item.price)}</td><td className="px-3 py-3"><span className={low ? "rounded-md bg-amber-200/10 px-2 py-1 text-[10px] font-medium text-amber-100" : "rounded-md bg-emerald-200/10 px-2 py-1 text-[10px] font-medium text-emerald-100"}>{low ? "Perlu dibeli" : "Aman"}</span></td>
-            <td className="px-4 py-3">{databaseEnabled ? <form action={adjustInventory} className="flex min-w-44 items-center gap-1.5"><input type="hidden" name="id" value={item.id} /><Input name="delta" required type="number" step="0.001" placeholder="+/- jumlah" aria-label={"Penyesuaian stok " + item.name} className="h-8" /><Button type="submit" className="h-8 px-2 text-xs">Simpan</Button></form> : <span className="text-[10px] text-muted"><Boxes size={13} className="inline" /> Demo</span>}</td>
+            <td className="px-4 py-3">{databaseEnabled ? <form action={adjustInventory} className="flex min-w-44 items-center gap-1.5"><input type="hidden" name="id" value={item.id} /><Input name="delta" required type="number" step="0.001" placeholder="+/- jumlah" aria-label={"Penyesuaian stok " + item.name} className="h-8" /><FormSubmitButton pendingText="…" className="h-8 px-2 text-xs">Simpan</FormSubmitButton></form> : <span className="text-[10px] text-muted"><Boxes size={13} className="inline" /> Demo</span>}</td>
           </tr>; })}</tbody>
         </table>
         {items.length === 0 && <p className="p-10 text-center text-xs text-muted">Belum ada barang persediaan. Tambahkan barang pertama di atas.</p>}
