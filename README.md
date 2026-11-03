@@ -151,4 +151,6 @@ docs/                          # spesifikasi dan standar teknis
 
 ## Lisensi
 
-Belum ditentukan. Tetapkan lisensi sebelum mendistribusikan atau menerima kontribusi eksternal.
+LaundryOS dilisensikan di bawah **[Lisensi MIT](LICENSE)**.
+
+Copyright (c) 2026 **Bali Tech Solution**. Setiap orang boleh memakai, menyalin, mengubah, dan mendistribusikan perangkat lunak ini dengan syarat pemberitahuan hak cipta dan izin di atas tetap disertakan dalam setiap salinan — jadi nama Bali Tech Solution sebagai pembuat selalu tercantum.
