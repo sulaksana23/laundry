@@ -18,7 +18,7 @@ Dokumen ini membatasi target produk agar istilah “lengkap” punya cakupan yan
 - Login dan registrasi memakai Neon serta cookie sesi bertanda tangan saat `DATABASE_URL` dan `AUTH_SECRET` tersedia. Pengguna membuat akunnya sendiri; seeder tidak membuat akun demo login.
 - Pesanan, pelanggan, layanan, persediaan, pembayaran, pengeluaran, dan laporan membaca/menulis data per cabang pada deployment yang dikonfigurasi.
 - Katalog layanan dapat ditambah, diubah, dan diaktifkan/nonaktifkan. Harga dibaca ulang di server saat pesanan dibuat; nama dan total pesanan lama tersimpan sebagai snapshot.
-- Dashboard dan Pengaturan profil masih memakai tampilan/contoh; cetak nota, refund, role terperinci, dan audit log belum tersedia.
+- Nota ringkasan pesanan dapat dicetak dari daftar pesanan; Dashboard dan profil Pengaturan masih memakai tampilan/contoh. Refund, role terperinci, audit log, dan pagination belum tersedia.
 - Alur pesanan saat ini memilih layanan per kilogram. Layanan per pcs/pasang sudah ada di katalog, tetapi belum dapat dipilih pada form pesanan.
 
 ## Alur utama pesanan

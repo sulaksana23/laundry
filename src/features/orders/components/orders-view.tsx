@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { CreditCard, Download, Plus, Search, SlidersHorizontal, X } from "lucide-react";
+import { CreditCard, Download, Plus, Printer, Search, SlidersHorizontal, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { Input } from "@/components/ui/input";
@@ -9,7 +9,6 @@ import { Select } from "@/components/ui/select";
 import { OrderStatusBadge, PaymentStatusBadge } from "@/components/ui/status-badge";
 import { Card } from "@/components/ui/card";
 import { createOrderSchema, orderStatusLabels, orderStatuses, type CreateOrderInput, type LaundryOrder, type OrderStatus } from "@/features/orders/domain/order";
-import { serviceCatalog } from "@/features/orders/data/mock-orders";
 import { formatCurrency, formatShortDate } from "@/lib/format";
 
 type OrderServiceOption = { id: string; name: string; unit: string; price: number };
@@ -26,6 +25,7 @@ export function OrdersView({ initialOrders, databaseEnabled = false, availableSe
   const [error, setError] = useState("");
   const [pendingAction, setPendingAction] = useState("");
   const [paymentOrder, setPaymentOrder] = useState<LaundryOrder | null>(null);
+  const [receiptOrder, setReceiptOrder] = useState<LaundryOrder | null>(null);
 
   useEffect(() => {
     if (databaseEnabled) {
@@ -65,7 +65,7 @@ export function OrdersView({ initialOrders, databaseEnabled = false, availableSe
       setError(parsed.error.issues[0]?.message ?? "Periksa kembali data pesanan.");
       return;
     }
-    const service = serviceCatalog.find((item) => item.name === parsed.data.serviceName && item.unit === "kg");
+    const service = availableServices.find((item) => item.name === parsed.data.serviceName && item.unit === "kg");
     if (!service) { setError("Layanan yang dipilih tidak ditemukan."); return; }
 
     if (databaseEnabled) {
@@ -210,8 +210,8 @@ export function OrdersView({ initialOrders, databaseEnabled = false, availableSe
         <div className="flex items-center justify-between border-b border-border px-4 py-3"><div><p className="text-sm font-semibold">Daftar pesanan</p><p className="mt-0.5 text-[11px] text-muted">{visibleOrders.length} pesanan ditampilkan</p></div><span className="text-[11px] text-muted">{databaseEnabled ? "Neon · Tersambung" : "Mode demo lokal"}</span></div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[880px] text-left text-xs">
-            <thead><tr className="bg-surface-raised/50 text-[10px] uppercase tracking-wide text-muted"><th className="px-4 py-3 font-medium">Pesanan / pelanggan</th><th className="px-3 py-3 font-medium">Layanan</th><th className="px-3 py-3 font-medium">Berat</th><th className="px-3 py-3 font-medium">Jatuh tempo</th><th className="px-3 py-3 font-medium">Status</th><th className="px-3 py-3 font-medium">Pembayaran</th><th className="px-4 py-3 text-right font-medium">Total</th><th className="w-32 px-4 py-3 text-right font-medium">Aksi</th></tr></thead>
-            <tbody>{visibleOrders.map((order) => <tr key={order.id} className="border-t border-border/70 transition hover:bg-surface-raised/50"><td className="px-4 py-3"><p className="font-semibold">{order.id}</p><p className="mt-1 text-[10px] text-muted">{order.customerName} · {order.customerPhone}</p></td><td className="px-3 py-3 text-muted">{order.serviceName}</td><td className="px-3 py-3">{order.weightKg} kg</td><td className="px-3 py-3 text-muted">{formatShortDate(order.dueAt)}</td><td className="px-3 py-3"><OrderStatusBadge status={order.status} /></td><td className="px-3 py-3"><PaymentStatusBadge status={order.paymentStatus} /></td><td className="px-4 py-3 text-right font-semibold">{formatCurrency(order.amount)}</td><td className="px-4 py-3 text-right"><div className="flex flex-col items-end gap-1">{order.paymentStatus !== "paid" && <button onClick={() => { setPaymentOrder(order); setError(""); }} className="inline-flex items-center gap-1 rounded-md border border-accent/40 px-2 py-1 text-[10px] font-medium text-accent hover:bg-accent/10"><CreditCard size={12} /> Catat bayar</button>}{order.status !== "completed" ? <button aria-busy={pendingAction === order.id} disabled={pendingAction === order.id} onClick={() => advanceOrder(order.id, order.status)} className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[10px] font-medium text-muted transition hover:border-accent/50 hover:text-accent disabled:cursor-wait disabled:opacity-50">{pendingAction === order.id ? <><Spinner className="size-3" /> Menyimpan…</> : "Lanjut proses"}</button> : <span className="text-[10px] text-muted">Selesai</span>}</div></td></tr>)}</tbody>
+            <thead><tr className="bg-surface-raised/50 text-[10px] uppercase tracking-wide text-muted"><th className="px-4 py-3 font-medium">Pesanan / pelanggan</th><th className="px-3 py-3 font-medium">Layanan</th><th className="px-3 py-3 font-medium">Berat</th><th className="px-3 py-3 font-medium">Jatuh tempo</th><th className="px-3 py-3 font-medium">Status</th><th className="px-3 py-3 font-medium">Pembayaran</th><th className="px-4 py-3 text-right font-medium">Total</th><th className="w-40 px-4 py-3 text-right font-medium">Aksi</th></tr></thead>
+            <tbody>{visibleOrders.map((order) => <tr key={order.id} className="border-t border-border/70 transition hover:bg-surface-raised/50"><td className="px-4 py-3"><p className="font-semibold">{order.id}</p><p className="mt-1 text-[10px] text-muted">{order.customerName} · {order.customerPhone}</p></td><td className="px-3 py-3 text-muted">{order.serviceName}</td><td className="px-3 py-3">{order.weightKg} kg</td><td className="px-3 py-3 text-muted">{formatShortDate(order.dueAt)}</td><td className="px-3 py-3"><OrderStatusBadge status={order.status} /></td><td className="px-3 py-3"><PaymentStatusBadge status={order.paymentStatus} /></td><td className="px-4 py-3 text-right font-semibold">{formatCurrency(order.amount)}</td><td className="px-4 py-3 text-right"><div className="flex flex-col items-end gap-1"><button type="button" aria-label={"Cetak nota pesanan " + order.id} title="Cetak nota" onClick={() => setReceiptOrder(order)} className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[10px] font-medium text-muted hover:border-accent/50 hover:text-accent"><Printer size={12} /> Nota</button>{order.paymentStatus !== "paid" && <button onClick={() => { setPaymentOrder(order); setError(""); }} className="inline-flex items-center gap-1 rounded-md border border-accent/40 px-2 py-1 text-[10px] font-medium text-accent hover:bg-accent/10"><CreditCard size={12} /> Catat bayar</button>}{order.status !== "completed" ? <button aria-busy={pendingAction === order.id} disabled={pendingAction === order.id} onClick={() => advanceOrder(order.id, order.status)} className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[10px] font-medium text-muted transition hover:border-accent/50 hover:text-accent disabled:cursor-wait disabled:opacity-50">{pendingAction === order.id ? <><Spinner className="size-3" /> Menyimpan…</> : "Lanjut proses"}</button> : <span className="text-[10px] text-muted">Selesai</span>}</div></td></tr>)}</tbody>
           </table>
           {visibleOrders.length === 0 && <div className="p-12 text-center"><p className="text-sm font-medium">Pesanan tidak ditemukan</p><p className="mt-1 text-xs text-muted">Ubah kata kunci atau filter status.</p></div>}
         </div>
@@ -245,6 +245,45 @@ export function OrdersView({ initialOrders, databaseEnabled = false, availableSe
           </form>
         </div>
       </div>}
+      {receiptOrder && (
+        <div id="laundry-receipt" role="dialog" aria-modal="true" aria-labelledby="receipt-title" className="animate-overlay-enter fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto bg-black/70 p-4">
+          <section className="receipt-sheet animate-dialog-enter relative w-full max-w-sm rounded-2xl border border-border bg-surface p-6 text-foreground shadow-2xl">
+            <header className="flex items-start justify-between gap-4 border-b border-border pb-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-widest text-accent">LaundryOS</p>
+                <h2 id="receipt-title" className="mt-1 text-lg font-semibold">Nota pesanan</h2>
+                <p className="mt-1 text-xs text-muted">{receiptOrder.id}</p>
+              </div>
+              <div className="flex shrink-0 gap-2 print:hidden">
+                <Button type="button" variant="primary" onClick={() => window.print()}><Printer size={14} /> Cetak</Button>
+                <Button type="button" aria-label="Tutup nota" onClick={() => setReceiptOrder(null)}><X size={14} /></Button>
+              </div>
+            </header>
+            <div className="space-y-3 py-4 text-xs">
+              <div>
+                <p className="text-[10px] uppercase tracking-wide text-muted">Pelanggan</p>
+                <p className="mt-1 font-semibold">{receiptOrder.customerName}</p>
+                <p className="mt-0.5 text-muted">{receiptOrder.customerPhone}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-3 border-y border-border py-3">
+                <div><p className="text-[10px] uppercase tracking-wide text-muted">Tanggal masuk</p><p className="mt-1">{formatShortDate(receiptOrder.receivedAt)}</p></div>
+                <div><p className="text-[10px] uppercase tracking-wide text-muted">Target selesai</p><p className="mt-1">{formatShortDate(receiptOrder.dueAt)}</p></div>
+              </div>
+              <div>
+                <p className="text-[10px] uppercase tracking-wide text-muted">Layanan</p>
+                <div className="mt-1 flex justify-between gap-3"><span>{receiptOrder.serviceName}</span><span>{receiptOrder.weightKg} kg</span></div>
+              </div>
+              <div className="space-y-1.5 border-t border-border pt-3">
+                <div className="flex justify-between gap-3"><span className="text-muted">Total tagihan</span><strong>{formatCurrency(receiptOrder.amount)}</strong></div>
+                <div className="flex justify-between gap-3"><span className="text-muted">Sudah dibayar</span><span>{formatCurrency(receiptOrder.paidAmount)}</span></div>
+                <div className="flex justify-between gap-3 border-t border-border pt-2 font-semibold"><span>Sisa tagihan</span><span>{formatCurrency(Math.max(0, receiptOrder.amount - receiptOrder.paidAmount))}</span></div>
+              </div>
+              <p className="border-t border-border pt-3 text-[10px] text-muted">Status: {orderStatusLabels[receiptOrder.status]} · {receiptOrder.paymentStatus === "paid" ? "Lunas" : receiptOrder.paymentStatus === "partial" ? "Dibayar sebagian" : "Belum dibayar"}</p>
+              <p className="text-center text-[10px] text-muted">Simpan nota ini untuk pengambilan cucian.</p>
+            </div>
+          </section>
+        </div>
+      )}
     </>
   );
 }

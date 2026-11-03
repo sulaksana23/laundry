@@ -20,7 +20,8 @@
 
 - [x] Login/registrasi email-password untuk akun Pemilik dan pembatasan pesanan berdasarkan cabang sesi.
 - [ ] Role-based access terperinci, audit log, rate limit, dan uji isolasi cabang lintas akun.
-- [ ] Nota/cetak, pagination, dan impor/ekspor.
+- [x] Cetak nota ringkasan pesanan dari daftar.
+- [ ] Pagination dan impor/ekspor lanjutan.
 - [ ] Notifikasi pelanggan untuk status dan pesanan siap, menggunakan provider yang dipilih.
 - [ ] Rekonsiliasi kas, pembayaran digital, refund, dan laporan terdefinisi.
 - [ ] Backup/restore, observability, aksesibilitas, dan uji end-to-end.

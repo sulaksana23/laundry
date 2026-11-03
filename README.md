@@ -27,7 +27,7 @@ Daftar berikut adalah cakupan produk yang dituju. Status implementasi sebenarnya
 | Bagian | Tersedia sekarang | Belum tersedia |
 | --- | --- | --- |
 | Dashboard | Ringkasan visual menggunakan data contoh | Query langsung dari database dan filter periode nyata |
-| Pesanan | Cari/filter, validasi server, hitung harga dari katalog, buat pesanan dan lanjutkan status tersimpan di PostgreSQL pada Vercel Preview/local dev | Role terperinci, pembayaran, histori audit lengkap, pagination, nota |
+| Pesanan | Cari/filter, validasi server, hitung harga katalog di server, status dan pembayaran tersimpan per cabang, ekspor CSV, cetak nota ringkasan | Pagination, histori audit lengkap, refund, dan role terperinci |
 | Pelanggan | Tambah dan cari pelanggan tersimpan per cabang di Neon | Impor massal, histori lengkap, dan kontrol akses terperinci |
 | Layanan & harga | Katalog tersimpan per cabang; tambah, ubah, aktif/nonaktif; harga aktif dipakai saat membuat pesanan | Satuan pcs/pasang pada form pesanan, histori perubahan harga, dan hak akses terperinci |
 | Persediaan & keuangan | Penyesuaian stok, pengeluaran, pembayaran, dan ringkasan kas tersimpan di Neon | Ledger stok, refund/reversal, dan rekonsiliasi mendalam |
