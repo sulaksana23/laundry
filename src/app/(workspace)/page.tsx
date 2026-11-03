@@ -157,13 +157,35 @@ async function DashboardContent({ branchId, databaseEnabled, branchName }: { bra
       <section className="mt-4 grid gap-4 xl:grid-cols-[1.55fr_1fr]">
         <Card className="min-w-0">
           <CardHeader><div><CardTitle>Pesanan terbaru</CardTitle><p className="mt-1 text-[11px] text-muted">Aktivitas terakhir di {branchName}</p></div><Link href="/orders" className="inline-flex items-center gap-1 text-xs font-semibold text-accent">Semua <ArrowRight size={13} /></Link></CardHeader>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[660px] text-left text-xs">
-              <thead><tr className="border-b border-border text-[10px] uppercase tracking-wide text-muted"><th className="px-4 py-2.5 font-medium">Pesanan</th><th className="px-3 py-2.5 font-medium">Pelanggan</th><th className="px-3 py-2.5 font-medium">Selesai</th><th className="px-3 py-2.5 font-medium">Status</th><th className="px-4 py-2.5 text-right font-medium">Total</th></tr></thead>
-              <tbody>{recentOrders.map((order) => <tr key={order.id} className="border-b border-border/60 last:border-0 hover:bg-surface-raised/60"><td className="px-4 py-3 font-semibold">{order.id}<p className="mt-0.5 text-[10px] font-normal text-muted">{order.serviceName}</p></td><td className="px-3 py-3">{order.customerName}</td><td className="px-3 py-3 text-muted">{formatShortDate(order.dueAt)}</td><td className="px-3 py-3"><OrderStatusBadge status={order.status} /></td><td className="px-4 py-3 text-right font-medium">{formatCurrency(order.amount)}</td></tr>)}</tbody>
-            </table>
-            {recentOrders.length === 0 && <p className="p-10 text-center text-xs text-muted">Belum ada pesanan tersimpan. Buat pesanan pertama untuk mulai.</p>}
-          </div>
+          {recentOrders.length === 0 ? (
+            <p className="p-10 text-center text-xs text-muted">Belum ada pesanan tersimpan. Buat pesanan pertama untuk mulai.</p>
+          ) : (
+            <>
+              <div className="divide-y divide-border/60 md:hidden">
+                {recentOrders.map((order) => (
+                  <div key={order.id} className="px-4 py-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-xs font-semibold">{order.id}</p>
+                        <p className="mt-0.5 truncate text-[11px] text-muted">{order.customerName} · {order.serviceName}</p>
+                      </div>
+                      <OrderStatusBadge status={order.status} />
+                    </div>
+                    <div className="mt-2 flex items-center justify-between text-[11px]">
+                      <span className="text-muted">Selesai {formatShortDate(order.dueAt)}</span>
+                      <span className="font-semibold">{formatCurrency(order.amount)}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="hidden overflow-x-auto md:block">
+                <table className="w-full min-w-[660px] text-left text-xs">
+                  <thead><tr className="border-b border-border text-[10px] uppercase tracking-wide text-muted"><th className="px-4 py-2.5 font-medium">Pesanan</th><th className="px-3 py-2.5 font-medium">Pelanggan</th><th className="px-3 py-2.5 font-medium">Selesai</th><th className="px-3 py-2.5 font-medium">Status</th><th className="px-4 py-2.5 text-right font-medium">Total</th></tr></thead>
+                  <tbody>{recentOrders.map((order) => <tr key={order.id} className="border-b border-border/60 last:border-0 hover:bg-surface-raised/60"><td className="px-4 py-3 font-semibold">{order.id}<p className="mt-0.5 text-[10px] font-normal text-muted">{order.serviceName}</p></td><td className="px-3 py-3">{order.customerName}</td><td className="px-3 py-3 text-muted">{formatShortDate(order.dueAt)}</td><td className="px-3 py-3"><OrderStatusBadge status={order.status} /></td><td className="px-4 py-3 text-right font-medium">{formatCurrency(order.amount)}</td></tr>)}</tbody>
+                </table>
+              </div>
+            </>
+          )}
         </Card>
         <Card className="min-w-0">
           <CardHeader><div><CardTitle>Catatan operasional</CardTitle><p className="mt-1 text-[11px] text-muted">Hal yang perlu diperhatikan</p></div></CardHeader>
