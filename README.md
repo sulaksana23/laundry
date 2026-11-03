@@ -4,7 +4,7 @@ Sistem operasional laundry berbasis **Next.js App Router**, TypeScript, dan Tail
 
 ![Pratinjau fitur LaundryOS](./public/readme-feature-overview.svg)
 
-> **Status saat ini:** MVP. Modul Pesanan dapat memakai Neon PostgreSQL pada Vercel Preview dan local development setelah migrasi dijalankan; tanpa konfigurasi database, aplikasi memakai data demo di browser. Modul lain masih berupa UI/fixture. **Login dan registrasi email aktif setelah database dan secret sesi dikonfigurasi.** Role terperinci, pemulihan akun, dan akses transaksi produksi masih belum tersedia. Jangan masukkan data pelanggan nyata sebelum kontrol akses siap.
+> **Status saat ini:** MVP. Pesanan, pelanggan, persediaan, keuangan, dan laporan memakai Neon pada Preview serta Production dengan sesi yang valid. Layanan dan pengaturan masih berupa data contoh. Login memakai akun pemilik per cabang; fitur reset akun dan role terperinci belum tersedia. Gunakan data uji sampai audit, backup, dan kontrol operasional siap.
 
 ## Cakupan fitur lengkap
 
@@ -61,7 +61,7 @@ npm run typecheck
 npm run build
 ```
 
-`.env.example` berisi variabel untuk Neon. Modul Pesanan memakai database di Vercel Preview jika `DATABASE_URL` tersedia; local development juga perlu `LAUNDRY_DATABASE_MODE=true`. Mutasi database Pesanan hanya aktif pada Vercel Preview dan local development. Login/register aktif setelah DATABASE_URL dan AUTH_SECRET disiapkan. Jangan masukkan rahasia ke `NEXT_PUBLIC_*`.
+`.env.example` berisi variabel untuk Neon. Modul operasional memakai Neon jika `DATABASE_URL` tersedia dan sesi `AUTH_SECRET` valid. Local development juga perlu `LAUNDRY_DATABASE_MODE=true`. Jangan masukkan rahasia ke `NEXT_PUBLIC_*`.
 
 ## Deploy ke Vercel + PostgreSQL (Neon)
 
@@ -72,13 +72,17 @@ Repository ini menyiapkan migrasi SQL, autentikasi email/password, dan implement
 1. Hubungkan repository `sulaksana23/laundry` ke Vercel dengan framework Next.js dan Node.js 22.
 2. Tambahkan Neon PostgreSQL melalui integrasi Vercel Marketplace dan hubungkan resource ke environment Preview.
 3. Pastikan `DATABASE_URL` dan `AUTH_SECRET` tersedia sebagai environment variable server-side untuk Preview. Buat `AUTH_SECRET` acak minimal 32 karakter; jangan menaruh rahasia di variabel `NEXT_PUBLIC_*`.
-4. Deploy branch `main`. Build menerapkan migrasi SQL dan seed katalog layanan demo.
-5. Akses Preview melalui Vercel Authentication. Preview berisi data uji; jangan memasukkan data pelanggan nyata.
-6. Production belum menggunakan database atau menerima mutasi transaksi sampai login, role, dan perlindungan data selesai.
+4. Build Vercel menerapkan migrasi SQL. Cabang akun baru otomatis mendapat katalog layanan.
+5. Akses Preview melalui Vercel Authentication. Gunakan data uji sampai kebijakan backup dan audit siap.
+6. Setelah deploy Production, akun dengan sesi valid memakai data Neon yang terisolasi menurut cabang.
 
 ### Lingkup database saat ini
 
-Tabel cabang, pengguna, pelanggan, layanan, pesanan, dan histori status dibuat oleh migrasi. Modul Pesanan membaca dan menyimpan pesanan ke PostgreSQL; pembayaran dimulai sebagai belum lunas. Dashboard dan modul lain masih menggunakan fixture/demo. Sebelum penggunaan operasional, lengkapi autentikasi, izin per cabang, audit, pembayaran, backup, dan kebijakan retensi.
+Tabel cabang, pengguna, pelanggan, layanan, pesanan, histori status, pembayaran, persediaan, dan pengeluaran dibuat oleh migrasi. Modul operasional menyimpan data per cabang. Akun `demo@laundry.test` mendapat pelanggan, pesanan, pembayaran, persediaan, dan pengeluaran contoh saat didaftarkan; buat password sendiri pada formulir registrasi.
+
+## Akun dan data demo
+
+Daftarkan email `demo@laundry.test` melalui halaman registrasi dan pilih password sendiri. Saat akun demo dibuat, aplikasi mengisi cabangnya dengan pelanggan, pesanan, pembayaran, persediaan, dan pengeluaran sintetis. Akun serta password tidak ditanam sebagai kredensial bawaan di source code. Email lain mendapat cabang baru tanpa data contoh.
 
 ## Struktur direktori
 
