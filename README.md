@@ -56,6 +56,18 @@ Flowchart tersedia sebagai berkas **[draw.io](docs/flowcharts/laundryos-flowchar
 
 ![Arsitektur sistem](docs/flowcharts/arsitektur-sistem.svg)
 
+## LaundryOS Pro
+
+Fitur inti LaundryOS (pesanan, pelanggan, layanan, persediaan, keuangan dasar, dan lacak pesanan publik) **gratis dan terbuka (MIT)**. Fitur lanjutan dikunci sebagai **LaundryOS Pro** bagi pendukung Bali Tech Solution:
+
+- **Ekspor laporan CSV** dan **Tutup kasir harian** (daftar ini dapat berubah).
+
+Cara mengaktifkan:
+
+1. Dukung melalui [Trakteer](https://trakteer.id/bali_techsolution/support).
+2. Anda menerima **kode aktivasi** (ditandatangani secara kriptografis, tidak dapat dipalsukan).
+3. Buka **Pengaturan → LaundryOS Pro** di aplikasi, tempel kode, dan fitur Pro langsung terbuka. Kode dapat memiliki masa berlaku atau berlaku selamanya, sesuai dukungan.
+
 ## Dukungan
 
 LaundryOS dikembangkan oleh **Bali Tech Solution**. Jika aplikasi ini membantu operasional laundry Anda dan Anda ingin mendukung pengembangannya, silakan beri dukungan melalui Trakteer:

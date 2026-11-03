@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { isOrdersDatabaseEnabled } from "@/server/db/mode";
 import { getNeonSql } from "@/server/db/neon";
 import { getAuthSession } from "@/server/modules/auth/auth.session";
+import { isProActive } from "@/server/modules/license/license";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,6 +15,7 @@ export async function GET() {
   const session = await getAuthSession();
   if (!session) return NextResponse.json({ error: "Silakan masuk untuk mengunduh laporan." }, { status: 401 });
   if (!isOrdersDatabaseEnabled()) return NextResponse.json({ error: "Laporan CSV tersedia setelah database aktif." }, { status: 503 });
+  if (!(await isProActive(session.branchId))) return NextResponse.json({ error: "Ekspor laporan CSV adalah fitur LaundryOS Pro. Aktifkan Pro di Pengaturan untuk mengunduh laporan." }, { status: 403 });
 
   const result = await getNeonSql().query(
     "WITH branch_clock AS (" +
