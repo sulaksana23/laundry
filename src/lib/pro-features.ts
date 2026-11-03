@@ -19,6 +19,11 @@ export const PRO_FEATURES: ProFeature[] = [
     label: "Tutup kasir harian",
     description: "Rekonsiliasi kas tunai sistem dengan uang fisik setiap hari dan catat selisihnya.",
   },
+  {
+    key: "backup-restore",
+    label: "Backup & restore data",
+    description: "Unduh salinan seluruh data cabang dan pulihkan kembali bila diperlukan.",
+  },
 ];
 
 export const TRAKTEER_SUPPORT_URL = "https://trakteer.id/bali_techsolution/support";

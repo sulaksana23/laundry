@@ -65,6 +65,7 @@ export function ProActivationCard({ mode, initialStatus, activateAction }: ProAc
         }
         try {
           window.localStorage.setItem(DEMO_LICENSE_KEY, JSON.stringify({ key, payload: data.payload }));
+          window.dispatchEvent(new Event("laundryos:pro-activated"));
         } catch { /* penyimpanan tidak tersedia */ }
         setStatus({ active: true, holderName: data.payload.name, holderEmail: data.payload.email, expiresAt: data.payload.expiresAt });
         setLicenseKey("");

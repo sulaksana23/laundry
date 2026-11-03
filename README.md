@@ -34,7 +34,8 @@ Daftar berikut adalah cakupan produk yang dituju. Status implementasi sebenarnya
 | Persediaan & keuangan | Penyesuaian stok, pengeluaran, pembayaran, ringkasan kas, dan tutup kasir harian (kas tunai seharusnya vs uang fisik, selisih tercatat) tersimpan di Neon | Ledger stok, refund/reversal, dan rekonsiliasi mendalam |
 | Laporan | Agregasi transaksi tersimpan dan ekspor CSV | Filter periode/cabang yang lebih lengkap serta definisi metrik terverifikasi |
 | Pengaturan | Profil usaha (nama, telepon, email, alamat, zona waktu) tersimpan ke database, tampilan cabang aktif dan metode pembayaran | Preferensi lanjutan ke database; role dan audit log |
-| Platform | Layout responsif, komponen UI, TypeScript strict, pola controller/service/repository, migrasi PostgreSQL untuk pesanan | Role terperinci, API produksi, multi-cabang, backup, notifikasi |
+| Platform | Layout responsif, komponen UI, TypeScript strict, pola controller/service/repository, migrasi PostgreSQL untuk pesanan | Role terperinci, API produksi, multi-cabang per akun, notifikasi otomatis |
+| Backup & restore | Unduh salinan JSON seluruh data cabang dan pulihkan ke cabang yang sama dari Pengaturan (fitur Pro) | Penjadwalan backup otomatis |
 
 Status rinci dan kriteria penerimaan ada di [docs/modules.md](docs/modules.md) dan [docs/roadmap.md](docs/roadmap.md). Nama serta nomor kontak dalam fixture bersifat sintetis/masked.
 
@@ -60,7 +61,7 @@ Flowchart tersedia sebagai berkas **[draw.io](docs/flowcharts/laundryos-flowchar
 
 Fitur inti LaundryOS (pesanan, pelanggan, layanan, persediaan, keuangan dasar, dan lacak pesanan publik) **gratis dan terbuka (MIT)**. Fitur lanjutan dikunci sebagai **LaundryOS Pro** bagi pendukung Bali Tech Solution:
 
-- **Ekspor laporan CSV** dan **Tutup kasir harian** (daftar ini dapat berubah).
+- **Ekspor laporan CSV**, **Tutup kasir harian**, dan **Backup & restore data** (daftar ini dapat berubah).
 
 Cara mengaktifkan:
 
