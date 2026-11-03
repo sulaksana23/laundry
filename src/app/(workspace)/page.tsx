@@ -130,7 +130,7 @@ async function DashboardContent({ branchId, databaseEnabled, branchName }: { bra
       </section>
 
       <section className="mt-4 grid gap-4 xl:grid-cols-[1.55fr_1fr]">
-        <Card>
+        <Card className="min-w-0">
           <CardHeader><div><CardTitle>Ringkasan pendapatan</CardTitle><p className="mt-1 text-[11px] text-muted">Tren 7 hari terakhir · {databaseEnabled ? "data tersimpan" : "data demo"}</p></div><span className="rounded-md bg-surface-raised px-2 py-1.5 text-[10px] text-muted">7 hari</span></CardHeader>
           <div className="px-4 pb-4 pt-3">
             <div className="mb-3 flex items-baseline gap-2"><p className="text-2xl font-semibold">{formatCurrency(incomeWeek)}</p><span className="text-[11px] font-medium text-muted">total 7 hari</span></div>
@@ -142,7 +142,7 @@ async function DashboardContent({ branchId, databaseEnabled, branchName }: { bra
           </div>
         </Card>
 
-        <Card>
+        <Card className="min-w-0">
           <CardHeader><div><CardTitle>Proses hari ini</CardTitle><p className="mt-1 text-[11px] text-muted">Status antrean pesanan aktif</p></div><span className="rounded-lg bg-surface-raised p-2 text-accent"><Sparkles size={15} /></span></CardHeader>
           <div className="space-y-4 px-4 py-4">
             {queueStatuses.map(({ status, color }) => {
@@ -155,7 +155,7 @@ async function DashboardContent({ branchId, databaseEnabled, branchName }: { bra
       </section>
 
       <section className="mt-4 grid gap-4 xl:grid-cols-[1.55fr_1fr]">
-        <Card>
+        <Card className="min-w-0">
           <CardHeader><div><CardTitle>Pesanan terbaru</CardTitle><p className="mt-1 text-[11px] text-muted">Aktivitas terakhir di {branchName}</p></div><Link href="/orders" className="inline-flex items-center gap-1 text-xs font-semibold text-accent">Semua <ArrowRight size={13} /></Link></CardHeader>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[660px] text-left text-xs">
@@ -165,7 +165,7 @@ async function DashboardContent({ branchId, databaseEnabled, branchName }: { bra
             {recentOrders.length === 0 && <p className="p-10 text-center text-xs text-muted">Belum ada pesanan tersimpan. Buat pesanan pertama untuk mulai.</p>}
           </div>
         </Card>
-        <Card>
+        <Card className="min-w-0">
           <CardHeader><div><CardTitle>Catatan operasional</CardTitle><p className="mt-1 text-[11px] text-muted">Hal yang perlu diperhatikan</p></div></CardHeader>
           <div className="space-y-2.5 p-4">
             {lowStock.length > 0 ? lowStock.slice(0, 2).map((item) => <div key={item.id} className="rounded-lg border border-amber-300/15 bg-amber-300/5 p-3"><div className="mb-1 flex items-center justify-between"><span className="text-xs font-semibold text-amber-100">Stok menipis</span><span className="size-1.5 rounded-full bg-amber-200" /></div><p className="text-[11px] leading-5 text-muted">{item.name} tersisa {item.stock} {item.unit}. Batas minimum {item.minStock} {item.unit}.</p><Link href="/inventory" className="mt-2 inline-block text-[11px] font-semibold text-accent">Periksa persediaan →</Link></div>) : <div className="rounded-lg border border-emerald-300/15 bg-emerald-300/5 p-3"><div className="mb-1 flex items-center justify-between"><span className="text-xs font-semibold text-emerald-100">Stok aman</span><span className="size-1.5 rounded-full bg-emerald-200" /></div><p className="text-[11px] leading-5 text-muted">Tidak ada bahan yang berada di bawah batas minimum.</p></div>}

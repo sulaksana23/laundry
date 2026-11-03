@@ -18,7 +18,7 @@ export function DashboardSkeleton() {
       </section>
 
       <section aria-hidden="true" className="mt-4 grid gap-4 xl:grid-cols-[1.55fr_1fr]">
-        <Card>
+        <Card className="min-w-0">
           <CardHeader>
             <div>
               <CardTitle>Ringkasan pendapatan</CardTitle>
@@ -46,7 +46,7 @@ export function DashboardSkeleton() {
           </div>
         </Card>
 
-        <Card>
+        <Card className="min-w-0">
           <CardHeader>
             <div>
               <CardTitle>Proses hari ini</CardTitle>
