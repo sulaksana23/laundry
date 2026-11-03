@@ -12,7 +12,7 @@ const orderTone: Record<OrderStatus, string> = {
 };
 
 export function OrderStatusBadge({ status }: { status: OrderStatus }) {
-  return <span className={cn("inline-flex whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium", orderTone[status])}>{orderStatusLabels[status]}</span>;
+  return <span key={status} className={cn("status-badge inline-flex whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium", orderTone[status])}>{orderStatusLabels[status]}</span>;
 }
 
 export function PaymentStatusBadge({ status }: { status: PaymentStatus }) {
@@ -22,5 +22,5 @@ export function PaymentStatusBadge({ status }: { status: PaymentStatus }) {
     partial: "bg-amber-300/10 text-amber-200",
     unpaid: "bg-rose-300/10 text-rose-200",
   };
-  return <span className={cn("inline-flex whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium", tones[status])}>{labels[status]}</span>;
+  return <span key={status} className={cn("status-badge inline-flex whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium", tones[status])}>{labels[status]}</span>;
 }

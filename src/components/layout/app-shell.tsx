@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { Bell, LogOut, Menu, Plus, Search, Shirt, Sparkles, X } from "lucide-react";
+import { Bell, ExternalLink, Heart, LogOut, Menu, Plus, Search, Shirt, Sparkles, X } from "lucide-react";
 import { navigation } from "@/components/layout/navigation";
 import { cn } from "@/lib/utils";
 
@@ -44,6 +44,11 @@ function Sidebar({ onNavigate, user }: { onNavigate?: () => void; user: { fullNa
         })}
       </nav>
 
+      <a href="https://trakteer.id/bali_techsolution" target="_blank" rel="noopener noreferrer" className="mb-3 flex items-center gap-2.5 rounded-xl border border-accent/20 bg-accent/5 px-3 py-2.5 text-xs font-medium text-foreground transition hover:-translate-y-px hover:bg-accent/10">
+        <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-accent/10 text-accent"><Heart size={14} /></span>
+        <span className="min-w-0 flex-1"><span className="block">Dukung pengembangan</span><span className="mt-0.5 block text-[10px] text-muted">Trakteer</span></span>
+        <ExternalLink size={13} className="text-muted" />
+      </a>
       <div className="mt-auto rounded-xl border border-border bg-surface px-3.5 py-3">
         <div className="mb-1 text-xs font-semibold">{user.isDemo ? "Mode demo" : "Akun pemilik"}</div>
         <p className="truncate text-[11px] leading-5 text-muted">{user.isDemo ? "Pesanan contoh disimpan di browser ini." : user.email}</p>
@@ -58,6 +63,7 @@ function Sidebar({ onNavigate, user }: { onNavigate?: () => void; user: { fullNa
 }
 
 export function AppShell({ children, user }: { children: React.ReactNode; user: { fullName: string; email: string; branchName: string; isDemo?: boolean } }) {
+  const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   async function signOut() {
@@ -89,7 +95,7 @@ export function AppShell({ children, user }: { children: React.ReactNode; user: 
             {!user.isDemo && <button type="button" onClick={signOut} aria-label="Keluar dari LaundryOS" className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 text-xs text-muted hover:text-foreground"><LogOut size={14} /><span className="hidden sm:inline">Keluar</span></button>}
           </div>
         </header>
-        <main className="mx-auto w-full max-w-[1500px] px-4 py-5 sm:px-6 sm:py-6 xl:px-8">{children}</main>
+        <main className="mx-auto w-full max-w-[1500px] px-4 py-5 sm:px-6 sm:py-6 xl:px-8"><div key={pathname} className="page-motion">{children}</div></main>
         <footer className="px-6 pb-5 text-center text-[10px] text-muted/70">LaundryOS · Demo operasional · © 2026</footer>
       </div>
     </div>

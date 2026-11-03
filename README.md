@@ -4,7 +4,7 @@ Sistem operasional laundry berbasis **Next.js App Router**, TypeScript, dan Tail
 
 ![Pratinjau fitur LaundryOS](./public/readme-feature-overview.svg)
 
-> **Status saat ini:** MVP. Modul Pesanan dapat memakai Neon PostgreSQL pada Vercel Preview dan local development setelah migrasi dijalankan; tanpa konfigurasi database, aplikasi memakai data demo di browser. Modul lain masih berupa UI/fixture. **Login dan registrasi email aktif setelah database dan secret sesi dikonfigurasi.** Role terperinci, pemulihan akun, dan akses transaksi produksi masih belum tersedia. Jangan masukkan data pelanggan nyata sebelum kontrol akses siap.
+> **Status saat ini:** MVP. Pesanan, pelanggan, layanan, persediaan, keuangan, dan laporan memakai Neon pada Preview serta Production dengan sesi yang valid. Profil usaha dan preferensi di Pengaturan masih berupa contoh. Login/register aktif saat `DATABASE_URL` dan `AUTH_SECRET` tersedia; akun demo tidak dibuat otomatis. Gunakan data uji sampai audit, backup, dan kontrol operasional siap.
 
 ## Cakupan fitur lengkap
 
@@ -28,7 +28,11 @@ Daftar berikut adalah cakupan produk yang dituju. Status implementasi sebenarnya
 | --- | --- | --- |
 | Dashboard | Ringkasan visual menggunakan data contoh | Query langsung dari database dan filter periode nyata |
 | Pesanan | Cari/filter, validasi server, hitung harga dari katalog, buat pesanan dan lanjutkan status tersimpan di PostgreSQL pada Vercel Preview/local dev | Role terperinci, pembayaran, histori audit lengkap, pagination, nota |
-| Pelanggan, layanan, persediaan, keuangan, laporan, pengaturan | Layar UI dan data fixture untuk demonstrasi | CRUD persisten, aturan bisnis server, laporan terverifikasi, akses berbasis role |
+| Pelanggan | Tambah dan cari pelanggan tersimpan per cabang di Neon | Impor massal, histori lengkap, dan kontrol akses terperinci |
+| Layanan & harga | Katalog tersimpan per cabang; tambah, ubah, aktif/nonaktif; harga aktif dipakai saat membuat pesanan | Satuan pcs/pasang pada form pesanan, histori perubahan harga, dan hak akses terperinci |
+| Persediaan & keuangan | Penyesuaian stok, pengeluaran, pembayaran, dan ringkasan kas tersimpan di Neon | Ledger stok, refund/reversal, dan rekonsiliasi mendalam |
+| Laporan | Agregasi transaksi tersimpan dan ekspor CSV | Filter periode/cabang yang lebih lengkap serta definisi metrik terverifikasi |
+| Pengaturan | Tampilan profil, cabang, dan metode pembayaran | Simpan profil usaha dan preferensi ke database; role dan audit log |
 | Platform | Layout responsif, komponen UI, TypeScript strict, pola controller/service/repository, migrasi PostgreSQL untuk pesanan | Role terperinci, API produksi, multi-cabang, backup, notifikasi |
 
 Status rinci dan kriteria penerimaan ada di [docs/modules.md](docs/modules.md) dan [docs/roadmap.md](docs/roadmap.md). Nama serta nomor kontak dalam fixture bersifat sintetis/masked.
@@ -61,7 +65,7 @@ npm run typecheck
 npm run build
 ```
 
-`.env.example` berisi variabel untuk Neon. Modul Pesanan memakai database di Vercel Preview jika `DATABASE_URL` tersedia; local development juga perlu `LAUNDRY_DATABASE_MODE=true`. Mutasi database Pesanan hanya aktif pada Vercel Preview dan local development. Login/register aktif setelah DATABASE_URL dan AUTH_SECRET disiapkan. Jangan masukkan rahasia ke `NEXT_PUBLIC_*`.
+`.env.example` berisi variabel untuk Neon. Modul operasional memakai Neon jika `DATABASE_URL` tersedia dan sesi `AUTH_SECRET` valid. Local development juga perlu `LAUNDRY_DATABASE_MODE=true`. Jangan masukkan rahasia ke `NEXT_PUBLIC_*`.
 
 ## Deploy ke Vercel + PostgreSQL (Neon)
 
@@ -72,13 +76,19 @@ Repository ini menyiapkan migrasi SQL, autentikasi email/password, dan implement
 1. Hubungkan repository `sulaksana23/laundry` ke Vercel dengan framework Next.js dan Node.js 22.
 2. Tambahkan Neon PostgreSQL melalui integrasi Vercel Marketplace dan hubungkan resource ke environment Preview.
 3. Pastikan `DATABASE_URL` dan `AUTH_SECRET` tersedia sebagai environment variable server-side untuk Preview. Buat `AUTH_SECRET` acak minimal 32 karakter; jangan menaruh rahasia di variabel `NEXT_PUBLIC_*`.
-4. Deploy branch `main`. Build menerapkan migrasi SQL dan seed katalog layanan demo.
-5. Akses Preview melalui Vercel Authentication. Preview berisi data uji; jangan memasukkan data pelanggan nyata.
-6. Production belum menggunakan database atau menerima mutasi transaksi sampai login, role, dan perlindungan data selesai.
+4. Build Vercel menjalankan migrasi SQL, lalu seeder demo secara idempoten sebelum build. Seeder dilewati jika akun demo belum terdaftar atau DATABASE_URL tidak tersedia; akun demo baru juga otomatis mendapat data saat registrasi.
+5. Akses Preview melalui Vercel Authentication. Gunakan data uji sampai kebijakan backup dan audit siap.
+6. Setelah deploy Production, akun dengan sesi valid memakai data Neon yang terisolasi menurut cabang.
 
 ### Lingkup database saat ini
 
-Tabel cabang, pengguna, pelanggan, layanan, pesanan, dan histori status dibuat oleh migrasi. Modul Pesanan membaca dan menyimpan pesanan ke PostgreSQL; pembayaran dimulai sebagai belum lunas. Dashboard dan modul lain masih menggunakan fixture/demo. Sebelum penggunaan operasional, lengkapi autentikasi, izin per cabang, audit, pembayaran, backup, dan kebijakan retensi.
+Tabel cabang, pengguna, pelanggan, layanan, pesanan, histori status, pembayaran, persediaan, dan pengeluaran dibuat oleh migrasi. Modul operasional menyimpan data per cabang. Akun `demo@laundry.test` mendapat pelanggan, pesanan, pembayaran, persediaan, dan pengeluaran contoh saat didaftarkan; buat password sendiri pada formulir registrasi.
+
+## Akun dan data demo
+
+Daftarkan email `demo@laundry.test` melalui halaman registrasi dan pilih password sendiri. Saat akun demo dibuat, aplikasi mengisi cabangnya dengan pelanggan, pesanan, pembayaran, persediaan, dan pengeluaran sintetis. Akun serta password tidak ditanam sebagai kredensial bawaan di source code. Email lain mendapat cabang baru tanpa data contoh.
+
+Jika akun demo sudah terdaftar sebelum fitur seed aktif, isi datanya sekali dengan `npm run db:seed:demo` setelah `DATABASE_URL` tersedia dan migrasi dijalankan. Seeder tidak menyimpan password dan tidak mengubah cabang yang sudah berisi data.
 
 ## Struktur direktori
 

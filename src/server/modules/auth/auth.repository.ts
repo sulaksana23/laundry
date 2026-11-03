@@ -55,6 +55,15 @@ function toCredentials(row: {
   };
 }
 
+
+const DEMO_EMAIL = "demo@laundry.test";
+
+function demoSeedStatements(sql: ReturnType<typeof getNeonSql>, branchId: string, actorId: string) {
+  return [
+    sql.query("SELECT laundry_seed_demo_data($1, $2)", [branchId, actorId]),
+  ];
+}
+
 export class AuthRepository {
   async findByEmail(email: string): Promise<AuthCredentials | null> {
     const result = await getNeonSql().query(
@@ -71,7 +80,7 @@ export class AuthRepository {
     const sql = getNeonSql();
     const serviceIds = [randomUUID(), randomUUID(), randomUUID(), randomUUID()];
     try {
-      await sql.transaction([
+      const statements = [
         sql.query(
           "INSERT INTO laundry_branches (id, name, timezone) VALUES ($1, $2, 'Asia/Makassar')",
           [input.branchId, input.branchName],
@@ -82,14 +91,18 @@ export class AuthRepository {
           [input.userId, input.branchId, input.fullName, input.email, input.passwordHash],
         ),
         sql.query(
-          "INSERT INTO laundry_services (id, branch_id, name, unit, price_per_unit) VALUES " +
-            "($1, $5, 'Cuci + Setrika', 'kg', 8000), " +
-            "($2, $5, 'Cuci Kering', 'kg', 6000), " +
-            "($3, $5, 'Setrika Saja', 'kg', 8000), " +
-            "($4, $5, 'Express 6 Jam', 'kg', 12000)",
+          "INSERT INTO laundry_services (id, branch_id, name, unit, price_per_unit, description, duration_minutes) VALUES " +
+            "($1, $5, 'Cuci + Setrika', 'kg', 8000, 'Cuci, keringkan, dan setrika pakaian.', 2880), " +
+            "($2, $5, 'Cuci Kering', 'kg', 6000, 'Cuci dan keringkan pakaian.', 1440), " +
+            "($3, $5, 'Setrika Saja', 'kg', 8000, 'Setrika pakaian bersih.', 1440), " +
+            "($4, $5, 'Express 6 Jam', 'kg', 12000, 'Prioritas selesai maksimal enam jam.', 360)",
           [...serviceIds, input.branchId],
         ),
-      ]);
+      ];
+      if (input.email.toLowerCase() === DEMO_EMAIL) {
+        statements.push(...demoSeedStatements(sql, input.branchId, input.userId));
+      }
+      await sql.transaction(statements);
     } catch (error) {
       const existing = await this.findByEmail(input.email).catch(() => null);
       if (existing) throw new Error("EMAIL_EXISTS");

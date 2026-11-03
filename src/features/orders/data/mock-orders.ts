@@ -11,12 +11,12 @@ export const mockOrders: LaundryOrder[] = [
 ];
 
 export const serviceCatalog = [
-  { id: "svc-wash-iron", name: "Cuci + Setrika", description: "Cuci, keringkan, dan setrika", unit: "kg", price: 8000, duration: "2 hari" },
-  { id: "svc-dry", name: "Cuci Kering", description: "Cuci dan keringkan", unit: "kg", price: 6000, duration: "1 hari" },
-  { id: "svc-iron", name: "Setrika Saja", description: "Setrika pakaian bersih", unit: "kg", price: 8000, duration: "1 hari" },
-  { id: "svc-express", name: "Express 6 Jam", description: "Prioritas selesai maksimal 6 jam", unit: "kg", price: 12000, duration: "6 jam" },
-  { id: "svc-bedcover", name: "Bed cover", description: "Cuci khusus perlengkapan tidur", unit: "pcs", price: 25000, duration: "2 hari" },
-  { id: "svc-shoes", name: "Cuci sepatu", description: "Pembersihan sepatu per pasang", unit: "pasang", price: 35000, duration: "3 hari" },
+  { id: "svc-wash-iron", name: "Cuci + Setrika", description: "Cuci, keringkan, dan setrika", unit: "kg", price: 8000, duration: "2 hari", durationMinutes: 2880, isActive: true },
+  { id: "svc-dry", name: "Cuci Kering", description: "Cuci dan keringkan", unit: "kg", price: 6000, duration: "1 hari", durationMinutes: 1440, isActive: true },
+  { id: "svc-iron", name: "Setrika Saja", description: "Setrika pakaian bersih", unit: "kg", price: 8000, duration: "1 hari", durationMinutes: 1440, isActive: true },
+  { id: "svc-express", name: "Express 6 Jam", description: "Prioritas selesai maksimal 6 jam", unit: "kg", price: 12000, duration: "6 jam", durationMinutes: 360, isActive: true },
+  { id: "svc-bedcover", name: "Bed cover", description: "Cuci khusus perlengkapan tidur", unit: "pcs", price: 25000, duration: "2 hari", durationMinutes: 2880, isActive: true },
+  { id: "svc-shoes", name: "Cuci sepatu", description: "Pembersihan sepatu per pasang", unit: "pasang", price: 35000, duration: "3 hari", durationMinutes: 4320, isActive: true },
 ];
 
 export const customers = [
