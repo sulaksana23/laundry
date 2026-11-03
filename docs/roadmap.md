@@ -15,7 +15,8 @@
 - [x] Implementasikan repository/API pesanan untuk local development dan Preview.
 - [x] Implementasikan operasi pelanggan, layanan, pembayaran, persediaan, pengeluaran, dan laporan pada Neon.
 - [x] Hubungkan modul operasional tersebut ke data cabang.
-- [ ] Hubungkan Dashboard dan profil Pengaturan ke data tersimpan.
+- [x] Hubungkan Dashboard ke data tersimpan.
+- [ ] Hubungkan profil Pengaturan ke data tersimpan.
 
 ## Tahap 3 — Kesiapan operasional
 

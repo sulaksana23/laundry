@@ -162,6 +162,44 @@ export async function getFinanceSummary(branchId: string): Promise<FinanceSummar
   };
 }
 
+export interface DashboardData {
+  statusCounts: Record<string, number>;
+  dailyIncome: { date: string; amount: number }[];
+}
+
+export async function getDashboardData(branchId: string): Promise<DashboardData> {
+  const sql = getNeonSql();
+  const [statusResult, incomeResult] = await Promise.all([
+    sql.query(
+      "SELECT status, COUNT(*)::int AS count FROM laundry_orders " +
+      "WHERE branch_id = $1 AND status <> 'completed' GROUP BY status",
+      [branchId],
+    ),
+    sql.query(
+      "WITH branch_clock AS (" +
+      "SELECT id, timezone, now() AT TIME ZONE timezone AS local_now FROM laundry_branches WHERE id = $1" +
+      ") SELECT to_char((p.received_at AT TIME ZONE b.timezone)::date, 'YYYY-MM-DD') AS day, " +
+      "COALESCE(SUM(p.amount), 0)::bigint AS amount " +
+      "FROM laundry_payments p CROSS JOIN branch_clock b WHERE p.branch_id = b.id " +
+      "AND (p.received_at AT TIME ZONE b.timezone)::date > b.local_now::date - 7 " +
+      "AND (p.received_at AT TIME ZONE b.timezone)::date <= b.local_now::date " +
+      "GROUP BY 1 ORDER BY 1",
+      [branchId],
+    ),
+  ]);
+  const statusCounts: Record<string, number> = {};
+  for (const row of resultRows<{ status: string; count: number | string }>(statusResult)) {
+    statusCounts[row.status] = Number(row.count);
+  }
+  return {
+    statusCounts,
+    dailyIncome: resultRows<{ day: string; amount: number | string }>(incomeResult).map((row) => ({
+      date: row.day,
+      amount: Number(row.amount),
+    })),
+  };
+}
+
 export async function listRecentPayments(branchId: string) {
   const rows = resultRows<{
     id: string; order_id: string; customer_name: string; amount: number | string;
