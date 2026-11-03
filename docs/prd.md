@@ -84,8 +84,8 @@ Saat ini akun yang didukung adalah Pemilik; pembagian peran staf vs pemilik (RBA
 | FR-14 | Versi aplikasi tampil jelas di sidebar agar versi yang berjalan mudah diverifikasi | Penting | Tersedia |
 | FR-15 | Tutup kasir harian: membandingkan kas sistem vs uang fisik dan mencatat selisih | Penting | Tersedia |
 | FR-16 | Impor massal pelanggan dari berkas CSV dengan validasi dan laporan hasil | Penting | Tersedia |
-| FR-17 | Backup data cabang yang dapat diunduh dan dipulihkan | Penting | Roadmap |
-| FR-18 | Aktivasi LaundryOS Pro: fitur lanjutan (ekspor laporan CSV, tutup kasir harian) terkunci dan terbuka dengan kode aktivasi bertanda tangan digital yang diterbitkan bagi pendukung Trakteer | Penting | Tersedia (fondasi) |
+| FR-17 | Backup data cabang yang dapat diunduh dan dipulihkan | Penting | Tersedia (fitur Pro) |
+| FR-18 | Aktivasi LaundryOS Pro: fitur lanjutan (ekspor laporan CSV, tutup kasir harian, backup & restore) terkunci dan terbuka dengan kode aktivasi bertanda tangan digital yang diterbitkan bagi pendukung Trakteer | Penting | Tersedia (fondasi) |
 
 ## 6. Kebutuhan non-fungsional
 
@@ -137,3 +137,4 @@ Hal berikut **belum diputuskan** dan harus dikonfirmasi pemilik usaha sebelum di
 | v0.6.0 | Tutup kasir harian di halaman Keuangan |
 | v0.7.0 | Impor massal pelanggan dari CSV di halaman Pelanggan |
 | v0.8.0 | Fondasi Aktivasi Pro: kode aktivasi Ed25519, bagian LaundryOS Pro di Pengaturan, ekspor CSV dan tutup kasir menjadi fitur Pro |
+| v0.9.0 | Backup & restore data cabang (FR-17) sebagai fitur Pro: unduh JSON seluruh data cabang dan pulihkan ke cabang yang sama dari Pengaturan |
