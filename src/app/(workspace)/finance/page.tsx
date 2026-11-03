@@ -9,8 +9,9 @@ import { expenseItems as demoExpenses, mockOrders } from "@/features/orders/data
 import { formatCurrency, formatShortDate } from "@/lib/format";
 import { isOrdersDatabaseEnabled } from "@/server/db/mode";
 import { getAuthSession } from "@/server/modules/auth/auth.session";
-import { getFinanceSummary, listExpenses, listRecentPayments, type ExpenseItem } from "@/server/modules/workspace/operations";
-import { createExpense } from "./actions";
+import { getCashClosingOverview, getFinanceSummary, listExpenses, listRecentPayments, type ExpenseItem } from "@/server/modules/workspace/operations";
+import { createExpense, saveCashClosing } from "./actions";
+import { CashClosingCard, type CashClosingView } from "./cash-closing";
 
 export const metadata: Metadata = { title: "Keuangan" };
 export const dynamic = "force-dynamic";
@@ -31,6 +32,10 @@ export default async function FinancePage() {
   const payments = databaseEnabled ? await listRecentPayments(session!.branchId) : mockOrders.filter((order) => order.paidAmount > 0).map((order) => ({
     id: order.id, orderId: order.id, customerName: order.customerName, amount: order.paidAmount, method: "cash", date: order.receivedAt,
   }));
+  const closingOverview = databaseEnabled ? await getCashClosingOverview(session!.branchId) : null;
+  const toClosingView = (item: { date: string; expectedAmount: number; countedAmount: number; note: string | null }): CashClosingView => ({
+    date: item.date, expectedAmount: item.expectedAmount, countedAmount: item.countedAmount, note: item.note,
+  });
   const net = summary.incomeMonth - summary.expenseMonth;
 
   return (
@@ -42,6 +47,11 @@ export default async function FinancePage() {
         <Card className="p-3.5"><p className="text-[11px] text-muted">Arus kas tercatat</p><p className="mt-2 text-xl font-semibold">{formatCurrency(net)}</p><p className="mt-1 text-[10px] text-muted">Pemasukan dikurangi pengeluaran</p></Card>
         <Card className="p-3.5"><p className="text-[11px] text-muted">Tagihan belum lunas</p><p className="mt-2 text-xl font-semibold">{formatCurrency(summary.outstanding)}</p><p className="mt-1 text-[10px] text-muted">{summary.unpaidCount} pesanan</p></Card>
       </div>
+      {closingOverview ? (
+        <CashClosingCard mode="db" today={closingOverview.today} cashIn={closingOverview.cashIn} cashOut={closingOverview.cashOut} expected={closingOverview.expected} todayClosing={closingOverview.todayClosing ? toClosingView(closingOverview.todayClosing) : null} history={closingOverview.history.map(toClosingView)} saveAction={saveCashClosing} />
+      ) : (
+        <CashClosingCard mode="demo" today={new Date().toISOString().slice(0, 10)} cashIn={1248000} cashOut={210000} expected={1038000} todayClosing={null} history={[]} />
+      )}
       {databaseEnabled ? (
         <Card className="mb-4 p-4">
           <div className="mb-3 flex items-center gap-2"><Plus size={16} className="text-accent" /><div><h2 className="text-sm font-semibold">Catat pengeluaran</h2><p className="text-[11px] text-muted">Pengeluaran tersimpan pada cabang yang sedang aktif.</p></div></div>
