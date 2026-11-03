@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Check, Wallet } from "lucide-react";
+import Link from "next/link";
+import { Check, Crown, Lock, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { FormSubmitButton } from "@/components/ui/form-submit-button";
@@ -17,6 +18,7 @@ export interface CashClosingView {
 
 interface CashClosingCardProps {
   mode: "db" | "demo";
+  locked?: boolean;
   today: string;
   cashIn: number;
   cashOut: number;
@@ -36,7 +38,8 @@ function differenceBadge(difference: number) {
   return <span className="rounded-md bg-rose-300/10 px-2 py-1 text-[10px] font-semibold text-rose-200">Kurang {formatCurrency(Math.abs(difference))}</span>;
 }
 
-export function CashClosingCard({ mode, today, cashIn, cashOut, expected, todayClosing, history, saveAction }: CashClosingCardProps) {
+export function CashClosingCard({ mode, locked = false, today, cashIn, cashOut, expected, todayClosing, history, saveAction }: CashClosingCardProps) {
+  const [demoPro, setDemoPro] = useState<boolean | null>(null);
   const [demoStore, setDemoStore] = useState<DemoStore>({});
   const [counted, setCounted] = useState(() => (todayClosing ? String(todayClosing.countedAmount) : ""));
   const [note, setNote] = useState(() => todayClosing?.note ?? "");
@@ -45,6 +48,16 @@ export function CashClosingCard({ mode, today, cashIn, cashOut, expected, todayC
   useEffect(() => {
     if (mode !== "demo") return;
     const timer = window.setTimeout(() => {
+      try {
+        const licenseRaw = window.localStorage.getItem("laundryos.license.v1");
+        if (licenseRaw) {
+          const stored = JSON.parse(licenseRaw) as { payload?: { expiresAt: string | null } };
+          const todayIso = new Date().toISOString().slice(0, 10);
+          setDemoPro(Boolean(stored.payload && (!stored.payload.expiresAt || stored.payload.expiresAt >= todayIso)));
+        } else {
+          setDemoPro(false);
+        }
+      } catch { setDemoPro(false); }
       try {
         const raw = window.localStorage.getItem(DEMO_STORAGE_KEY);
         if (!raw) return;
@@ -70,6 +83,26 @@ export function CashClosingCard({ mode, today, cashIn, cashOut, expected, todayC
         .sort((a, b) => b.date.localeCompare(a.date))
         .slice(0, 7)
     : history;
+
+  const effectiveLocked = mode === "db" ? locked : demoPro === false;
+
+  if (effectiveLocked) {
+    return (
+      <Card className="mb-4 p-4">
+        <div className="mb-3 flex items-center gap-2">
+          <Wallet size={16} className="text-accent" />
+          <div>
+            <h2 className="flex items-center gap-2 text-sm font-semibold">Tutup kasir <span className="rounded-md bg-amber-300/15 px-1.5 py-0.5 text-[10px] font-bold text-amber-200">PRO</span></h2>
+            <p className="text-[11px] text-muted">Fitur LaundryOS Pro untuk pendukung Bali Tech Solution di Trakteer.</p>
+          </div>
+        </div>
+        <div className="flex flex-col items-start gap-3 rounded-lg border border-amber-300/20 bg-amber-300/5 p-3.5">
+          <p className="flex items-start gap-2 text-xs leading-5 text-muted"><Lock size={14} className="mt-0.5 shrink-0 text-amber-300" /> Tutup kasir harian terkunci. Aktifkan LaundryOS Pro dengan kode aktivasi untuk membandingkan kas tunai sistem dengan uang fisik dan mencatat selisihnya setiap hari.</p>
+          <Link href="/settings#pro" className="inline-flex h-9 items-center gap-2 rounded-lg bg-accent px-3 text-xs font-semibold text-accent-foreground transition hover:brightness-105"><Crown size={14} /> Aktifkan Pro</Link>
+        </div>
+      </Card>
+    );
+  }
 
   const countedValue = counted.trim() === "" ? null : Number(counted);
   const difference = countedValue !== null && Number.isFinite(countedValue) ? countedValue - expected : null;

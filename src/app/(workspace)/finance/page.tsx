@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { ArrowDownLeft, ArrowUpRight, Download, Plus } from "lucide-react";
+import Link from "next/link";
+import { ArrowDownLeft, ArrowUpRight, Download, Lock, Plus } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { FormSubmitButton } from "@/components/ui/form-submit-button";
 import { Card } from "@/components/ui/card";
@@ -10,6 +11,8 @@ import { formatCurrency, formatShortDate } from "@/lib/format";
 import { isOrdersDatabaseEnabled } from "@/server/db/mode";
 import { getAuthSession } from "@/server/modules/auth/auth.session";
 import { getCashClosingOverview, getFinanceSummary, listExpenses, listRecentPayments, type ExpenseItem } from "@/server/modules/workspace/operations";
+import { getLicenseStatus } from "@/server/modules/license/license";
+import { INACTIVE_LICENSE } from "@/lib/pro-features";
 import { createExpense, saveCashClosing } from "./actions";
 import { CashClosingCard, type CashClosingView } from "./cash-closing";
 
@@ -33,6 +36,7 @@ export default async function FinancePage() {
     id: order.id, orderId: order.id, customerName: order.customerName, amount: order.paidAmount, method: "cash", date: order.receivedAt,
   }));
   const closingOverview = databaseEnabled ? await getCashClosingOverview(session!.branchId) : null;
+  const licenseStatus = databaseEnabled ? await getLicenseStatus(session!.branchId) : INACTIVE_LICENSE;
   const toClosingView = (item: { date: string; expectedAmount: number; countedAmount: number; note: string | null }): CashClosingView => ({
     date: item.date, expectedAmount: item.expectedAmount, countedAmount: item.countedAmount, note: item.note,
   });
@@ -40,7 +44,7 @@ export default async function FinancePage() {
 
   return (
     <>
-      <PageHeader eyebrow="Arus kas" title="Keuangan" description="Catat pengeluaran dan pantau pembayaran yang masuk serta tagihan tertunda." action={databaseEnabled ? <a href="/api/reports/export" className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-surface-raised px-3 text-xs font-semibold hover:bg-surface-hover"><Download size={14} /> Unduh CSV</a> : undefined} />
+      <PageHeader eyebrow="Arus kas" title="Keuangan" description="Catat pengeluaran dan pantau pembayaran yang masuk serta tagihan tertunda." action={databaseEnabled ? (licenseStatus.active ? <a href="/api/reports/export" className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-surface-raised px-3 text-xs font-semibold hover:bg-surface-hover"><Download size={14} /> Unduh CSV</a> : <Link href="/settings#pro" className="inline-flex h-9 items-center gap-2 rounded-lg border border-amber-300/30 bg-amber-300/5 px-3 text-xs font-semibold text-amber-200 hover:bg-amber-300/10"><Lock size={14} /> Unduh CSV · Pro</Link>) : undefined} />
       <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Card className="p-3.5"><p className="text-[11px] text-muted">Pemasukan bulan ini</p><p className="mt-2 text-xl font-semibold">{formatCurrency(summary.incomeMonth)}</p><p className="mt-1 text-[10px] text-muted">Dari pembayaran pesanan yang dicatat</p></Card>
         <Card className="p-3.5"><p className="text-[11px] text-muted">Pengeluaran bulan ini</p><p className="mt-2 text-xl font-semibold">{formatCurrency(summary.expenseMonth)}</p><p className="mt-1 text-[10px] text-muted">{expenses.length} catatan terbaru</p></Card>
@@ -48,7 +52,7 @@ export default async function FinancePage() {
         <Card className="p-3.5"><p className="text-[11px] text-muted">Tagihan belum lunas</p><p className="mt-2 text-xl font-semibold">{formatCurrency(summary.outstanding)}</p><p className="mt-1 text-[10px] text-muted">{summary.unpaidCount} pesanan</p></Card>
       </div>
       {closingOverview ? (
-        <CashClosingCard mode="db" today={closingOverview.today} cashIn={closingOverview.cashIn} cashOut={closingOverview.cashOut} expected={closingOverview.expected} todayClosing={closingOverview.todayClosing ? toClosingView(closingOverview.todayClosing) : null} history={closingOverview.history.map(toClosingView)} saveAction={saveCashClosing} />
+        <CashClosingCard mode="db" locked={!licenseStatus.active} today={closingOverview.today} cashIn={closingOverview.cashIn} cashOut={closingOverview.cashOut} expected={closingOverview.expected} todayClosing={closingOverview.todayClosing ? toClosingView(closingOverview.todayClosing) : null} history={closingOverview.history.map(toClosingView)} saveAction={saveCashClosing} />
       ) : (
         <CashClosingCard mode="demo" today={new Date().toISOString().slice(0, 10)} cashIn={1248000} cashOut={210000} expected={1038000} todayClosing={null} history={[]} />
       )}
