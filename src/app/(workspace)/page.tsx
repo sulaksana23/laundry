@@ -175,15 +175,13 @@ async function DashboardContent({ branchId, databaseEnabled, branchName }: { bra
                 {recentOrders.map((order) => (
                   <div key={order.id} className="px-4 py-3">
                     <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="truncate text-xs font-semibold">{order.id}</p>
-                        <p className="mt-0.5 truncate text-[11px] text-muted">{order.customerName} · {order.serviceName}</p>
-                      </div>
-                      <OrderStatusBadge status={order.status} />
+                      <p className="min-w-0 text-[13px] font-semibold leading-5">{order.customerName}</p>
+                      <p className="shrink-0 whitespace-nowrap text-xs font-semibold tabular-nums">{formatCurrency(order.amount)}</p>
                     </div>
-                    <div className="mt-2 flex items-center justify-between text-[11px]">
-                      <span className="text-muted">Selesai {formatShortDate(order.dueAt)}</span>
-                      <span className="font-semibold">{formatCurrency(order.amount)}</span>
+                    <p className="mt-0.5 break-words text-[11px] leading-4 text-muted">{order.id} · {order.serviceName}</p>
+                    <div className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
+                      <OrderStatusBadge status={order.status} />
+                      <span className="text-[11px] text-muted">Selesai {formatShortDate(order.dueAt)}</span>
                     </div>
                   </div>
                 ))}
