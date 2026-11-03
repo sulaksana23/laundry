@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { Bell, ExternalLink, Heart, LogOut, Menu, Plus, Search, Shirt, X } from "lucide-react";
 import { navigation } from "@/components/layout/navigation";
+import { APP_VERSION_LABEL } from "@/lib/app-info";
 import { cn } from "@/lib/utils";
 
 function Sidebar({ onNavigate, user }: { onNavigate?: () => void; user: { fullName: string; email: string; branchName: string; isDemo?: boolean } }) {
@@ -58,6 +59,7 @@ function Sidebar({ onNavigate, user }: { onNavigate?: () => void; user: { fullNa
         <div className="flex size-8 items-center justify-center rounded-full bg-[#314036] text-xs font-bold text-accent">{user.fullName.slice(0, 1).toUpperCase()}</div>
         <div className="min-w-0 flex-1"><p className="truncate text-xs font-semibold">{user.fullName}</p><p className="truncate text-[10px] text-muted">{user.isDemo ? "Demo" : "Pemilik"}</p></div>
       </div>
+      <p className="mt-1 px-2.5 text-[10px] text-muted/70">LaundryOS {APP_VERSION_LABEL}</p>
     </aside>
   );
 }
@@ -97,7 +99,7 @@ export function AppShell({ children, user }: { children: React.ReactNode; user: 
           </div>
         </header>
         <main className="mx-auto w-full max-w-[1500px] px-4 py-5 sm:px-6 sm:py-6 xl:px-8"><div key={pathname} className="page-motion">{children}</div></main>
-        <footer className="px-6 pb-5 text-center text-[10px] text-muted/70">LaundryOS · Demo operasional · © 2026</footer>
+        <footer className="px-6 pb-5 text-center text-[10px] text-muted/70">LaundryOS {APP_VERSION_LABEL} · Demo operasional · © 2026</footer>
       </div>
     </div>
   );
