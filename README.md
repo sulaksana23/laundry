@@ -28,6 +28,7 @@ Daftar berikut adalah cakupan produk yang dituju. Status implementasi sebenarnya
 | --- | --- | --- |
 | Dashboard | Ringkasan pendapatan, antrean status, pesanan terbaru, stok menipis, dan tagihan belum lunas dari data tersimpan di Neon (mode demo memakai data contoh); tren pendapatan 7 hari terakhir | Filter periode yang dapat dipilih pengguna dan ringkasan per cabang |
 | Pesanan | Pencarian/filter cabang, pagination server-side 25 baris, status dan pembayaran tersimpan, ekspor halaman aktif, nota ringkasan cetak, riwayat perubahan status yang dapat dilihat, tombol WhatsApp untuk mengabari pelanggan saat pesanan siap diambil | Refund, impor massal, dan role terperinci |
+| Lacak pesanan (publik) | Halaman `/lacak` untuk pelanggan: cek status, tahapan pengerjaan, riwayat status, dan sisa tagihan dengan kode pesanan + nomor HP terdaftar (rate-limited, tanpa login) | Tautan lacak otomatis di struk/WhatsApp |
 | Pelanggan | Tambah dan cari pelanggan tersimpan per cabang di Neon | Impor massal, histori lengkap, dan kontrol akses terperinci |
 | Layanan & harga | Katalog tersimpan per cabang; tambah, ubah, aktif/nonaktif; harga aktif dipakai saat membuat pesanan | Satuan pcs/pasang pada form pesanan, histori perubahan harga, dan hak akses terperinci |
 | Persediaan & keuangan | Penyesuaian stok, pengeluaran, pembayaran, dan ringkasan kas tersimpan di Neon | Ledger stok, refund/reversal, dan rekonsiliasi mendalam |
