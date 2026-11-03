@@ -54,12 +54,15 @@ function Sidebar({ onNavigate, user }: { onNavigate?: () => void; user: { fullNa
         <div className="mb-1 text-xs font-semibold">{user.isDemo ? "Mode demo" : "Akun pemilik"}</div>
         <p className="truncate text-[11px] leading-5 text-muted">{user.isDemo ? "Pesanan contoh disimpan di browser ini." : user.email}</p>
         <p className="truncate text-[11px] text-muted">{user.branchName}</p>
+        <div className="mt-2.5 flex items-center justify-between gap-3 border-t border-border/70 pt-2.5">
+          <span className="text-[11px] text-muted">Versi sistem</span>
+          <span className="rounded-md bg-surface-hover px-2 py-1 text-[11px] font-semibold text-accent">{APP_VERSION_LABEL}</span>
+        </div>
       </div>
       <div className="mt-3 flex items-center gap-2.5 rounded-lg px-2.5 py-2">
         <div className="flex size-8 items-center justify-center rounded-full bg-[#314036] text-xs font-bold text-accent">{user.fullName.slice(0, 1).toUpperCase()}</div>
         <div className="min-w-0 flex-1"><p className="truncate text-xs font-semibold">{user.fullName}</p><p className="truncate text-[10px] text-muted">{user.isDemo ? "Demo" : "Pemilik"}</p></div>
       </div>
-      <p className="mt-1 px-2.5 text-[10px] text-muted/70">LaundryOS {APP_VERSION_LABEL}</p>
     </aside>
   );
 }
