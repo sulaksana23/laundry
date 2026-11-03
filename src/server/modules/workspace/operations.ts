@@ -328,3 +328,79 @@ export async function getReportData(branchId: string) {
     services: services.map((row) => ({ name: row.name, count: Number(row.count) })),
   };
 }
+export interface CashClosingItem {
+  id: string;
+  date: string;
+  expectedAmount: number;
+  countedAmount: number;
+  difference: number;
+  note: string | null;
+}
+
+export interface ExpectedCash {
+  cashIn: number;
+  cashOut: number;
+  expected: number;
+}
+
+/**
+ * Kas tunai yang seharusnya ada pada satu tanggal kalender cabang:
+ * pembayaran tunai (method = 'cash') yang diterima pada tanggal itu menurut
+ * zona waktu cabang, dikurangi pengeluaran tunai pada tanggal yang sama.
+ * Asumsi (menunggu kebijakan pemilik): hanya transaksi tunai yang dihitung
+ * karena tutup kasir membandingkan uang fisik di laci.
+ */
+export async function getExpectedCash(branchId: string, date: string): Promise<ExpectedCash> {
+  const rows = resultRows<Record<string, number | string>>(await getNeonSql().query(
+    "WITH branch_clock AS (" +
+    "SELECT id, timezone FROM laundry_branches WHERE id = $1" +
+    "), bounds AS (" +
+    "SELECT id, (($2::date)::timestamp AT TIME ZONE timezone) AS day_start, " +
+    "((($2::date + 1)::timestamp) AT TIME ZONE timezone) AS next_day_start FROM branch_clock" +
+    ") SELECT " +
+    "COALESCE((SELECT SUM(p.amount) FROM laundry_payments p CROSS JOIN bounds b WHERE p.branch_id = b.id AND p.method = 'cash' AND p.received_at >= b.day_start AND p.received_at < b.next_day_start), 0) AS cash_in, " +
+    "COALESCE((SELECT SUM(e.amount) FROM laundry_expenses e CROSS JOIN bounds b WHERE e.branch_id = b.id AND e.method = 'cash' AND e.incurred_at = $2::date), 0) AS cash_out",
+    [branchId, date],
+  ));
+  const row = rows[0] ?? {};
+  const cashIn = Number(row.cash_in ?? 0);
+  const cashOut = Number(row.cash_out ?? 0);
+  return { cashIn, cashOut, expected: cashIn - cashOut };
+}
+
+export interface CashClosingOverview extends ExpectedCash {
+  today: string;
+  todayClosing: CashClosingItem | null;
+  history: CashClosingItem[];
+}
+
+export async function getCashClosingOverview(branchId: string): Promise<CashClosingOverview> {
+  const clockRows = resultRows<{ today: string }>(await getNeonSql().query(
+    "SELECT to_char((now() AT TIME ZONE timezone)::date, 'YYYY-MM-DD') AS today FROM laundry_branches WHERE id = $1",
+    [branchId],
+  ));
+  const today = clockRows[0]?.today ?? new Date().toISOString().slice(0, 10);
+  const expectedCash = await getExpectedCash(branchId, today);
+  const rows = resultRows<{
+    id: string; closing_date: string; expected_amount: number | string;
+    counted_amount: number | string; note: string | null;
+  }>(await getNeonSql().query(
+    "SELECT id::text AS id, to_char(closing_date, 'YYYY-MM-DD') AS closing_date, expected_amount, counted_amount, note " +
+    "FROM laundry_cash_closings WHERE branch_id = $1 ORDER BY closing_date DESC LIMIT 14",
+    [branchId],
+  ));
+  const history: CashClosingItem[] = rows.map((row) => {
+    const expectedAmount = Number(row.expected_amount);
+    const countedAmount = Number(row.counted_amount);
+    return {
+      id: row.id, date: row.closing_date, expectedAmount, countedAmount,
+      difference: countedAmount - expectedAmount, note: row.note,
+    };
+  });
+  return {
+    today,
+    ...expectedCash,
+    todayClosing: history.find((item) => item.date === today) ?? null,
+    history,
+  };
+}

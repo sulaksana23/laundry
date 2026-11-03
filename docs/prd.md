@@ -49,7 +49,7 @@ Saat ini akun yang didukung adalah Pemilik; pembagian peran staf vs pemilik (RBA
 - Pelanggan: tambah dan cari pelanggan per cabang.
 - Layanan & harga: katalog per cabang, tambah/ubah, aktif/nonaktif; harga aktif dipakai saat pesanan dibuat (snapshot harga tersimpan di pesanan).
 - Persediaan: daftar bahan, penyesuaian stok, peringatan stok minimum.
-- Keuangan: pemasukan dari pembayaran, pengeluaran operasional, ringkasan kas dan tagihan belum lunas.
+- Keuangan: pemasukan dari pembayaran, pengeluaran operasional, ringkasan kas dan tagihan belum lunas; tutup kasir harian membandingkan kas tunai sistem dengan uang fisik dan mencatat selisihnya.
 - Laporan: agregasi transaksi dan ekspor CSV.
 - Pengaturan: profil usaha (nama, telepon, email, alamat, zona waktu) tersimpan ke database; informasi versi sistem tampil di sidebar, footer, dan Pengaturan → Sistem.
 - Lacak pesanan publik (`/lacak`): pelanggan mengecek status dengan kode pesanan + nomor HP terdaftar, tanpa login.
@@ -59,7 +59,6 @@ Saat ini akun yang didukung adalah Pemilik; pembagian peran staf vs pemilik (RBA
 
 - Refund/pembatalan pesanan (aturan belum diputuskan).
 - Peran terperinci staf vs pemilik (RBAC).
-- Tutup kasir/rekonsiliasi kas harian.
 - Impor massal (pelanggan/pesanan) dari CSV.
 - Backup dan restore data.
 - Notifikasi WhatsApp otomatis via provider.
@@ -83,7 +82,7 @@ Saat ini akun yang didukung adalah Pemilik; pembagian peran staf vs pemilik (RBA
 | FR-12 | Profil usaha tersimpan ke database dan dipakai di seluruh aplikasi (nama cabang, kontak) | Penting | Tersedia |
 | FR-13 | Pelanggan dapat melacak status pesanan secara publik dengan kode pesanan + nomor HP terdaftar; hasil memuat tahapan, riwayat, sisa tagihan, dan kontak cabang | Wajib | Tersedia |
 | FR-14 | Versi aplikasi tampil jelas di sidebar agar versi yang berjalan mudah diverifikasi | Penting | Tersedia |
-| FR-15 | Tutup kasir harian: membandingkan kas sistem vs uang fisik dan mencatat selisih | Penting | Roadmap |
+| FR-15 | Tutup kasir harian: membandingkan kas sistem vs uang fisik dan mencatat selisih | Penting | Tersedia |
 | FR-16 | Impor massal pelanggan dari berkas CSV dengan validasi dan laporan hasil | Penting | Roadmap |
 | FR-17 | Backup data cabang yang dapat diunduh dan dipulihkan | Penting | Roadmap |
 
@@ -134,3 +133,4 @@ Hal berikut **belum diputuskan** dan harus dikonfirmasi pemilik usaha sebelum di
 | v0.4.1 | Baris pesanan terbaru tanpa teks terpotong untuk data produksi yang panjang |
 | v0.5.0 | Halaman lacak pesanan publik untuk pelanggan |
 | v0.5.1 | Pesan error lacak menjadi toast melayang |
+| v0.6.0 | Tutup kasir harian di halaman Keuangan |
