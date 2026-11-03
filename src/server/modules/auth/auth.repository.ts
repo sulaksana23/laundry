@@ -91,11 +91,11 @@ export class AuthRepository {
           [input.userId, input.branchId, input.fullName, input.email, input.passwordHash],
         ),
         sql.query(
-          "INSERT INTO laundry_services (id, branch_id, name, unit, price_per_unit) VALUES " +
-            "($1, $5, 'Cuci + Setrika', 'kg', 8000), " +
-            "($2, $5, 'Cuci Kering', 'kg', 6000), " +
-            "($3, $5, 'Setrika Saja', 'kg', 8000), " +
-            "($4, $5, 'Express 6 Jam', 'kg', 12000)",
+          "INSERT INTO laundry_services (id, branch_id, name, unit, price_per_unit, description, duration_minutes) VALUES " +
+            "($1, $5, 'Cuci + Setrika', 'kg', 8000, 'Cuci, keringkan, dan setrika pakaian.', 2880), " +
+            "($2, $5, 'Cuci Kering', 'kg', 6000, 'Cuci dan keringkan pakaian.', 1440), " +
+            "($3, $5, 'Setrika Saja', 'kg', 8000, 'Setrika pakaian bersih.', 1440), " +
+            "($4, $5, 'Express 6 Jam', 'kg', 12000, 'Prioritas selesai maksimal enam jam.', 360)",
           [...serviceIds, input.branchId],
         ),
       ];

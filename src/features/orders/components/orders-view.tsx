@@ -12,10 +12,12 @@ import { createOrderSchema, orderStatusLabels, orderStatuses, type CreateOrderIn
 import { serviceCatalog } from "@/features/orders/data/mock-orders";
 import { formatCurrency, formatShortDate } from "@/lib/format";
 
+type OrderServiceOption = { id: string; name: string; unit: string; price: number };
+
 const storageKey = "laundryos:orders:v1";
 const filters = ["Semua", "Diterima", "Dicuci", "Dikeringkan", "Disetrika", "Siap diambil", "Selesai"];
 
-export function OrdersView({ initialOrders, databaseEnabled = false }: { initialOrders: LaundryOrder[]; databaseEnabled?: boolean }) {
+export function OrdersView({ initialOrders, databaseEnabled = false, availableServices }: { initialOrders: LaundryOrder[]; databaseEnabled?: boolean; availableServices: OrderServiceOption[] }) {
   const [orders, setOrders] = useState(initialOrders);
   const [ready, setReady] = useState(false);
   const [query, setQuery] = useState("");
@@ -236,7 +238,7 @@ export function OrdersView({ initialOrders, databaseEnabled = false }: { initial
           <form onSubmit={handleCreate} className="space-y-3">
             <label className="block text-xs font-medium">Nama pelanggan<Input name="customerName" required minLength={2} placeholder="Contoh: Made Arya" className="mt-1.5" /></label>
             <label className="block text-xs font-medium">Nomor telepon<Input name="customerPhone" required placeholder="08xx xxxx xxxx" className="mt-1.5" /></label>
-            <div className="grid gap-3 sm:grid-cols-2"><label className="block text-xs font-medium">Layanan<Select name="serviceName" required className="mt-1.5"><option value="">Pilih layanan</option>{serviceCatalog.filter((service) => service.unit === "kg").map((service) => <option key={service.id} value={service.name}>{service.name} · {formatCurrency(service.price)}/{service.unit}</option>)}</Select></label><label className="block text-xs font-medium">Berat (kg)<Input name="weightKg" required type="number" min="0.1" step="0.1" placeholder="3.5" className="mt-1.5" /></label></div>
+            <div className="grid gap-3 sm:grid-cols-2"><label className="block text-xs font-medium">Layanan<Select name="serviceName" required className="mt-1.5"><option value="">Pilih layanan</option>{availableServices.filter((service) => service.unit === "kg").length === 0 && <option value="" disabled>Tidak ada layanan aktif per kg</option>}{availableServices.filter((service) => service.unit === "kg").map((service) => <option key={service.id} value={service.name}>{service.name} · {formatCurrency(service.price)}/{service.unit}</option>)}</Select></label><label className="block text-xs font-medium">Berat (kg)<Input name="weightKg" required type="number" min="0.1" step="0.1" placeholder="3.5" className="mt-1.5" /></label></div>
             <label className="block text-xs font-medium">Target selesai<Input name="dueAt" required type="date" className="mt-1.5" /></label>
             {error && <p role="alert" className="rounded-lg border border-danger/20 bg-danger/10 px-3 py-2 text-xs text-danger">{error}</p>}
             <div className="flex justify-end gap-2 border-t border-border pt-4"><Button type="button" onClick={() => setDialogOpen(false)}>Batal</Button><Button type="submit" variant="primary" isLoading={pendingAction === "create"} loadingText="Menyimpan…">Simpan pesanan</Button></div>

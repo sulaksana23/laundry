@@ -4,7 +4,7 @@ Sistem operasional laundry berbasis **Next.js App Router**, TypeScript, dan Tail
 
 ![Pratinjau fitur LaundryOS](./public/readme-feature-overview.svg)
 
-> **Status saat ini:** MVP. Pesanan, pelanggan, persediaan, keuangan, dan laporan memakai Neon pada Preview serta Production dengan sesi yang valid. Layanan dan pengaturan masih berupa data contoh. Login memakai akun pemilik per cabang; fitur reset akun dan role terperinci belum tersedia. Gunakan data uji sampai audit, backup, dan kontrol operasional siap.
+> **Status saat ini:** MVP. Pesanan, pelanggan, layanan, persediaan, keuangan, dan laporan memakai Neon pada Preview serta Production dengan sesi yang valid. Profil usaha dan preferensi di Pengaturan masih berupa contoh. Login/register aktif saat `DATABASE_URL` dan `AUTH_SECRET` tersedia; akun demo tidak dibuat otomatis. Gunakan data uji sampai audit, backup, dan kontrol operasional siap.
 
 ## Cakupan fitur lengkap
 
@@ -28,7 +28,11 @@ Daftar berikut adalah cakupan produk yang dituju. Status implementasi sebenarnya
 | --- | --- | --- |
 | Dashboard | Ringkasan visual menggunakan data contoh | Query langsung dari database dan filter periode nyata |
 | Pesanan | Cari/filter, validasi server, hitung harga dari katalog, buat pesanan dan lanjutkan status tersimpan di PostgreSQL pada Vercel Preview/local dev | Role terperinci, pembayaran, histori audit lengkap, pagination, nota |
-| Pelanggan, layanan, persediaan, keuangan, laporan, pengaturan | Layar UI dan data fixture untuk demonstrasi | CRUD persisten, aturan bisnis server, laporan terverifikasi, akses berbasis role |
+| Pelanggan | Tambah dan cari pelanggan tersimpan per cabang di Neon | Impor massal, histori lengkap, dan kontrol akses terperinci |
+| Layanan & harga | Katalog tersimpan per cabang; tambah, ubah, aktif/nonaktif; harga aktif dipakai saat membuat pesanan | Satuan pcs/pasang pada form pesanan, histori perubahan harga, dan hak akses terperinci |
+| Persediaan & keuangan | Penyesuaian stok, pengeluaran, pembayaran, dan ringkasan kas tersimpan di Neon | Ledger stok, refund/reversal, dan rekonsiliasi mendalam |
+| Laporan | Agregasi transaksi tersimpan dan ekspor CSV | Filter periode/cabang yang lebih lengkap serta definisi metrik terverifikasi |
+| Pengaturan | Tampilan profil, cabang, dan metode pembayaran | Simpan profil usaha dan preferensi ke database; role dan audit log |
 | Platform | Layout responsif, komponen UI, TypeScript strict, pola controller/service/repository, migrasi PostgreSQL untuk pesanan | Role terperinci, API produksi, multi-cabang, backup, notifikasi |
 
 Status rinci dan kriteria penerimaan ada di [docs/modules.md](docs/modules.md) dan [docs/roadmap.md](docs/roadmap.md). Nama serta nomor kontak dalam fixture bersifat sintetis/masked.
