@@ -2,12 +2,12 @@ import type { LaundryOrder } from "@/features/orders/domain/order";
 
 // Semua identitas dan nomor kontak di bawah adalah fixture sintetis, bukan data pelanggan nyata.
 export const mockOrders: LaundryOrder[] = [
-  { id: "LND-24018", customerName: "Pelanggan A", customerPhone: "08XX-XXXX-0001", serviceName: "Cuci + Setrika", weightKg: 4.5, amount: 36000, paidAmount: 36000, paymentStatus: "paid", status: "washing", receivedAt: "2026-11-02T08:35:00+08:00", dueAt: "2026-11-03T18:00:00+08:00" },
-  { id: "LND-24017", customerName: "Pelanggan B", customerPhone: "08XX-XXXX-0002", serviceName: "Cuci Kering", weightKg: 3, amount: 18000, paidAmount: 10000, paymentStatus: "partial", status: "ready", receivedAt: "2026-11-02T08:10:00+08:00", dueAt: "2026-11-02T19:00:00+08:00" },
-  { id: "LND-24016", customerName: "Pelanggan C", customerPhone: "08XX-XXXX-0003", serviceName: "Setrika Saja", weightKg: 2.5, amount: 20000, paidAmount: 0, paymentStatus: "unpaid", status: "ironing", receivedAt: "2026-11-02T07:45:00+08:00", dueAt: "2026-11-03T12:00:00+08:00" },
-  { id: "LND-24015", customerName: "Pelanggan D", customerPhone: "08XX-XXXX-0004", serviceName: "Cuci + Setrika", weightKg: 6, amount: 48000, paidAmount: 48000, paymentStatus: "paid", status: "drying", receivedAt: "2026-11-01T16:20:00+08:00", dueAt: "2026-11-03T16:00:00+08:00" },
-  { id: "LND-24014", customerName: "Pelanggan E", customerPhone: "08XX-XXXX-0005", serviceName: "Express 6 Jam", weightKg: 2, amount: 24000, paidAmount: 24000, paymentStatus: "paid", status: "completed", receivedAt: "2026-11-01T11:30:00+08:00", dueAt: "2026-11-01T17:30:00+08:00" },
-  { id: "LND-24013", customerName: "Pelanggan F", customerPhone: "08XX-XXXX-0006", serviceName: "Cuci Kering", weightKg: 5, amount: 30000, paidAmount: 0, paymentStatus: "unpaid", status: "received", receivedAt: "2026-11-01T10:15:00+08:00", dueAt: "2026-11-03T18:00:00+08:00" },
+  { id: "LND-24018", customerName: "Pelanggan A", customerPhone: "08XX-XXXX-0001", serviceName: "Cuci + Setrika", quantity: 4.5, unit: "kg", amount: 36000, paidAmount: 36000, paymentStatus: "paid", status: "washing", receivedAt: "2026-11-02T08:35:00+08:00", dueAt: "2026-11-03T18:00:00+08:00" },
+  { id: "LND-24017", customerName: "Pelanggan B", customerPhone: "08XX-XXXX-0002", serviceName: "Cuci Kering", quantity: 3, unit: "kg", amount: 18000, paidAmount: 10000, paymentStatus: "partial", status: "ready", receivedAt: "2026-11-02T08:10:00+08:00", dueAt: "2026-11-02T19:00:00+08:00" },
+  { id: "LND-24016", customerName: "Pelanggan C", customerPhone: "08XX-XXXX-0003", serviceName: "Setrika Saja", quantity: 2.5, unit: "kg", amount: 20000, paidAmount: 0, paymentStatus: "unpaid", status: "ironing", receivedAt: "2026-11-02T07:45:00+08:00", dueAt: "2026-11-03T12:00:00+08:00" },
+  { id: "LND-24015", customerName: "Pelanggan D", customerPhone: "08XX-XXXX-0004", serviceName: "Cuci + Setrika", quantity: 6, unit: "kg", amount: 48000, paidAmount: 48000, paymentStatus: "paid", status: "drying", receivedAt: "2026-11-01T16:20:00+08:00", dueAt: "2026-11-03T16:00:00+08:00" },
+  { id: "LND-24014", customerName: "Pelanggan E", customerPhone: "08XX-XXXX-0005", serviceName: "Express 6 Jam", quantity: 2, unit: "kg", amount: 24000, paidAmount: 24000, paymentStatus: "paid", status: "completed", receivedAt: "2026-11-01T11:30:00+08:00", dueAt: "2026-11-01T17:30:00+08:00" },
+  { id: "LND-24013", customerName: "Pelanggan F", customerPhone: "08XX-XXXX-0006", serviceName: "Cuci Kering", quantity: 5, unit: "kg", amount: 30000, paidAmount: 0, paymentStatus: "unpaid", status: "received", receivedAt: "2026-11-01T10:15:00+08:00", dueAt: "2026-11-03T18:00:00+08:00" },
 ];
 
 export const serviceCatalog = [

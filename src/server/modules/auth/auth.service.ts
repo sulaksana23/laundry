@@ -1,6 +1,7 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
 import { AuthRepository, type AuthCredentials, type AuthUser } from "@/server/modules/auth/auth.repository";
+import type { AuthRole, StaffMember } from "@/server/modules/auth/auth.repository";
 import { hashPassword, verifyPassword } from "@/server/modules/auth/auth.password";
 
 function withoutPassword(user: AuthCredentials): AuthUser {
@@ -24,7 +25,7 @@ export class AuthService {
     password: string;
   }): Promise<AuthUser> {
     const email = input.email.trim().toLowerCase();
-    if (await this.repository.findByEmail(email)) throw new Error("EMAIL_EXISTS");
+    if (await this.repository.emailExists(email)) throw new Error("EMAIL_EXISTS");
     const passwordHash = await hashPassword(input.password);
 
     return this.repository.createOwnerAccount({
@@ -43,5 +44,31 @@ export class AuthService {
       throw new Error("INVALID_CREDENTIALS");
     }
     return withoutPassword(credentials);
+  }
+
+  async createStaff(input: { branchId: string; actorId: string; fullName: string; email: string; password: string; role: Exclude<AuthRole, "owner"> }) {
+    const fullName = input.fullName.trim();
+    const email = input.email.trim().toLowerCase();
+    if (!input.branchId || fullName.length < 2 || fullName.length > 100 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) {
+      throw new Error("Data staf tidak valid.");
+    }
+    if (input.password.length < 12 || input.password.length > 128) throw new Error("Kata sandi staf minimal 12 karakter.");
+    if (await this.repository.emailExists(email)) throw new Error("EMAIL_EXISTS");
+    const userId = randomUUID();
+    await this.repository.createStaff({
+      userId, branchId: input.branchId, actorId: input.actorId, fullName, email,
+      passwordHash: await hashPassword(input.password), role: input.role,
+    });
+    return { userId, fullName, email, role: input.role };
+  }
+
+  listStaff(branchId: string): Promise<StaffMember[]> {
+    if (!branchId) throw new Error("Cabang wajib tersedia.");
+    return this.repository.listStaff(branchId);
+  }
+
+  setStaffActive(branchId: string, actorId: string, userId: string, isActive: boolean): Promise<boolean> {
+    if (!branchId || !actorId || !/^[0-9a-f-]{36}$/i.test(userId)) throw new Error("Akun staf tidak valid.");
+    return this.repository.setStaffActive(branchId, actorId, userId, isActive);
   }
 }

@@ -13,6 +13,7 @@ import { getDemoOrderPriorities } from "@/features/orders/domain/order-priority"
 import { formatCurrency, formatShortDate } from "@/lib/format";
 import { isOrdersDatabaseEnabled } from "@/server/db/mode";
 import { getAuthSession } from "@/server/modules/auth/auth.session";
+import { hasPermission } from "@/server/modules/auth/permissions";
 import { getOrdersService } from "@/server/modules/orders/orders.runtime";
 import { getOrderPriorities } from "@/server/modules/orders/order-priority";
 import {
@@ -60,6 +61,7 @@ export default async function DashboardPage() {
   const databaseEnabled = Boolean(session) && isOrdersDatabaseEnabled();
   const firstName = session ? session.fullName.split(" ")[0] : "Admin";
   const branchName = session ? session.branchName : "Cabang Bangli";
+  const role = session?.role ?? "owner";
   const todayLabel = new Intl.DateTimeFormat("id-ID", {
     weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: TIME_ZONE,
   }).format(new Date());
@@ -72,24 +74,27 @@ export default async function DashboardPage() {
         description={databaseEnabled
           ? "Berikut ringkasan operasional laundry hari ini dari data tersimpan."
           : "Berikut ringkasan operasional laundry hari ini. Mode demo memakai data contoh."}
-        action={<Link href="/orders" className="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-accent px-3.5 text-sm font-semibold text-accent-foreground transition hover:brightness-95"><Plus size={15} /> Buat pesanan</Link>}
+        action={hasPermission(role, "orders:create") ? <Link href="/orders" className="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-accent px-3.5 text-sm font-semibold text-accent-foreground transition hover:brightness-95"><Plus size={15} /> Buat pesanan</Link> : undefined}
       />
       <Suspense fallback={<DashboardSkeleton />}>
-        <DashboardContent branchId={session?.branchId ?? null} databaseEnabled={databaseEnabled} branchName={branchName} />
+        <DashboardContent branchId={session?.branchId ?? null} databaseEnabled={databaseEnabled} branchName={branchName} role={role} />
       </Suspense>
     </>
   );
 }
 
-async function DashboardContent({ branchId, databaseEnabled, branchName }: { branchId: string | null; databaseEnabled: boolean; branchName: string }) {
+async function DashboardContent({ branchId, databaseEnabled, branchName, role }: { branchId: string | null; databaseEnabled: boolean; branchName: string; role: "owner" | "cashier" | "operator" }) {
+  const canViewFinance = hasPermission(role, "finance:read");
+  const canViewReports = hasPermission(role, "reports:read");
+  const canViewInventory = hasPermission(role, "inventory:read");
   const [orderSummary, financeSummary, dashboardData, recentResult, inventory, reportData, priorities] = databaseEnabled && branchId
     ? await Promise.all([
         getOrderSummary(branchId),
-        getFinanceSummary(branchId),
-        getDashboardData(branchId),
+        canViewFinance ? getFinanceSummary(branchId) : Promise.resolve(null),
+        canViewFinance ? getDashboardData(branchId) : Promise.resolve(null),
         getOrdersService().list({ branchId, page: 1, pageSize: 5 }),
-        listInventory(branchId),
-        getReportData(branchId),
+        canViewInventory ? listInventory(branchId) : Promise.resolve([]),
+        canViewReports ? getReportData(branchId) : Promise.resolve(null),
         getOrderPriorities(branchId),
       ])
     : [null, null, null, null, null, null, null];
@@ -121,7 +126,7 @@ async function DashboardContent({ branchId, databaseEnabled, branchName }: { bra
   const incomePositive = incomeChangePct === null ? true : incomeChangePct >= 0;
   const unpaidCount = financeSummary?.unpaidCount ?? mockOrders.filter((order) => order.paymentStatus !== "paid").length;
   const outstanding = financeSummary?.outstanding ?? mockOrders.reduce((total, order) => total + (order.amount - order.paidAmount), 0);
-  const lowStock = (inventory ?? demoInventory).filter((item) => item.stock <= item.minStock);
+  const lowStock = (inventory ?? (databaseEnabled ? [] : demoInventory)).filter((item) => item.stock <= item.minStock);
   const priorityOrders = priorities ?? getDemoOrderPriorities(
     mockOrders,
     new Intl.DateTimeFormat("en-CA", { timeZone: TIME_ZONE }).format(new Date()),
@@ -130,13 +135,13 @@ async function DashboardContent({ branchId, databaseEnabled, branchName }: { bra
   return (
     <>
       <section aria-label="Ringkasan performa" className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-        <MetricCard className="col-span-2 sm:col-span-1" label="Pendapatan bulan ini" value={formatCurrency(incomeMonth)} change={incomeChange} positive={incomePositive} trend={!databaseEnabled || incomeChangePct !== null} icon={Banknote} />
+        {canViewFinance && <MetricCard className="col-span-2 sm:col-span-1" label="Pendapatan bulan ini" value={formatCurrency(incomeMonth)} change={incomeChange} positive={incomePositive} trend={!databaseEnabled || incomeChangePct !== null} icon={Banknote} />}
         <MetricCard label="Pesanan aktif" value={String(activeOrders)} change={databaseEnabled ? `${ordersToday} hari ini` : "data demo"} trend={false} note="Sedang dalam antrean proses" icon={ClipboardList} />
         <MetricCard label="Siap diambil" value={String(readyOrders)} change={readyOrders ? "perlu diambil" : "tidak ada"} trend={false} note="Menunggu diserahkan ke pelanggan" icon={CircleCheck} />
-        <MetricCard label="Belum lunas" value={String(unpaidCount)} change={formatCurrency(outstanding)} trend={false} note="Total tagihan belum lunas" icon={Wallet} />
+        {canViewFinance && <MetricCard label="Belum lunas" value={String(unpaidCount)} change={formatCurrency(outstanding)} trend={false} note="Total tagihan belum lunas" icon={Wallet} />}
       </section>
 
-      <section className="mt-4 grid gap-4 lg:grid-cols-[1.55fr_1fr]">
+      {canViewFinance && <section className="mt-4 grid gap-4 lg:grid-cols-[1.55fr_1fr]">
         <Card className="min-w-0">
           <CardHeader><div><CardTitle>Ringkasan pendapatan</CardTitle><p className="mt-1 text-[11px] text-muted">Tren 7 hari terakhir · {databaseEnabled ? "data tersimpan" : "data demo"}</p></div><span className="rounded-md bg-surface-raised px-2 py-1.5 text-[10px] text-muted">7 hari</span></CardHeader>
           <div className="px-4 pb-4 pt-3">
@@ -169,7 +174,7 @@ async function DashboardContent({ branchId, databaseEnabled, branchName }: { bra
             </Link>
           </div>
         </Card>
-      </section>
+      </section>}
 
       <section className="mt-4" aria-label="Prioritas pesanan">
         <Card>
@@ -220,7 +225,7 @@ async function DashboardContent({ branchId, databaseEnabled, branchName }: { bra
                   <div key={order.id} className="px-4 py-3">
                     <div className="flex items-start justify-between gap-3">
                       <p className="min-w-0 text-[13px] font-semibold leading-5">{order.customerName}</p>
-                      <p className="shrink-0 whitespace-nowrap text-xs font-semibold tabular-nums">{formatCurrency(order.amount)}</p>
+                      {canViewFinance && <p className="shrink-0 whitespace-nowrap text-xs font-semibold tabular-nums">{formatCurrency(order.amount)}</p>}
                     </div>
                     <p className="mt-0.5 break-words text-[11px] leading-4 text-muted">{order.id} · {order.serviceName}</p>
                     <div className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
@@ -232,8 +237,8 @@ async function DashboardContent({ branchId, databaseEnabled, branchName }: { bra
               </div>
               <div className="hidden overflow-x-auto md:block">
                 <table className="w-full min-w-[660px] text-left text-xs">
-                  <thead><tr className="border-b border-border text-[10px] uppercase tracking-wide text-muted"><th className="px-4 py-2.5 font-medium">Pesanan</th><th className="px-3 py-2.5 font-medium">Pelanggan</th><th className="px-3 py-2.5 font-medium">Selesai</th><th className="px-3 py-2.5 font-medium">Status</th><th className="px-4 py-2.5 text-right font-medium">Total</th></tr></thead>
-                  <tbody>{recentOrders.map((order) => <tr key={order.id} className="border-b border-border/60 last:border-0 hover:bg-surface-raised/60"><td className="px-4 py-3 font-semibold">{order.id}<p className="mt-0.5 text-[10px] font-normal text-muted">{order.serviceName}</p></td><td className="px-3 py-3">{order.customerName}</td><td className="px-3 py-3 text-muted">{formatShortDate(order.dueAt)}</td><td className="px-3 py-3"><OrderStatusBadge status={order.status} /></td><td className="px-4 py-3 text-right font-medium">{formatCurrency(order.amount)}</td></tr>)}</tbody>
+                  <thead><tr className="border-b border-border text-[10px] uppercase tracking-wide text-muted"><th className="px-4 py-2.5 font-medium">Pesanan</th><th className="px-3 py-2.5 font-medium">Pelanggan</th><th className="px-3 py-2.5 font-medium">Selesai</th><th className="px-3 py-2.5 font-medium">Status</th>{canViewFinance && <th className="px-4 py-2.5 text-right font-medium">Total</th>}</tr></thead>
+                  <tbody>{recentOrders.map((order) => <tr key={order.id} className="border-b border-border/60 last:border-0 hover:bg-surface-raised/60"><td className="px-4 py-3 font-semibold">{order.id}<p className="mt-0.5 text-[10px] font-normal text-muted">{order.serviceName}</p></td><td className="px-3 py-3">{order.customerName}</td><td className="px-3 py-3 text-muted">{formatShortDate(order.dueAt)}</td><td className="px-3 py-3"><OrderStatusBadge status={order.status} /></td>{canViewFinance && <td className="px-4 py-3 text-right font-medium">{formatCurrency(order.amount)}</td>}</tr>)}</tbody>
                 </table>
               </div>
             </>
@@ -242,8 +247,8 @@ async function DashboardContent({ branchId, databaseEnabled, branchName }: { bra
         <Card className="min-w-0">
           <CardHeader><div><CardTitle>Catatan operasional</CardTitle><p className="mt-1 text-[11px] text-muted">Hal yang perlu diperhatikan</p></div></CardHeader>
           <div className="space-y-2.5 p-4">
-            {lowStock.length > 0 ? lowStock.slice(0, 2).map((item) => <div key={item.id} className="rounded-lg border border-amber-300/15 bg-amber-300/5 p-3"><div className="mb-1 flex items-center justify-between"><span className="text-xs font-semibold text-amber-100">Stok menipis</span><span className="size-1.5 rounded-full bg-amber-200" /></div><p className="text-[11px] leading-5 text-muted">{item.name} tersisa {item.stock} {item.unit}. Batas minimum {item.minStock} {item.unit}.</p><Link href="/inventory" className="mt-2 inline-block text-[11px] font-semibold text-accent">Periksa persediaan →</Link></div>) : <div className="rounded-lg border border-emerald-300/15 bg-emerald-300/5 p-3"><div className="mb-1 flex items-center justify-between"><span className="text-xs font-semibold text-emerald-100">Stok aman</span><span className="size-1.5 rounded-full bg-emerald-200" /></div><p className="text-[11px] leading-5 text-muted">Tidak ada bahan yang berada di bawah batas minimum.</p></div>}
-            {unpaidCount > 0 ? <div className="rounded-lg border border-border bg-surface-raised/60 p-3"><div className="mb-1 flex items-center justify-between"><span className="text-xs font-semibold">Pembayaran tertunda</span><span className="text-[10px] text-muted">{unpaidCount} pesanan</span></div><p className="text-[11px] leading-5 text-muted">Total tagihan belum lunas {formatCurrency(outstanding)}.</p><Link href="/finance" className="mt-2 inline-block text-[11px] font-semibold text-accent">Buka keuangan →</Link></div> : <div className="rounded-lg border border-border bg-surface-raised/60 p-3"><div className="mb-1 flex items-center justify-between"><span className="text-xs font-semibold">Pembayaran tertunda</span></div><p className="text-[11px] leading-5 text-muted">Semua pesanan sudah lunas.</p></div>}
+            {canViewInventory && (lowStock.length > 0 ? lowStock.slice(0, 2).map((item) => <div key={item.id} className="rounded-lg border border-amber-300/15 bg-amber-300/5 p-3"><div className="mb-1 flex items-center justify-between"><span className="text-xs font-semibold text-amber-100">Stok menipis</span><span className="size-1.5 rounded-full bg-amber-200" /></div><p className="text-[11px] leading-5 text-muted">{item.name} tersisa {item.stock} {item.unit}. Batas minimum {item.minStock} {item.unit}.</p><Link href="/inventory" className="mt-2 inline-block text-[11px] font-semibold text-accent">Periksa persediaan →</Link></div>) : <div className="rounded-lg border border-emerald-300/15 bg-emerald-300/5 p-3"><div className="mb-1 flex items-center justify-between"><span className="text-xs font-semibold text-emerald-100">Stok aman</span><span className="size-1.5 rounded-full bg-emerald-200" /></div><p className="text-[11px] leading-5 text-muted">Tidak ada bahan yang berada di bawah batas minimum.</p></div>)}
+            {canViewFinance && (unpaidCount > 0 ? <div className="rounded-lg border border-border bg-surface-raised/60 p-3"><div className="mb-1 flex items-center justify-between"><span className="text-xs font-semibold">Pembayaran tertunda</span><span className="text-[10px] text-muted">{unpaidCount} pesanan</span></div><p className="text-[11px] leading-5 text-muted">Total tagihan belum lunas {formatCurrency(outstanding)}.</p><Link href="/finance" className="mt-2 inline-block text-[11px] font-semibold text-accent">Buka keuangan →</Link></div> : <div className="rounded-lg border border-border bg-surface-raised/60 p-3"><div className="mb-1 flex items-center justify-between"><span className="text-xs font-semibold">Pembayaran tertunda</span></div><p className="text-[11px] leading-5 text-muted">Semua pesanan sudah lunas.</p></div>)}
           </div>
         </Card>
       </section>

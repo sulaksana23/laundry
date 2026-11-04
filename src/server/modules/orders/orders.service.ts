@@ -37,14 +37,18 @@ export class OrdersService {
     if (!parsed.success) throw parsed.error;
     if (!branchId || !actorId) throw new Error("Branch dan pengguna wajib tersedia.");
 
-    const amount = await this.pricing.calculate(parsed.data, branchId);
-    if (!Number.isSafeInteger(amount) || amount < 0) throw new Error("Kebijakan harga mengembalikan nominal yang tidak valid.");
+    const pricing = await this.pricing.calculate(parsed.data, branchId);
+    if (!Number.isSafeInteger(pricing.amount) || pricing.amount < 0 || !Number.isSafeInteger(pricing.unitPrice) || pricing.unitPrice < 0) {
+      throw new Error("Kebijakan harga mengembalikan nominal yang tidak valid.");
+    }
 
     return this.orders.create({
       ...parsed.data,
       branchId,
       actorId,
-      amount,
+      amount: pricing.amount,
+      unit: pricing.unit,
+      unitPrice: pricing.unitPrice,
       receivedAt: this.now().toISOString(),
     });
   }

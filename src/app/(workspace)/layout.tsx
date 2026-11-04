@@ -10,7 +10,7 @@ export default async function WorkspaceLayout({ children }: Readonly<{ children:
   if (!session && !productionDemo) redirect("/login");
 
   const user = session
-    ? { fullName: session.fullName, email: session.email, branchName: session.branchName, isDemo: false }
-    : { fullName: "Laundry Demo", email: "", branchName: "Cabang Demo", isDemo: true };
+    ? { fullName: session.fullName, email: session.email, branchName: session.branchName, role: session.role, isDemo: false }
+    : { fullName: "Laundry Demo", email: "", branchName: "Cabang Demo", role: "owner" as const, isDemo: true };
   return <AppShell user={user}>{children}</AppShell>;
 }

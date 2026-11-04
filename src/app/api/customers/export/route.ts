@@ -3,6 +3,7 @@ import { isOrdersDatabaseEnabled } from "@/server/db/mode";
 import { getAuthSession } from "@/server/modules/auth/auth.session";
 import { getCustomersService } from "@/server/modules/customers/customers.runtime";
 import type { CustomerSummary } from "@/server/modules/customers/customers.repository";
+import { hasPermission } from "@/server/modules/auth/permissions";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,6 +22,7 @@ function csvRows(rows: CustomerSummary[]) {
 export async function GET(request: Request) {
   const session = await getAuthSession();
   if (!session) return NextResponse.json({ error: "Silakan masuk untuk melanjutkan." }, { status: 401 });
+  if (!hasPermission(session.role, "customers:export")) return NextResponse.json({ error: "Ekspor data pelanggan hanya tersedia bagi pemilik." }, { status: 403 });
   if (!isOrdersDatabaseEnabled()) return NextResponse.json({ error: "Ekspor pelanggan belum aktif pada mode demo." }, { status: 503 });
 
   const search = new URL(request.url).searchParams.get("q")?.trim().slice(0, 100) ?? "";

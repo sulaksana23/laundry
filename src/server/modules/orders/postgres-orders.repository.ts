@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { LaundryOrder, OrderStatus } from "@/features/orders/domain/order";
+import type { LaundryOrder, OrderStatus, OrderUnit } from "@/features/orders/domain/order";
 import { getNeonSql } from "@/server/db/neon";
 import type {
   NewOrderRecord,
@@ -14,7 +14,8 @@ type OrderRow = {
   customer_name: string;
   customer_phone: string;
   service_name: string;
-  weight_kg: string | number;
+  quantity: string | number;
+  unit: OrderUnit;
   amount: string | number;
   paid_amount: string | number;
   payment_status: "paid" | "partial" | "unpaid";
@@ -25,7 +26,7 @@ type OrderRow = {
 
 const ORDER_COLUMNS =
   "o.id, c.name AS customer_name, c.phone AS customer_phone, " +
-  "o.service_name_snapshot AS service_name, o.weight_kg, o.amount, o.paid_amount, o.status, " +
+  "o.service_name_snapshot AS service_name, o.quantity, o.unit, o.amount, o.paid_amount, o.status, " +
   "o.received_at, to_char(o.due_at, 'YYYY-MM-DD') || 'T12:00:00.000Z' AS due_at, " +
   "CASE WHEN o.paid_amount <= 0 THEN 'unpaid' " +
   "WHEN o.paid_amount < o.amount THEN 'partial' ELSE 'paid' END AS payment_status";
@@ -40,7 +41,8 @@ function toLaundryOrder(row: OrderRow): LaundryOrder {
     customerName: row.customer_name,
     customerPhone: row.customer_phone,
     serviceName: row.service_name,
-    weightKg: Number(row.weight_kg),
+    quantity: Number(row.quantity),
+    unit: row.unit,
     amount: Number(row.amount),
     paidAmount: Number(row.paid_amount),
     paymentStatus: row.payment_status,
@@ -110,18 +112,22 @@ export class PostgresOrdersRepository implements OrdersRepository {
         "ON CONFLICT (branch_id, phone) DO UPDATE SET name = EXCLUDED.name, updated_at = now() " +
         "RETURNING id" +
       "), inserted_order AS (" +
-        "INSERT INTO laundry_orders (id, branch_id, customer_id, service_id, service_name_snapshot, weight_kg, amount, paid_amount, status, due_at) " +
-        "SELECT $5, $2, customer_upsert.id, service.id, service.name, $6, $7, 0, 'received', $8::date " +
+        "INSERT INTO laundry_orders (id, branch_id, customer_id, service_id, service_name_snapshot, weight_kg, quantity, unit, unit_price_snapshot, amount, paid_amount, status, due_at) " +
+        "SELECT $5, $2, customer_upsert.id, service.id, service.name, CASE WHEN $10 = 'kg' THEN $6 ELSE 0 END, $6, $10, $11, $7, 0, 'received', $8::date " +
         "FROM customer_upsert CROSS JOIN laundry_services service " +
-        "WHERE service.branch_id = $2 AND service.name = $9 AND service.unit = 'kg' AND service.is_active = true " +
+        "WHERE service.branch_id = $2 AND service.name = $9 AND service.unit = $10 AND service.is_active = true " +
         "RETURNING *" +
       "), inserted_history AS (" +
         "INSERT INTO laundry_order_status_history (id, branch_id, order_id, previous_status, next_status, actor_id, changed_at) " +
-        "SELECT $10::uuid, $2, id, NULL, 'received', $11, now() FROM inserted_order RETURNING order_id" +
+        "SELECT $12::uuid, $2, id, NULL, 'received', $13, now() FROM inserted_order RETURNING order_id" +
+      "), audit AS (" +
+        "INSERT INTO laundry_audit_events (id, branch_id, actor_id, action, entity_type, entity_id, metadata) " +
+        "SELECT $14::uuid, $2, $13, 'order.created', 'order', id, " +
+        "jsonb_build_object('service', service_name_snapshot, 'quantity', quantity, 'unit', unit, 'unit_price', unit_price_snapshot, 'amount', amount, 'status', status) FROM inserted_order RETURNING id" +
       ") " +
       "SELECT " + ORDER_COLUMNS +
       " FROM inserted_order o JOIN laundry_customers c ON c.id = o.customer_id AND c.branch_id = o.branch_id",
-      [randomUUID(), input.branchId, input.customerName, input.customerPhone, id, input.weightKg, input.amount, dueDate, input.serviceName, historyId, input.actorId],
+      [randomUUID(), input.branchId, input.customerName, input.customerPhone, id, input.quantity, input.amount, dueDate, input.serviceName, input.unit, input.unitPrice, historyId, input.actorId, randomUUID()],
     );
     const row = (rows as OrderRow[])[0];
     if (!row) throw new Error("Layanan tidak tersedia pada cabang ini.");
@@ -138,10 +144,14 @@ export class PostgresOrdersRepository implements OrdersRepository {
       "), inserted_history AS (" +
         "INSERT INTO laundry_order_status_history (id, branch_id, order_id, previous_status, next_status, actor_id, changed_at) " +
         "SELECT $6::uuid, $4, id, $5, $1, $7, $2::timestamptz FROM updated_order RETURNING order_id" +
+      "), audit AS (" +
+        "INSERT INTO laundry_audit_events (id, branch_id, actor_id, action, entity_type, entity_id, metadata) " +
+        "SELECT $8::uuid, $4, $7, 'order.status_changed', 'order', id, " +
+        "jsonb_build_object('from', $5, 'to', $1) FROM updated_order RETURNING id" +
       ") " +
       "SELECT " + ORDER_COLUMNS +
       " FROM updated_order o JOIN laundry_customers c ON c.id = o.customer_id AND c.branch_id = o.branch_id",
-      [input.nextStatus, input.changedAt, input.id, input.branchId, input.expectedStatus, historyId, actorId],
+      [input.nextStatus, input.changedAt, input.id, input.branchId, input.expectedStatus, historyId, actorId, randomUUID()],
     );
     const row = (rows as OrderRow[])[0];
     if (!row) throw new Error("ORDER_CONFLICT");

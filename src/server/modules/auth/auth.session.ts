@@ -2,6 +2,7 @@ import "server-only";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
 import type { AuthUser } from "@/server/modules/auth/auth.repository";
+import { AuthRepository } from "@/server/modules/auth/auth.repository";
 
 const COOKIE_NAME = "laundry_session";
 const SESSION_SECONDS = 60 * 60 * 24 * 7;
@@ -48,7 +49,7 @@ function parseToken(token: string | undefined, secretValue: string): AuthSession
       !value.email ||
       !value.branchId ||
       !value.branchName ||
-      value.role !== "owner" ||
+      !["owner", "cashier", "operator"].includes(value.role) ||
       !Number.isInteger(value.expiresAt) ||
       value.expiresAt <= Math.floor(Date.now() / 1000)
     ) {
@@ -64,7 +65,15 @@ export async function getAuthSession(): Promise<AuthSession | null> {
   const secretValue = secret();
   if (!secretValue) return null;
   const cookieStore = await cookies();
-  return parseToken(cookieStore.get(COOKIE_NAME)?.value, secretValue);
+  const signedSession = parseToken(cookieStore.get(COOKIE_NAME)?.value, secretValue);
+  if (!signedSession) return null;
+  try {
+    const user = await new AuthRepository().findActiveUser(signedSession.userId);
+    if (!user || user.branchId !== signedSession.branchId) return null;
+    return { ...signedSession, ...user };
+  } catch {
+    return null;
+  }
 }
 
 export async function setAuthSession(user: AuthUser): Promise<void> {

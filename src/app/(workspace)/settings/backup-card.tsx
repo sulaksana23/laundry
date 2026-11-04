@@ -84,9 +84,9 @@ export function BackupCard({ mode, initialProActive }: { mode: "db" | "demo"; in
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ backup: candidate }),
       });
-      const result = (await response.json()) as { error?: string; counts?: { total: number } };
+      const result = (await response.json()) as { error?: string; counts?: { total: number }; auditRecorded?: boolean };
       if (!response.ok) throw new Error(result.error ?? "Restore gagal dijalankan.");
-      setSuccess(`Restore selesai. ${result.counts?.total ?? 0} baris data cabang berhasil dipulihkan dari backup.`);
+      setSuccess(`Restore selesai. ${result.counts?.total ?? 0} baris data cabang berhasil dipulihkan dari backup.${result.auditRecorded === false ? " Catatan aktivitas gagal disimpan." : ""}`);
       setCandidate(null);
       setConfirmed(false);
       router.refresh();

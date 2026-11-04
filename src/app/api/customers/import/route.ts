@@ -3,6 +3,7 @@ import { z } from "zod";
 import { isOrdersDatabaseEnabled } from "@/server/db/mode";
 import { getAuthSession } from "@/server/modules/auth/auth.session";
 import { importCustomersFromCsv } from "@/server/modules/customers/import-customers";
+import { hasPermission } from "@/server/modules/auth/permissions";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,6 +17,7 @@ export async function POST(request: Request) {
   if (!session) {
     return NextResponse.json({ error: "Silakan masuk untuk melanjutkan." }, { status: 401 });
   }
+  if (!hasPermission(session.role, "customers:write")) return NextResponse.json({ error: "Akses impor pelanggan tidak diizinkan." }, { status: 403 });
   if (!isOrdersDatabaseEnabled()) {
     return NextResponse.json({ error: "Impor pelanggan belum aktif pada mode demo." }, { status: 503 });
   }
@@ -32,7 +34,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const report = await importCustomersFromCsv(session.branchId, parsed.data.csv);
+    const report = await importCustomersFromCsv(session.branchId, session.userId, parsed.data.csv);
     return NextResponse.json({ report });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Impor gagal diproses.";

@@ -1,4 +1,4 @@
-import type { CreateOrderInput, LaundryOrder, OrderStatus } from "@/features/orders/domain/order";
+import type { CreateOrderInput, LaundryOrder, OrderStatus, OrderUnit } from "@/features/orders/domain/order";
 
 export interface OrderListQuery {
   branchId: string;
@@ -17,6 +17,8 @@ export interface OrderListResult {
 }
 
 export interface NewOrderRecord extends CreateOrderInput {
+  unit: OrderUnit;
+  unitPrice: number;
   branchId: string;
   actorId: string;
   amount: number;
@@ -42,5 +44,5 @@ export interface OrdersRepository {
 
 /** Harga harus diambil dari katalog pada server, bukan dari angka kiriman browser. */
 export interface OrderPricingPolicy {
-  calculate(input: CreateOrderInput, branchId: string): Promise<number>;
+  calculate(input: CreateOrderInput, branchId: string): Promise<{ amount: number; unit: OrderUnit; unitPrice: number }>;
 }

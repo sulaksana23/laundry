@@ -16,12 +16,18 @@ Status pembayaran demo: `unpaid`, `partial`, `paid`. Status pembayaran dan statu
 - Pembayaran demo selalu dimulai sebagai belum dibayar.
 - Pesanan demo baru tersimpan hanya pada `localStorage` browser.
 
+## Harga dan jumlah layanan
+
+- Pesanan per kg menghitung total dari berat × harga katalog per kg, dibulatkan ke Rupiah terdekat seperti alur yang sudah berjalan.
+- Pesanan per pcs/pasang menerima jumlah bulat dan menghitung total dari harga katalog per unit × jumlah. Setiap pesanan menyimpan unit, jumlah, harga unit, dan total sebagai snapshot agar perubahan katalog tidak mengubah nota lama.
+- Biaya tambahan, diskon, express, pajak, pembulatan berat, dan biaya antar tidak ditambahkan otomatis. Tetapkan kebijakan usaha sebelum fitur tambahan tersebut dipakai.
+
 Angka dan ketentuan ini bukan kebijakan usaha yang dikonfirmasi.
 
 ## Wajib diputuskan sebelum produksi
 
 - Minimum order dan pembulatan berat (misalnya pembulatan per 0,1 kg atau 1 kg).
-- Cara menangani layanan per pcs/pasang, item rusak/hilang, noda khusus, dan komplain.
+- Cara menangani item rusak/hilang, noda khusus, dan komplain pada layanan per pcs/pasang.
 - Cara menghitung layanan express, diskon, biaya pickup/delivery, pajak, dan pembulatan Rupiah.
 - Apakah status bisa mundur, dilewati, dibatalkan, atau perlu persetujuan supervisor.
 - Kapan transaksi dianggap selesai dan kapan pembayaran harus lunas.

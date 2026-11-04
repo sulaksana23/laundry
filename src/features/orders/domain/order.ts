@@ -11,6 +11,7 @@ export const orderStatuses = [
 
 export type OrderStatus = (typeof orderStatuses)[number];
 export type PaymentStatus = "paid" | "partial" | "unpaid";
+export type OrderUnit = "kg" | "pcs" | "pasang";
 
 export const orderStatusLabels: Record<OrderStatus, string> = {
   received: "Diterima",
@@ -26,7 +27,8 @@ export interface LaundryOrder {
   customerName: string;
   customerPhone: string;
   serviceName: string;
-  weightKg: number;
+  quantity: number;
+  unit: OrderUnit;
   amount: number;
   paidAmount: number;
   paymentStatus: PaymentStatus;
@@ -39,7 +41,7 @@ export const createOrderSchema = z.object({
   customerName: z.string().trim().min(2, "Nama pelanggan minimal 2 karakter"),
   customerPhone: z.string().trim().min(8, "Nomor telepon belum valid"),
   serviceName: z.string().trim().min(1, "Pilih layanan"),
-  weightKg: z.coerce.number().positive("Berat harus lebih dari 0"),
+  quantity: z.coerce.number().positive("Jumlah harus lebih dari 0").max(100000),
   dueAt: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/, "Pilih tanggal selesai yang valid"),
 });
 
