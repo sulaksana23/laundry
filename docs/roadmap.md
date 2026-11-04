@@ -24,6 +24,7 @@
 - [ ] Role-based access terperinci, audit log, rate limit, dan uji isolasi cabang lintas akun.
 - [x] Cetak nota ringkasan pesanan dari daftar.
 - [x] Pagination server-side untuk daftar pesanan, pencarian, dan filter status.
+- [x] Panel prioritas pesanan yang masih diproses dan targetnya hari ini atau sudah lewat.
 - [x] Riwayat perubahan status pesanan dapat dilihat dari daftar pesanan.
 - [x] Kabari pelanggan lewat WhatsApp (tautan wa.me) saat pesanan siap diambil.
 - [x] Rate limit percobaan login dan registrasi.

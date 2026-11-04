@@ -32,16 +32,16 @@ const storageKey = "laundryos:orders:v1";
 const filters = ["Semua", "Diterima", "Dicuci", "Dikeringkan", "Disetrika", "Siap diambil", "Selesai"];
 const orderPageSize = 25;
 
-export function OrdersView({ initialOrders, initialTotal = initialOrders.length, databaseEnabled = false, availableServices }: { initialOrders: LaundryOrder[]; initialTotal?: number; databaseEnabled?: boolean; availableServices: OrderServiceOption[] }) {
+export function OrdersView({ initialOrders, initialTotal = initialOrders.length, initialQuery = "", databaseEnabled = false, availableServices }: { initialOrders: LaundryOrder[]; initialTotal?: number; initialQuery?: string; databaseEnabled?: boolean; availableServices: OrderServiceOption[] }) {
   const router = useRouter();
   const [orders, setOrders] = useState(initialOrders);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalOrders, setTotalOrders] = useState(initialTotal);
   const [loadingList, setLoadingList] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
-  const lastRequest = useRef({ page: 1, query: "", activeFilter: "Semua", refreshKey: 0 });
+  const lastRequest = useRef({ page: 1, query: initialQuery, activeFilter: "Semua", refreshKey: 0 });
   const [ready, setReady] = useState(false);
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(initialQuery);
   const [activeFilter, setActiveFilter] = useState("Semua");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [error, setError] = useState("");

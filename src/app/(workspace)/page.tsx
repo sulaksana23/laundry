@@ -9,10 +9,12 @@ import { OrderStatusBadge } from "@/components/ui/status-badge";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { inventoryItems as demoInventory, mockOrders } from "@/features/orders/data/mock-orders";
 import { orderStatusLabels, type OrderStatus } from "@/features/orders/domain/order";
+import { getDemoOrderPriorities } from "@/features/orders/domain/order-priority";
 import { formatCurrency, formatShortDate } from "@/lib/format";
 import { isOrdersDatabaseEnabled } from "@/server/db/mode";
 import { getAuthSession } from "@/server/modules/auth/auth.session";
 import { getOrdersService } from "@/server/modules/orders/orders.runtime";
+import { getOrderPriorities } from "@/server/modules/orders/order-priority";
 import {
   getDashboardData,
   getFinanceSummary,
@@ -80,7 +82,7 @@ export default async function DashboardPage() {
 }
 
 async function DashboardContent({ branchId, databaseEnabled, branchName }: { branchId: string | null; databaseEnabled: boolean; branchName: string }) {
-  const [orderSummary, financeSummary, dashboardData, recentResult, inventory, reportData] = databaseEnabled && branchId
+  const [orderSummary, financeSummary, dashboardData, recentResult, inventory, reportData, priorities] = databaseEnabled && branchId
     ? await Promise.all([
         getOrderSummary(branchId),
         getFinanceSummary(branchId),
@@ -88,8 +90,9 @@ async function DashboardContent({ branchId, databaseEnabled, branchName }: { bra
         getOrdersService().list({ branchId, page: 1, pageSize: 5 }),
         listInventory(branchId),
         getReportData(branchId),
+        getOrderPriorities(branchId),
       ])
-    : [null, null, null, null, null, null];
+    : [null, null, null, null, null, null, null];
 
   const days = lastSevenDays();
   const demoDailyAmounts = [1900000, 2600000, 2200000, 3350000, 2900000, 3900000, 4550000];
@@ -113,17 +116,21 @@ async function DashboardContent({ branchId, databaseEnabled, branchName }: { bra
     ? ((reportData.income - reportData.previousIncome) / reportData.previousIncome) * 100
     : null;
   const incomeChange = incomeChangePct === null
-    ? "12,8%"
+    ? (databaseEnabled ? "Belum ada data pembanding" : "12,8%")
     : `${Math.abs(incomeChangePct).toLocaleString("id-ID", { maximumFractionDigits: 1 })}%`;
   const incomePositive = incomeChangePct === null ? true : incomeChangePct >= 0;
   const unpaidCount = financeSummary?.unpaidCount ?? mockOrders.filter((order) => order.paymentStatus !== "paid").length;
   const outstanding = financeSummary?.outstanding ?? mockOrders.reduce((total, order) => total + (order.amount - order.paidAmount), 0);
   const lowStock = (inventory ?? demoInventory).filter((item) => item.stock <= item.minStock);
+  const priorityOrders = priorities ?? getDemoOrderPriorities(
+    mockOrders,
+    new Intl.DateTimeFormat("en-CA", { timeZone: TIME_ZONE }).format(new Date()),
+  );
 
   return (
     <>
       <section aria-label="Ringkasan performa" className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-        <MetricCard className="col-span-2 sm:col-span-1" label="Pendapatan bulan ini" value={formatCurrency(incomeMonth)} change={incomeChange} positive={incomePositive} icon={Banknote} />
+        <MetricCard className="col-span-2 sm:col-span-1" label="Pendapatan bulan ini" value={formatCurrency(incomeMonth)} change={incomeChange} positive={incomePositive} trend={!databaseEnabled || incomeChangePct !== null} icon={Banknote} />
         <MetricCard label="Pesanan aktif" value={String(activeOrders)} change={databaseEnabled ? `${ordersToday} hari ini` : "data demo"} trend={false} note="Sedang dalam antrean proses" icon={ClipboardList} />
         <MetricCard label="Siap diambil" value={String(readyOrders)} change={readyOrders ? "perlu diambil" : "tidak ada"} trend={false} note="Menunggu diserahkan ke pelanggan" icon={CircleCheck} />
         <MetricCard label="Belum lunas" value={String(unpaidCount)} change={formatCurrency(outstanding)} trend={false} note="Total tagihan belum lunas" icon={Wallet} />
@@ -161,6 +168,43 @@ async function DashboardContent({ branchId, databaseEnabled, branchName }: { bra
               <span className="mt-2 text-[10px] leading-4 text-muted">Buka daftar pesanan lengkap</span>
             </Link>
           </div>
+        </Card>
+      </section>
+
+      <section className="mt-4" aria-label="Prioritas pesanan">
+        <Card>
+          <CardHeader>
+            <div>
+              <CardTitle>Prioritas pesanan</CardTitle>
+              <p className="mt-1 text-[11px] text-muted">Masih diproses dan targetnya hari ini atau sudah lewat, berdasarkan tanggal cabang.</p>
+            </div>
+            <Link href="/orders" className="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-accent">Semua <ArrowRight size={13} /></Link>
+          </CardHeader>
+          <div className="flex flex-wrap gap-2 px-4 pt-3 text-[11px] font-semibold">
+            <span className="rounded-md bg-rose-400/10 px-2 py-1 text-rose-200">{priorityOrders.overdue} lewat target</span>
+            <span className="rounded-md bg-amber-300/10 px-2 py-1 text-amber-200">{priorityOrders.today} target hari ini</span>
+          </div>
+          {priorityOrders.items.length === 0 ? (
+            <p className="px-4 py-5 text-xs text-muted">Tidak ada pesanan yang perlu diprioritaskan saat ini.</p>
+          ) : (
+            <ul className="divide-y divide-border/60 px-4 pb-2 pt-2">
+              {priorityOrders.items.map((order) => (
+                <li key={order.id}>
+                  <Link href={"/orders?search=" + encodeURIComponent(order.id)} className="flex flex-wrap items-center justify-between gap-2 rounded-md py-3 text-xs transition hover:text-accent">
+                    <span className="min-w-0">
+                      <span className="block font-semibold">{order.id} · {order.customerName}</span>
+                      <span className="mt-1 block text-[11px] text-muted">{order.serviceName} · {orderStatusLabels[order.status]}</span>
+                    </span>
+                    <span className="text-right text-[11px]">
+                      <span className={order.priority === "overdue" ? "block font-semibold text-rose-200" : "block font-semibold text-amber-200"}>{order.priority === "overdue" ? "Lewat target" : "Target hari ini"}</span>
+                      <span className="mt-1 block text-muted">{formatShortDate(order.dueDate + "T12:00:00.000Z")}</span>
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+          {priorityOrders.overdue + priorityOrders.today > priorityOrders.items.length && <p className="px-4 pb-4 text-[11px] text-muted">Menampilkan 5 prioritas terdekat.</p>}
         </Card>
       </section>
 

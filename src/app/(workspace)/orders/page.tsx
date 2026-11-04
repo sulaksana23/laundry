@@ -13,14 +13,16 @@ import { getServicesService } from "@/server/modules/services/services.runtime";
 export const metadata: Metadata = { title: "Pesanan" };
 export const dynamic = "force-dynamic";
 
-export default async function OrdersPage() {
+export default async function OrdersPage({ searchParams }: { searchParams: Promise<{ search?: string | string[] }> }) {
+  const params = await searchParams;
+  const initialQuery = typeof params.search === "string" ? params.search.trim().slice(0, 100) : "";
   const session = await getAuthSession();
   const productionDemo = process.env.VERCEL_ENV === "production" && !isAuthConfigured();
   if (!session && !productionDemo) redirect("/login");
   const databaseEnabled = Boolean(session) && isOrdersDatabaseEnabled();
   const [ordersResult, servicesResult, databaseSummary] = session && databaseEnabled
     ? await Promise.all([
-        getOrdersService().list({ branchId: session.branchId, page: 1, pageSize: 25 }),
+        getOrdersService().list({ branchId: session.branchId, page: 1, pageSize: 25, search: initialQuery || undefined }),
         getServicesService().list(session.branchId),
         getOrderSummary(session.branchId),
       ])
@@ -44,7 +46,7 @@ export default async function OrdersPage() {
         <Card className="p-3.5"><p className="text-[11px] text-muted">Siap diambil</p><p className="mt-1 text-xl font-semibold">{summary.ready}</p></Card>
         <Card className="p-3.5"><p className="text-[11px] text-muted">Belum lunas</p><p className="mt-1 text-xl font-semibold">{summary.unpaid}</p></Card>
       </div>
-      <OrdersView initialOrders={orders} initialTotal={ordersResult?.total ?? orders.length} databaseEnabled={databaseEnabled} availableServices={availableServices} />
+      <OrdersView initialOrders={orders} initialTotal={ordersResult?.total ?? orders.length} initialQuery={initialQuery} databaseEnabled={databaseEnabled} availableServices={availableServices} />
     </>
   );
 }
