@@ -10,38 +10,6 @@ function resultRows<Row>(result: unknown): Row[] {
   return [];
 }
 
-export interface CustomerSummary {
-  id: string;
-  name: string;
-  phone: string;
-  orders: number;
-  totalSpent: number;
-  lastOrder: string | null;
-}
-
-export async function listCustomers(branchId: string, search = ""): Promise<CustomerSummary[]> {
-  const parameters: string[] = [branchId];
-  const filter = search.trim()
-    ? (parameters.push("%" + search.trim() + "%"), " AND (c.name ILIKE $2 OR c.phone ILIKE $2)")
-    : "";
-  const rows = resultRows<{
-    id: string; name: string; phone: string; orders: number | string;
-    total_spent: number | string; last_order: string | null;
-  }>(await getNeonSql().query(
-    "SELECT c.id::text AS id, c.name, c.phone, COUNT(o.id)::int AS orders, " +
-    "COALESCE(SUM(o.amount), 0)::bigint AS total_spent, " +
-    "to_char(MAX(o.received_at AT TIME ZONE b.timezone), 'YYYY-MM-DD') AS last_order " +
-    "FROM laundry_customers c JOIN laundry_branches b ON b.id = c.branch_id " +
-    "LEFT JOIN laundry_orders o ON o.customer_id = c.id AND o.branch_id = c.branch_id " +
-    "WHERE c.branch_id = $1" + filter + " GROUP BY c.id, c.name, c.phone, b.timezone ORDER BY c.name ASC",
-    parameters,
-  ));
-  return rows.map((row) => ({
-    id: row.id, name: row.name, phone: row.phone, orders: Number(row.orders),
-    totalSpent: Number(row.total_spent), lastOrder: row.last_order,
-  }));
-}
-
 export interface OrderSummary {
   today: number;
   active: number;

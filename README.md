@@ -29,7 +29,7 @@ Daftar berikut adalah cakupan produk yang dituju. Status implementasi sebenarnya
 | Dashboard | Ringkasan pendapatan, antrean status, pesanan terbaru, stok menipis, dan tagihan belum lunas dari data tersimpan di Neon (mode demo memakai data contoh); tren pendapatan 7 hari terakhir | Filter periode yang dapat dipilih pengguna dan ringkasan per cabang |
 | Pesanan | Pencarian/filter cabang, pagination server-side 25 baris, status dan pembayaran tersimpan, ekspor halaman aktif, nota ringkasan cetak, riwayat perubahan status yang dapat dilihat, tombol WhatsApp untuk mengabari pelanggan saat pesanan siap diambil | Refund, impor massal, dan role terperinci |
 | Lacak pesanan (publik) | Halaman `/lacak` untuk pelanggan: cek status, tahapan pengerjaan, riwayat status, dan sisa tagihan dengan kode pesanan + nomor HP terdaftar (rate-limited, tanpa login) | Tautan lacak otomatis di struk/WhatsApp |
-| Pelanggan | Tambah, cari, dan impor massal pelanggan dari CSV (validasi nomor, duplikat dilewati, laporan hasil per baris) tersimpan per cabang di Neon | Histori lengkap dan kontrol akses terperinci |
+| Pelanggan | Tambah, cari, dan impor massal pelanggan dari CSV (validasi nomor, duplikat dilewati, laporan hasil per baris); daftar Neon dibagi 25 pelanggan per halaman, ringkasan dihitung dari seluruh cabang, dan setiap pelanggan punya tautan ke riwayat pesanan | Profil lanjutan dan kontrol akses terperinci |
 | Layanan & harga | Katalog tersimpan per cabang; tambah, ubah, aktif/nonaktif; harga aktif dipakai saat membuat pesanan | Satuan pcs/pasang pada form pesanan, histori perubahan harga, dan hak akses terperinci |
 | Persediaan & keuangan | Penyesuaian stok, pengeluaran, pembayaran, ringkasan kas, dan tutup kasir harian (kas tunai seharusnya vs uang fisik, selisih tercatat) tersimpan di Neon | Ledger stok, refund/reversal, dan rekonsiliasi mendalam |
 | Laporan | Agregasi transaksi tersimpan dan ekspor CSV | Filter periode/cabang yang lebih lengkap serta definisi metrik terverifikasi |
@@ -111,7 +111,7 @@ npm run build
 
 ## Deploy ke Vercel + PostgreSQL (Neon)
 
-Repository ini menyiapkan migrasi SQL, autentikasi email/password, dan implementasi PostgreSQL untuk modul Pesanan. Vercel menjalankan `npm run db:migrate` sebelum build jika Neon menyediakan `DATABASE_URL`. API database aktif pada local development yang dikonfigurasi dan Vercel Preview; mode Production tetap demo karena autentikasi belum tersedia.
+Repository ini menyiapkan migrasi SQL, autentikasi email/password, dan implementasi PostgreSQL untuk modul operasional. Vercel menjalankan migrasi dan seeder demo yang idempoten sebelum build. Preview maupun Production memakai Neon bila `DATABASE_URL`, `AUTH_SECRET`, dan sesi valid tersedia; tanpa konfigurasi tersebut, data contoh hanya dipakai untuk pratinjau.
 
 ### Langkah deployment
 
