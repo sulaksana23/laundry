@@ -138,3 +138,4 @@ Hal berikut **belum diputuskan** dan harus dikonfirmasi pemilik usaha sebelum di
 | v0.7.0 | Impor massal pelanggan dari CSV di halaman Pelanggan |
 | v0.8.0 | Fondasi Aktivasi Pro: kode aktivasi Ed25519, bagian LaundryOS Pro di Pengaturan, ekspor CSV dan tutup kasir menjadi fitur Pro |
 | v0.9.0 | Backup & restore data cabang (FR-17) sebagai fitur Pro: unduh JSON seluruh data cabang dan pulihkan ke cabang yang sama dari Pengaturan |
+| v0.9.1 | Validasi isi backup, snapshot konsisten, dan restore data cabang dalam satu transaksi database |

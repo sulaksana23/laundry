@@ -43,7 +43,12 @@ export async function POST(request: Request) {
     );
   }
 
-  const counts = await restoreBranchBackup(session.branchId, validation.backup);
+  let counts;
+  try {
+    counts = await restoreBranchBackup(session.branchId, validation.backup);
+  } catch {
+    return NextResponse.json({ error: "Restore gagal. Periksa kembali berkas backup dan coba lagi." }, { status: 500 });
+  }
   for (const path of ["/", "/orders", "/customers", "/services", "/inventory", "/finance", "/reports", "/settings"]) {
     revalidatePath(path);
   }

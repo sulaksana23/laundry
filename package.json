@@ -1,6 +1,6 @@
 {
   "name": "laundry-management-nextjs",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "private": true,
   "description": "Sistem operasional laundry berbasis Next.js dengan pola UI TypeUI yang ringkas.",
   "scripts": {
@@ -9,6 +9,7 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test tests/*.test.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "db:migrate": "node scripts/migrate.mjs",

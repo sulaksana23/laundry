@@ -48,20 +48,21 @@ function rowsOf(result: unknown): BackupRow[] {
 
 export async function buildBranchBackup(branchId: string): Promise<BranchBackup> {
   const sql = getNeonSql();
-  const branchRows = rowsOf(await sql.query(
-    "SELECT id, name, timezone, phone, email, address FROM laundry_branches WHERE id = $1 LIMIT 1",
-    [branchId],
-  ));
+  // Baca semua tabel dari snapshot yang sama agar perubahan saat ekspor tidak
+  // menghasilkan referensi pesanan/pembayaran yang saling tidak cocok.
+  const results = await sql.transaction([
+    sql.query("SELECT id, name, timezone, phone, email, address FROM laundry_branches WHERE id = $1 LIMIT 1", [branchId]),
+    ...TABLE_DEFS.map((def) => sql.query(
+      `SELECT ${def.columns.join(", ")} FROM ${def.table} WHERE branch_id = $1 ORDER BY 1`,
+      [branchId],
+    )),
+  ], { isolationLevel: "RepeatableRead", readOnly: true });
+  const branchRows = rowsOf(results[0]);
   const branchRow = branchRows[0];
   if (!branchRow) throw new Error("Cabang tidak ditemukan.");
 
   const tables = {} as Record<BackupTableKey, BackupRow[]>;
-  for (const def of TABLE_DEFS) {
-    tables[def.key] = rowsOf(await sql.query(
-      `SELECT ${def.columns.join(", ")} FROM ${def.table} WHERE branch_id = $1 ORDER BY 1`,
-      [branchId],
-    ));
-  }
+  TABLE_DEFS.forEach((def, index) => { tables[def.key] = rowsOf(results[index + 1]); });
 
   return {
     app: "LaundryOS",
@@ -82,8 +83,8 @@ export async function buildBranchBackup(branchId: string): Promise<BranchBackup>
 
 const INSERT_CHUNK = 100;
 
-async function insertRows(def: TableDef, rows: BackupRow[]): Promise<void> {
-  const sql = getNeonSql();
+function insertQueries(sql: ReturnType<typeof getNeonSql>, def: TableDef, rows: BackupRow[]) {
+  const queries: ReturnType<typeof sql.query>[] = [];
   for (let start = 0; start < rows.length; start += INSERT_CHUNK) {
     const chunk = rows.slice(start, start + INSERT_CHUNK);
     const parameters: unknown[] = [];
@@ -97,32 +98,34 @@ async function insertRows(def: TableDef, rows: BackupRow[]): Promise<void> {
       });
       return `(${placeholders.join(", ")})`;
     });
-    await sql.query(
+    queries.push(sql.query(
       `INSERT INTO ${def.table} (${def.columns.join(", ")}) VALUES ${tuples.join(", ")}`,
       parameters,
-    );
+    ));
   }
+  return queries;
 }
 
 /**
  * Memulihkan backup ke cabang yang sama: seluruh data operasional cabang
  * digantikan isi backup (profil cabang ikut diperbarui, id cabang tetap).
- * Berkas sudah divalidasi penuh sebelum fungsi ini dipanggil; penghapusan
- * dan penyisipan mengikuti urutan aman foreign key.
+ * Penghapusan, penyisipan, dan profil cabang dijalankan dalam satu transaksi.
  */
 export async function restoreBranchBackup(branchId: string, backup: BranchBackup): Promise<Record<BackupTableKey, number> & { total: number }> {
   const sql = getNeonSql();
+  const queries: ReturnType<typeof sql.query>[] = [];
   for (const key of DELETE_ORDER) {
     const def = TABLE_DEFS.find((item) => item.key === key)!;
-    await sql.query(`DELETE FROM ${def.table} WHERE branch_id = $1`, [branchId]);
+    queries.push(sql.query(`DELETE FROM ${def.table} WHERE branch_id = $1`, [branchId]));
   }
   for (const key of INSERT_ORDER) {
     const def = TABLE_DEFS.find((item) => item.key === key)!;
-    await insertRows(def, backup.tables[key]);
+    queries.push(...insertQueries(sql, def, backup.tables[key]));
   }
-  await sql.query(
+  queries.push(sql.query(
     "UPDATE laundry_branches SET name = $2, timezone = $3, phone = $4, email = $5, address = $6 WHERE id = $1",
     [branchId, backup.branch.name, backup.branch.timezone, backup.branch.phone, backup.branch.email, backup.branch.address],
-  );
+  ));
+  await sql.transaction(queries, { isolationLevel: "Serializable" });
   return countBackupRows(backup);
 }
