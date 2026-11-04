@@ -2,11 +2,9 @@
 
 ## Status implementasi
 
-Migrasi `db/migrations/001_initial.sql` membuat tabel cabang, pelanggan, layanan, pesanan, dan histori status. Modul Pesanan mempunyai repository PostgreSQL dan API baca/tulis. Migrasi dijalankan melalui `npm run db:migrate`; saat build Vercel, script `vercel-build` menjalankannya sebelum Next.js build bila `DATABASE_URL` tersedia.
+Migrasi `db/migrations/001_initial.sql` sampai `012_service_inventory_recipes.sql` mencakup cabang, pengguna dan akses cabang, pelanggan, layanan, pesanan, pembayaran, refund, pengeluaran, persediaan, ledger stok, penutupan kas, audit, dan resep pemakaian bahan. Modul operasional memakai Neon dengan batas cabang; `npm run db:migrate` menerapkan migrasi, termasuk pada alur build Vercel.
 
-Mode database aktif untuk local development bila `LAUNDRY_DATABASE_MODE=true`, dan untuk Vercel Preview bila Neon menyediakan `DATABASE_URL`. Mode Production tetap demo sampai autentikasi dan otorisasi selesai. Database awal hanya seed cabang dan katalog layanan sintetis; tidak ada data pelanggan contoh.
-
-Skema yang aktif belum mencakup seluruh rancangan di bawah. Pembayaran, item beragam per pesanan, inventaris, pengeluaran, role, dan multi-cabang operasional masih perlu implementasi.
+Tabel `laundry_service_inventory_recipes` mengikat layanan, barang persediaan, tahap pemakaian, dan jumlah bahan per satuan layanan. Constraint gabungan menjaga agar layanan dan barang resep berasal dari cabang yang sama.
 
 ## Relasi konseptual
 
@@ -22,6 +20,8 @@ erDiagram
   LAUNDRY_ORDER ||--o{ ORDER_STATUS_HISTORY : changes
   BRANCH ||--o{ INVENTORY_ITEM : stores
   INVENTORY_ITEM ||--o{ STOCK_MOVEMENT : tracks
+  SERVICE ||--o{ SERVICE_INVENTORY_RECIPE : consumes
+  INVENTORY_ITEM ||--o{ SERVICE_INVENTORY_RECIPE : configured_for
   BRANCH ||--o{ EXPENSE : records
 ```
 
@@ -36,6 +36,7 @@ erDiagram
 - `Payment`: nominal, metode, status, reference provider, actor, waktu.
 - `OrderStatusHistory`: status lama/baru, actor, waktu, catatan.
 - `InventoryItem` dan `StockMovement`: master barang dan ledger pergerakan stok.
+- `ServiceInventoryRecipe`: resep bahan per layanan dan tahap pengerjaan.
 - `Expense`: kategori, nominal, metode, waktu, cabang, lampiran opsional.
 
 ## Keputusan skema

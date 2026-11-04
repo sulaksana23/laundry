@@ -144,9 +144,45 @@ export class PostgresOrdersRepository implements OrdersRepository {
     const historyId = randomUUID();
     const actorId = input.actorId;
     const rows = await getNeonSql().query(
-      "WITH updated_order AS (" +
-        "UPDATE laundry_orders SET status = $1, updated_at = $2::timestamptz " +
-        "WHERE id = $3 AND branch_id = $4 AND status = $5 RETURNING *" +
+      "WITH target_order AS MATERIALIZED (" +
+        "SELECT * FROM laundry_orders WHERE id = $3 AND branch_id = $4 AND status = $5 FOR UPDATE" +
+      "), configured_recipe AS MATERIALIZED (" +
+        "SELECT recipe.item_id, ceil(recipe.quantity_per_service_unit * target.quantity * 1000) / 1000 AS required_quantity " +
+        "FROM target_order target JOIN laundry_service_inventory_recipes recipe " +
+        "ON recipe.branch_id = target.branch_id AND recipe.service_id = target.service_id AND recipe.consume_at_status = $1 " +
+        "JOIN laundry_inventory_items item ON item.id = recipe.item_id AND item.branch_id = target.branch_id" +
+      "), locked_items AS MATERIALIZED (" +
+        "SELECT item.id, item.branch_id, item.quantity AS on_hand, recipe.required_quantity " +
+        "FROM configured_recipe recipe JOIN laundry_inventory_items item ON item.id = recipe.item_id " +
+        "ORDER BY item.id FOR UPDATE OF item" +
+      "), availability AS (" +
+        "SELECT COUNT(recipe.item_id)::int AS recipe_count, COUNT(locked.id)::int AS locked_count, " +
+        "COALESCE(bool_and(locked.on_hand >= locked.required_quantity), true) AS can_consume " +
+        "FROM configured_recipe recipe LEFT JOIN locked_items locked ON locked.id = recipe.item_id" +
+      "), updated_inventory AS (" +
+        "UPDATE laundry_inventory_items item SET quantity = item.quantity - locked.required_quantity, updated_at = $2::timestamptz " +
+        "FROM locked_items locked CROSS JOIN availability available " +
+        "WHERE item.id = locked.id AND available.can_consume AND available.recipe_count = available.locked_count " +
+        "AND EXISTS (SELECT 1 FROM target_order) RETURNING item.id, item.branch_id, locked.required_quantity" +
+      "), inserted_movements AS (" +
+        "INSERT INTO laundry_inventory_movements (id, branch_id, item_id, movement_type, quantity_delta, note, actor_id) " +
+        "SELECT gen_random_uuid(), updated.branch_id, updated.id, 'usage', -updated.required_quantity, " +
+        "'Pemakaian otomatis · pesanan ' || $3 || ' · tahap ' || $1, $7 FROM updated_inventory " +
+        "RETURNING item_id, branch_id, quantity_delta" +
+      "), inventory_audit AS (" +
+        "INSERT INTO laundry_audit_events (id, branch_id, actor_id, action, entity_type, entity_id, metadata) " +
+        "SELECT gen_random_uuid(), movement.branch_id, $7, 'inventory.auto_used', 'inventory_item', movement.item_id::text, " +
+        "jsonb_build_object('order_id', $3, 'status', $1, 'quantity_delta', movement.quantity_delta) " +
+        "FROM inserted_movements movement RETURNING id" +
+      "), consumption_gate AS (" +
+        "SELECT available.recipe_count, available.can_consume, COUNT(movement.item_id)::int AS movement_count " +
+        "FROM availability available LEFT JOIN inserted_movements movement ON true " +
+        "GROUP BY available.recipe_count, available.can_consume" +
+      "), updated_order AS (" +
+        "UPDATE laundry_orders order_row SET status = $1, updated_at = $2::timestamptz " +
+        "FROM target_order target CROSS JOIN consumption_gate gate " +
+        "WHERE order_row.id = target.id AND (gate.recipe_count = 0 OR (gate.can_consume AND gate.recipe_count = gate.movement_count)) " +
+        "RETURNING order_row.*" +
       "), inserted_history AS (" +
         "INSERT INTO laundry_order_status_history (id, branch_id, order_id, previous_status, next_status, actor_id, changed_at) " +
         "SELECT $6::uuid, $4, id, $5, $1, $7, $2::timestamptz FROM updated_order RETURNING order_id" +
@@ -155,12 +191,16 @@ export class PostgresOrdersRepository implements OrdersRepository {
         "SELECT $8::uuid, $4, $7, 'order.status_changed', 'order', id, " +
         "jsonb_build_object('from', $5, 'to', $1) FROM updated_order RETURNING id" +
       ") " +
-      "SELECT " + ORDER_COLUMNS +
-      " FROM updated_order o JOIN laundry_customers c ON c.id = o.customer_id AND c.branch_id = o.branch_id",
+      "SELECT (o.id IS NOT NULL) AS updated, (target.id IS NOT NULL) AS matched_order, gate.recipe_count, gate.can_consume, " + ORDER_COLUMNS +
+      " FROM (SELECT 1) marker CROSS JOIN consumption_gate gate LEFT JOIN target_order target ON true " +
+      "LEFT JOIN updated_order o ON true LEFT JOIN laundry_customers c ON c.id = o.customer_id AND c.branch_id = o.branch_id",
       [input.nextStatus, input.changedAt, input.id, input.branchId, input.expectedStatus, historyId, actorId, randomUUID()],
     );
-    const row = (rows as OrderRow[])[0];
-    if (!row) throw new Error("ORDER_CONFLICT");
+    const row = (rows as Array<OrderRow & { updated: boolean; matched_order: boolean; recipe_count: number; can_consume: boolean }>)[0];
+    if (!row?.updated) {
+      if (row?.matched_order && row.recipe_count > 0 && !row.can_consume) throw new Error("INSUFFICIENT_INVENTORY");
+      throw new Error("ORDER_CONFLICT");
+    }
     return toLaundryOrder(row);
   }
 }

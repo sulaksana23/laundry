@@ -5,7 +5,7 @@
 import { z } from "zod";
 
 export const BACKUP_KIND = "laundryos-branch-backup";
-export const BACKUP_FORMAT_VERSION = 3;
+export const BACKUP_FORMAT_VERSION = 4;
 
 export const BACKUP_TABLE_KEYS = [
   "customers",
@@ -16,6 +16,7 @@ export const BACKUP_TABLE_KEYS = [
   "refunds",
   "expenses",
   "inventoryItems",
+  "serviceInventoryRecipes",
   "cashClosings",
 ] as const;
 
@@ -30,6 +31,7 @@ export const BACKUP_TABLE_LABELS: Record<BackupTableKey, string> = {
   refunds: "Pengembalian dana",
   expenses: "Pengeluaran",
   inventoryItems: "Persediaan",
+  serviceInventoryRecipes: "Resep pemakaian bahan",
   cashClosings: "Tutup kasir",
 };
 
@@ -121,6 +123,11 @@ const rowSchemas: Record<BackupTableKey, z.ZodType> = {
     ...uuidCommon, name: text, category: text, unit: text, quantity: decimal(12, 3),
     min_quantity: decimal(12, 3), unit_price: amount, ...timestamps,
   }),
+  serviceInventoryRecipes: z.object({
+    ...uuidCommon, service_id: text.min(1), item_id: uuid,
+    consume_at_status: z.enum(["washing", "drying", "ironing", "ready", "completed"]),
+    quantity_per_service_unit: decimal(12, 3, true), actor_id: text, ...timestamps,
+  }),
   cashClosings: z.object({
     ...uuidCommon, closing_date: date, expected_amount: signedAmount, counted_amount: amount,
     note: nullableText, closed_by: nullableText, ...timestamps,
@@ -139,7 +146,7 @@ export function validateBackup(input: unknown): BackupValidation {
   if (candidate.kind !== BACKUP_KIND) {
     return { ok: false, error: "Berkas ini bukan backup LaundryOS (jenis berkas tidak dikenal)." };
   }
-  if (candidate.formatVersion !== 1 && candidate.formatVersion !== 2 && candidate.formatVersion !== BACKUP_FORMAT_VERSION) {
+  if (candidate.formatVersion !== 1 && candidate.formatVersion !== 2 && candidate.formatVersion !== 3 && candidate.formatVersion !== BACKUP_FORMAT_VERSION) {
     return { ok: false, error: `Versi format backup (${String(candidate.formatVersion)}) tidak didukung aplikasi ini.` };
   }
   const branch = candidate.branch;
@@ -157,6 +164,7 @@ export function validateBackup(input: unknown): BackupValidation {
   }
   const sourceTables = tables as Record<string, unknown>;
   if (candidate.formatVersion === 1 || candidate.formatVersion === 2) sourceTables.refunds ??= [];
+  if (candidate.formatVersion !== BACKUP_FORMAT_VERSION) sourceTables.serviceInventoryRecipes ??= [];
   for (const key of BACKUP_TABLE_KEYS) {
     const rows = sourceTables[key];
     if (!Array.isArray(rows)) {
@@ -218,12 +226,22 @@ export function validateBackup(input: unknown): BackupValidation {
   }
   const customerIds = new Set(typedTables.customers.map((row) => row.id));
   const serviceIds = new Set(typedTables.services.map((row) => row.id));
+  const inventoryIds = new Set(typedTables.inventoryItems.map((row) => row.id));
   const orderIds = new Set(typedTables.orders.map((row) => row.id));
   if (typedTables.orders.some((row) => !customerIds.has(row.customer_id) || !serviceIds.has(row.service_id))) {
     return { ok: false, error: "Pesanan merujuk pelanggan atau layanan yang tidak ada dalam backup." };
   }
   if ([...typedTables.orderStatusHistory, ...typedTables.payments, ...typedTables.refunds].some((row) => !orderIds.has(row.order_id))) {
     return { ok: false, error: "Riwayat status, pembayaran, atau refund merujuk pesanan yang tidak ada dalam backup." };
+  }
+  const recipeKeys = new Set<string>();
+  for (const recipe of typedTables.serviceInventoryRecipes) {
+    if (!serviceIds.has(recipe.service_id) || !inventoryIds.has(recipe.item_id)) {
+      return { ok: false, error: "Resep pemakaian merujuk layanan atau persediaan yang tidak ada dalam backup." };
+    }
+    const key = [recipe.service_id, recipe.item_id, recipe.consume_at_status].join(":");
+    if (recipeKeys.has(key)) return { ok: false, error: "Ada resep pemakaian duplikat pada satu tahap layanan." };
+    recipeKeys.add(key);
   }
   return { ok: true, backup: candidate as BranchBackup };
 }

@@ -9,14 +9,16 @@ import { inventoryItems as demoInventory } from "@/features/orders/data/mock-ord
 import { formatCurrency, formatShortDate } from "@/lib/format";
 import { isOrdersDatabaseEnabled } from "@/server/db/mode";
 import { getAuthSession } from "@/server/modules/auth/auth.session";
-import { listInventory, listInventoryMovements, type InventoryItem } from "@/server/modules/workspace/operations";
-import { adjustInventory, createInventoryItem } from "./actions";
+import { listInventory, listInventoryMovements, listServiceInventoryRecipes, type InventoryItem } from "@/server/modules/workspace/operations";
+import { getServicesService } from "@/server/modules/services/services.runtime";
+import { adjustInventory, createInventoryItem, deleteServiceInventoryRecipe, saveServiceInventoryRecipe } from "./actions";
 import { hasPermission } from "@/server/modules/auth/permissions";
 
 export const metadata: Metadata = { title: "Persediaan" };
 export const dynamic = "force-dynamic";
 
 const movementLabels: Record<string, string> = { opening: "Saldo awal", purchase: "Pembelian", adjustment: "Penyesuaian", usage: "Pemakaian" };
+const recipeStatusLabels: Record<string, string> = { washing: "Dicuci", drying: "Dikeringkan", ironing: "Disetrika", ready: "Siap diambil", completed: "Selesai" };
 
 export default async function InventoryPage() {
   const session = await getAuthSession();
@@ -28,6 +30,8 @@ export default async function InventoryPage() {
     ? await listInventory(session!.branchId)
     : demoInventory.map((item) => ({ ...item }));
   const movements = databaseEnabled ? await listInventoryMovements(session!.branchId) : [];
+  const services = databaseEnabled && canManageInventory ? await getServicesService().list(session!.branchId) : [];
+  const recipes = databaseEnabled && canManageInventory ? await listServiceInventoryRecipes(session!.branchId) : [];
   const lowStockCount = items.filter((item) => item.stock <= item.minStock).length;
   const valuation = items.reduce((total, item) => total + item.stock * item.price, 0);
 
@@ -54,6 +58,18 @@ export default async function InventoryPage() {
           </form>
         </Card>
       ) : !databaseEnabled ? <p className="mb-4 rounded-lg border border-border bg-surface px-3 py-2 text-xs text-muted">Mode demo: daftar contoh hanya untuk pratinjau dan tidak disimpan ke Neon.</p> : !canManageInventory ? <p className="mb-4 rounded-lg border border-border bg-surface px-3 py-2 text-xs text-muted">Anda dapat melihat saldo stok. Pemilik mengelola penambahan dan penyesuaiannya.</p> : null}
+      {databaseEnabled && canManageInventory && <Card className="mb-4 overflow-hidden">
+        <div className="border-b border-border p-4"><h2 className="text-sm font-semibold">Resep pemakaian bahan</h2><p className="mt-1 text-[11px] leading-5 text-muted">Atur jumlah bahan per kg, pcs, atau pasang layanan. Stok dipotong satu kali saat pesanan memasuki tahap yang dipilih; tahap tertahan jika stok tidak cukup.</p></div>
+        {items.length === 0 || !services.some((service) => service.isActive) ? <p className="p-4 text-xs text-muted">Tambahkan barang persediaan dan satu layanan aktif untuk membuat resep.</p> : <form action={saveServiceInventoryRecipe} className="grid gap-2 border-b border-border p-4 sm:grid-cols-2 xl:grid-cols-5">
+          <select name="serviceId" required aria-label="Layanan resep" className="h-9 rounded-lg border border-border bg-surface-raised px-2 text-xs text-foreground">{services.filter((service) => service.isActive).map((service) => <option key={service.id} value={service.id}>{service.name} · per {service.unit}</option>)}</select>
+          <select name="itemId" required aria-label="Bahan yang digunakan" className="h-9 rounded-lg border border-border bg-surface-raised px-2 text-xs text-foreground">{items.map((item) => <option key={item.id} value={item.id}>{item.name} ({item.unit})</option>)}</select>
+          <Input name="quantityPerServiceUnit" required type="number" min="0.001" max="999999999.999" step="0.001" placeholder="Jumlah bahan per satuan layanan" aria-label="Jumlah bahan per satuan layanan" />
+          <select name="consumeAtStatus" defaultValue="washing" aria-label="Tahap pemotongan stok" className="h-9 rounded-lg border border-border bg-surface-raised px-2 text-xs text-foreground">{Object.entries(recipeStatusLabels).map(([status, label]) => <option key={status} value={status}>{label}</option>)}</select>
+          <FormSubmitButton variant="primary" pendingText="Menyimpan…"><Plus size={14} /> Simpan resep</FormSubmitButton>
+        </form>}
+        {recipes.length === 0 ? <p className="p-4 text-xs text-muted">Belum ada resep. Pemakaian stok otomatis tetap nonaktif sampai pemilik menambahkan resep.</p> : <div className="overflow-x-auto"><table className="w-full min-w-[700px] text-left text-xs"><thead><tr className="bg-surface-raised/50 text-[10px] uppercase tracking-wide text-muted"><th className="px-4 py-3 font-medium">Layanan</th><th className="px-3 py-3 font-medium">Bahan</th><th className="px-3 py-3 font-medium">Pemakaian</th><th className="px-3 py-3 font-medium">Tahap</th><th className="px-4 py-3 font-medium">Aksi</th></tr></thead><tbody>{recipes.map((recipe) => <tr key={recipe.id} className="border-t border-border/70"><td className="px-4 py-3 font-medium">{recipe.serviceName}<span className="ml-1 text-[10px] text-muted">/ {recipe.serviceUnit}</span></td><td className="px-3 py-3">{recipe.itemName}</td><td className="px-3 py-3">{recipe.quantityPerServiceUnit} {recipe.itemUnit} / {recipe.serviceUnit}</td><td className="px-3 py-3 text-muted">{recipeStatusLabels[recipe.consumeAtStatus]}</td><td className="px-4 py-3"><form action={deleteServiceInventoryRecipe}><input type="hidden" name="id" value={recipe.id} /><FormSubmitButton pendingText="…" className="h-8 px-2 text-xs">Hapus resep</FormSubmitButton></form></td></tr>)}</tbody></table></div>}
+        <p className="border-t border-border px-4 py-3 text-[10px] leading-5 text-muted">Jika pesanan dibatalkan setelah stok terpakai, koreksi jumlahnya secara manual melalui ledger stok agar jejak transaksi tetap jelas.</p>
+      </Card>}
       {lowStockCount > 0 && <div className="mb-4 flex items-start gap-3 rounded-xl border border-amber-200/15 bg-amber-200/5 p-3.5"><AlertTriangle size={16} className="mt-0.5 shrink-0 text-amber-200" /><div><p className="text-xs font-semibold text-amber-100">Ada {lowStockCount} barang yang mencapai batas minimum</p><p className="mt-1 text-[11px] text-muted">Periksa jumlah stok sebelum menerima pesanan dalam jumlah besar.</p></div></div>}
       <Card className="overflow-hidden">
         <div className="border-b border-border p-4"><h2 className="text-sm font-semibold">Daftar persediaan</h2><p className="mt-1 text-[11px] text-muted">{databaseEnabled ? "Stok tersimpan per cabang di Neon" : "Data contoh"}</p></div>

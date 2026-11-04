@@ -4,7 +4,7 @@ Sistem operasional laundry berbasis **Next.js App Router**, TypeScript, dan Tail
 
 ![Pratinjau fitur LaundryOS](./public/readme-feature-overview.svg)
 
-> **Status saat ini:** LaundryOS menyimpan transaksi dan data operasional per cabang di Neon. Login/register pemilik, akun staf dengan peran Kasir/Operator, audit aktivitas utama, ledger persediaan, layanan per kg/pcs/pasang, laporan berfilter tanggal, tutup kasir, dan backup/restore tersedia. Jalankan migrasi database sebelum aplikasi memakai perubahan terbaru.
+> **Status saat ini:** LaundryOS menyimpan transaksi dan data operasional per cabang di Neon. Login/register pemilik, akun staf dengan peran Kasir/Operator, audit aktivitas utama, ledger persediaan, resep pemakaian bahan otomatis, laporan cabang dan konsolidasi pemilik, tutup kasir, serta backup/restore tersedia. Backup harian privat memerlukan koneksi Vercel Blob dan `CRON_SECRET`. Jalankan migrasi database sebelum aplikasi memakai perubahan terbaru.
 
 ## Cakupan fitur lengkap
 
@@ -16,7 +16,7 @@ Daftar berikut adalah cakupan produk yang dituju. Status implementasi sebenarnya
 | Pesanan | Penerimaan cucian; layanan per kg/pcs/pasang; estimasi selesai; snapshot harga; status pengerjaan; riwayat perubahan; pembayaran penuh/parsial; pencarian, filter, pagination; nota cetak; pembatalan dan refund sesuai kebijakan. |
 | Pelanggan | Profil dan kontak; pencarian; riwayat transaksi; frekuensi dan nilai transaksi; pencegahan duplikasi berdasarkan aturan nomor kontak; catatan preferensi dengan kontrol akses. |
 | Layanan & harga | Katalog layanan per kg atau per item; harga, durasi, status aktif; layanan reguler/express; perubahan harga dengan snapshot agar invoice lama tetap akurat. |
-| Persediaan | Katalog bahan; saldo dan batas minimum; pembelian/pemakaian/penyesuaian beralasan melalui ledger; stok opname; peringatan stok menipis; histori pergerakan. |
+| Persediaan | Katalog bahan; saldo dan batas minimum; resep konsumsi otomatis per layanan/tahap; pembelian/pemakaian/penyesuaian beralasan melalui ledger; peringatan stok menipis; histori pergerakan. |
 | Keuangan | Pemasukan dan pengeluaran; metode pembayaran; tagihan belum lunas; pembayaran parsial; refund/reversal; rekap kas dan rekonsiliasi berdasarkan periode. |
 | Laporan | Pemasukan tercatat, volume pesanan, pelanggan baru, layanan terlaris, dan metode pembayaran; filter tanggal; ekspor CSV berbasis periode. |
 | Pengaturan & akses | Profil usaha dan cabang; akun staf; role, hak akses; audit log; pengaturan notifikasi dan preferensi aplikasi. |
@@ -26,20 +26,20 @@ Daftar berikut adalah cakupan produk yang dituju. Status implementasi sebenarnya
 
 | Bagian | Tersedia sekarang | Belum tersedia |
 | --- | --- | --- |
-| Dashboard | Ringkasan pendapatan, antrean, pesanan terbaru, stok menipis, tagihan belum lunas, tren mingguan; pemilik melihat ringkasan cabang yang dapat diakses | Filter periode dashboard dan laporan konsolidasi semua cabang |
+| Dashboard | Ringkasan pendapatan, antrean, pesanan terbaru, stok menipis, tagihan belum lunas, tren mingguan; pemilik melihat ringkasan cabang yang dapat diakses | Filter periode dashboard |
 | Pesanan | Layanan kg/pcs/pasang, biaya express/antar dan diskon, snapshot harga, pagination, pembayaran parsial, pembatalan dan refund beralasan, nota, riwayat, ekspor CSV hasil filter, tautan WhatsApp manual | Notifikasi otomatis melalui provider WhatsApp/SMS/email |
 | Lacak pesanan (publik) | Halaman `/lacak` untuk pelanggan: cek status, tahapan pengerjaan, riwayat status, dan sisa tagihan dengan kode pesanan + nomor HP terdaftar (rate-limited, tanpa login) | Tautan lacak otomatis di struk/WhatsApp |
 | Pelanggan | Tambah, cari, dan impor massal pelanggan dari CSV (validasi nomor, duplikat dilewati, laporan hasil per baris); ekspor CSV seluruh hasil pencarian; daftar Neon dibagi 25 pelanggan per halaman, ringkasan dihitung dari seluruh cabang, dan setiap pelanggan punya tautan ke riwayat pesanan | Profil lanjutan dan kontrol akses terperinci |
 | Layanan & harga | Katalog per cabang; layanan kg/pcs/pasang; harga tersimpan sebagai snapshot pesanan; riwayat perubahan tercatat di aktivitas | Histori harga khusus dan aturan harga otomatis |
-| Persediaan & keuangan | Ledger stok beralasan; pembayaran/pengeluaran; refund dicatat terpisah; ringkasan metode dan tutup kasir | Pemakaian stok otomatis dari pesanan dan rekonsiliasi bank/QRIS |
-| Laporan | Rentang tanggal, perbandingan periode sebelumnya, layanan/pelanggan, berat/item, metode pembayaran, dan ekspor CSV per periode | Rekonsiliasi otomatis dan laporan gabungan beberapa cabang |
+| Persediaan & keuangan | Ledger stok beralasan; resep pemakaian otomatis saat tahap pesanan yang dipilih; stok kurang menahan perubahan status; pembayaran/pengeluaran; refund dicatat terpisah; ringkasan metode dan tutup kasir | Rekonsiliasi bank/QRIS |
+| Laporan | Rentang tanggal, perbandingan periode sebelumnya, layanan/pelanggan, berat/item, metode pembayaran, ekspor CSV per periode, dan rekap pesanan/pemasukan semua cabang yang dapat diakses pemilik | Rekonsiliasi otomatis |
 | Pengaturan & aktivitas | Profil dan pembuatan cabang, pilihan cabang aktif, akses Pemilik/Kasir/Operator, staf aktif/nonaktif, audit aktivitas utama | Supervisor, izin per tindakan yang dapat dikustomisasi, dan retensi audit lanjutan |
 | Platform | Login/register, sesi bertanda tangan, pembatasan cabang dan peran di server, migrasi PostgreSQL, validasi request | Provider notifikasi otomatis, public API, dan observability terpusat |
-| Backup & restore | Unduh dan pulihkan data cabang dalam transaksi, termasuk pembayaran, refund, dan harga tambahan (fitur Pro) | Penjadwalan backup otomatis |
+| Backup & restore | Unduh dan pulihkan data cabang dalam transaksi, termasuk pembayaran, refund, harga tambahan, dan resep bahan (fitur Pro); backup otomatis privat harian dengan retensi 30 hari | Koneksi Blob dan `CRON_SECRET` perlu dikonfigurasi untuk mengaktifkan jadwal produksi |
 | Prioritas pesanan | Dashboard menampilkan pesanan yang masih diproses dan targetnya hari ini atau sudah lewat sesuai zona waktu cabang, dengan tautan ke daftar pesanan | Pengingat otomatis |
 | Riwayat pelanggan | Tautan dari daftar pelanggan ke seluruh pesanan pelanggan di cabang aktif, dengan pencarian, filter status, dan pagination | Profil pelanggan lanjutan |
 
-Status rinci dan kriteria penerimaan ada di [docs/modules.md](docs/modules.md) dan [docs/roadmap.md](docs/roadmap.md). Stok masih dicatat manual, sedangkan pesan WhatsApp dibuka sebagai tautan untuk dikirim oleh staf. Nama serta nomor kontak dalam fixture bersifat sintetis/masked.
+Status rinci dan kriteria penerimaan ada di [docs/modules.md](docs/modules.md) dan [docs/roadmap.md](docs/roadmap.md). Pemakaian stok otomatis hanya berlaku jika pemilik sudah mengatur resep layanan; pesan WhatsApp dibuka sebagai tautan untuk dikirim oleh staf. Nama serta nomor kontak dalam fixture bersifat sintetis/masked.
 
 ## PRD dan flowchart
 

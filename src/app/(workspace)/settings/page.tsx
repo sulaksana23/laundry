@@ -29,6 +29,7 @@ export default async function SettingsPage() {
   const profile = databaseEnabled ? await getBranchProfile(session!.branchId) : null;
   const licenseStatus = databaseEnabled ? await getLicenseStatus(session!.branchId) : INACTIVE_LICENSE;
   const staff = databaseEnabled ? await new AuthService().listStaff(session!.branchId) : [];
+  const scheduledBackupConfigured = process.env.VERCEL_ENV === "production" && Boolean((process.env.BLOB_STORE_ID || process.env.BLOB_READ_WRITE_TOKEN) && process.env.CRON_SECRET);
 
   return (
     <>
@@ -50,7 +51,7 @@ export default async function SettingsPage() {
           <Card id="payment" className="p-4 sm:p-5"><div className="mb-3"><h2 className="text-sm font-semibold">Pembayaran</h2><p className="mt-1 text-[11px] text-muted">Metode yang dapat dicatat pada transaksi.</p></div><div className="flex flex-wrap gap-2"><span className="rounded-md border border-border bg-surface-raised px-2.5 py-1.5 text-[11px]">Tunai</span><span className="rounded-md border border-border bg-surface-raised px-2.5 py-1.5 text-[11px]">Transfer bank</span><span className="rounded-md border border-border bg-surface-raised px-2.5 py-1.5 text-[11px]">QRIS</span></div></Card>
           <Card id="system" className="p-4 sm:p-5"><div className="mb-3"><h2 className="text-sm font-semibold">Sistem</h2><p className="mt-1 text-[11px] text-muted">Informasi aplikasi yang sedang digunakan.</p></div><div className="space-y-2 text-xs"><div className="flex items-center justify-between gap-3"><span className="text-muted">Nama aplikasi</span><span className="font-medium">{APP_NAME}</span></div><div className="flex items-center justify-between gap-3"><span className="text-muted">Versi aplikasi</span><span className="rounded-md bg-surface-hover px-2 py-1 text-[11px] font-semibold">{APP_VERSION_LABEL}</span></div></div></Card>
           <Card id="pro" className="p-4 sm:p-5"><div className="mb-3"><h2 className="flex items-center gap-2 text-sm font-semibold"><Crown size={15} className="text-accent" /> LaundryOS Pro</h2><p className="mt-1 text-[11px] text-muted">Fitur lanjutan bagi pendukung Bali Tech Solution di Trakteer. Fitur inti LaundryOS selalu gratis.</p></div><ProActivationCard mode={databaseEnabled ? "db" : "demo"} initialStatus={licenseStatus} activateAction={databaseEnabled ? activateLicense : undefined} /></Card>
-          <Card id="backup" className="p-4 sm:p-5"><div className="mb-3"><h2 className="flex items-center gap-2 text-sm font-semibold"><Database size={15} className="text-accent" /> Backup & restore data</h2><p className="mt-1 text-[11px] text-muted">Salinan seluruh data cabang yang dapat diunduh dan dipulihkan (fitur LaundryOS Pro).</p></div><BackupCard mode={databaseEnabled ? "db" : "demo"} initialProActive={licenseStatus.active} /></Card></div>
+          <Card id="backup" className="p-4 sm:p-5"><div className="mb-3"><h2 className="flex items-center gap-2 text-sm font-semibold"><Database size={15} className="text-accent" /> Backup & restore data</h2><p className="mt-1 text-[11px] text-muted">Salinan seluruh data cabang yang dapat diunduh dan dipulihkan (fitur LaundryOS Pro).</p></div><BackupCard mode={databaseEnabled ? "db" : "demo"} initialProActive={licenseStatus.active} scheduledBackupConfigured={scheduledBackupConfigured} /></Card></div>
       </div>
     </>
   );

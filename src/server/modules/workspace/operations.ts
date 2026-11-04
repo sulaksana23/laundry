@@ -124,6 +124,41 @@ export async function listInventoryMovements(branchId: string): Promise<Inventor
   }));
 }
 
+export type InventoryRecipeStatus = "washing" | "drying" | "ironing" | "ready" | "completed";
+
+export interface ServiceInventoryRecipe {
+  id: string;
+  serviceId: string;
+  serviceName: string;
+  serviceUnit: string;
+  itemId: string;
+  itemName: string;
+  itemUnit: string;
+  consumeAtStatus: InventoryRecipeStatus;
+  quantityPerServiceUnit: number;
+}
+
+export async function listServiceInventoryRecipes(branchId: string): Promise<ServiceInventoryRecipe[]> {
+  const rows = resultRows<{
+    id: string; service_id: string; service_name: string; service_unit: string;
+    item_id: string; item_name: string; item_unit: string; consume_at_status: InventoryRecipeStatus;
+    quantity_per_service_unit: number | string;
+  }>(await getNeonSql().query(
+    "SELECT recipe.id::text, recipe.service_id, service.name AS service_name, service.unit AS service_unit, " +
+    "recipe.item_id::text, item.name AS item_name, item.unit AS item_unit, recipe.consume_at_status, recipe.quantity_per_service_unit " +
+    "FROM laundry_service_inventory_recipes recipe " +
+    "JOIN laundry_services service ON service.id = recipe.service_id AND service.branch_id = recipe.branch_id " +
+    "JOIN laundry_inventory_items item ON item.id = recipe.item_id AND item.branch_id = recipe.branch_id " +
+    "WHERE recipe.branch_id = $1 ORDER BY service.name, recipe.consume_at_status, item.name",
+    [branchId],
+  ));
+  return rows.map((row) => ({
+    id: row.id, serviceId: row.service_id, serviceName: row.service_name, serviceUnit: row.service_unit,
+    itemId: row.item_id, itemName: row.item_name, itemUnit: row.item_unit,
+    consumeAtStatus: row.consume_at_status, quantityPerServiceUnit: Number(row.quantity_per_service_unit),
+  }));
+}
+
 export interface ExpenseItem {
   id: string;
   label: string;
@@ -321,6 +356,38 @@ export async function listRecentPayments(branchId: string) {
 }
 
 export interface ReportDateRange { from: string; to: string }
+
+export interface OwnerBranchReportRow {
+  id: string;
+  name: string;
+  orders: number;
+  income: number;
+}
+
+/** Rekap seluruh cabang yang terdaftar pada akses pemilik, mengikuti tanggal lokal setiap cabang. */
+export async function getOwnerBranchReport(userId: string, from: string, to: string): Promise<OwnerBranchReportRow[]> {
+  const rows = resultRows<{
+    id: string; name: string; orders: number | string; income: number | string;
+  }>(await getNeonSql().query(
+    "WITH accessible_branches AS (" +
+    "SELECT branch.id, branch.name, branch.timezone FROM laundry_user_branch_access access " +
+    "JOIN laundry_users owner ON owner.id = access.user_id AND owner.role = 'owner' AND owner.is_active = true " +
+    "JOIN laundry_branches branch ON branch.id = access.branch_id WHERE access.user_id = $1::uuid" +
+    ") SELECT branch.id, branch.name, " +
+    "(SELECT COUNT(*) FROM laundry_orders order_row WHERE order_row.branch_id = branch.id AND order_row.status <> 'cancelled' " +
+    "AND order_row.received_at >= ($2::date::timestamp AT TIME ZONE branch.timezone) " +
+    "AND order_row.received_at < (($3::date + 1)::timestamp AT TIME ZONE branch.timezone))::int AS orders, " +
+    "COALESCE((SELECT SUM(payment.amount) FROM laundry_payments payment WHERE payment.branch_id = branch.id " +
+    "AND payment.received_at >= ($2::date::timestamp AT TIME ZONE branch.timezone) " +
+    "AND payment.received_at < (($3::date + 1)::timestamp AT TIME ZONE branch.timezone)), 0) - " +
+    "COALESCE((SELECT SUM(refund.amount) FROM laundry_order_refunds refund WHERE refund.branch_id = branch.id " +
+    "AND refund.created_at >= ($2::date::timestamp AT TIME ZONE branch.timezone) " +
+    "AND refund.created_at < (($3::date + 1)::timestamp AT TIME ZONE branch.timezone)), 0) AS income " +
+    "FROM accessible_branches branch ORDER BY branch.name, branch.id",
+    [userId, from, to],
+  ));
+  return rows.map((row) => ({ id: row.id, name: row.name, orders: Number(row.orders), income: Number(row.income) }));
+}
 
 export async function getCurrentReportDateRange(branchId: string): Promise<ReportDateRange> {
   const rows = resultRows<{ month_start: string; today: string }>(await getNeonSql().query(

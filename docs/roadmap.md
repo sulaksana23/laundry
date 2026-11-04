@@ -42,13 +42,17 @@
 
 - [x] Pesanan satu layanan dengan unit kg, pcs, atau pasang dan snapshot harga per unit.
 - [x] Ledger stok bercabang untuk saldo awal, pembelian, pemakaian, dan penyesuaian beralasan.
+- [x] Resep pemakaian stok otomatis per layanan dan tahap, dengan pembaruan status yang atomik serta validasi saldo cukup.
 - [x] Riwayat audit pemilik untuk perubahan transaksi dan konfigurasi utama.
 - [x] Filter laporan tanggal dan CSV mengikuti periode pilihan.
 - [x] Biaya express/antar dan diskon per pesanan dengan validasi server.
 - [x] Pemilik dapat membuat cabang dan berpindah antara cabang yang terdaftar; data operasional dibatasi ke cabang aktif.
+- [x] Laporan pemilik menggabungkan jumlah pesanan dan pemasukan bersih dari cabang yang dapat diakses.
+- [x] Format backup manual ikut membawa resep bahan dan tetap menerima versi backup sebelumnya.
+- [x] Jadwal backup harian privat dengan retensi 30 hari tersedia melalui Vercel Cron dan Blob; perlu konfigurasi penyimpanan produksi.
 
 ## Tahap 4 — Multi-cabang dan optimasi
 
 - [x] Ringkasan pesanan dan pendapatan per cabang pada dashboard pemilik.
-- [ ] Laporan konsolidasi lintas cabang, pengelolaan staf lintas cabang, dan pemindahan order bila diperlukan.
+- [ ] Pengelolaan staf lintas cabang dan pemindahan order bila diperlukan.
 - [ ] Optimasi query, indeks, caching, dan retensi berdasarkan volume nyata.

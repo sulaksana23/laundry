@@ -48,9 +48,9 @@ Saat ini akun yang didukung adalah Pemilik; pembagian peran staf vs pemilik (RBA
 - Manajemen pesanan: buat, cari/filter, pagination server-side, ubah status dengan riwayat tercatat, pembayaran (lunas/sebagian/belum), nota ringkasan cetak, tombol WhatsApp untuk pesanan siap, ekspor halaman aktif.
 - Pelanggan: tambah, cari, dan impor massal dari berkas CSV (dengan validasi dan laporan hasil) per cabang.
 - Layanan & harga: katalog per cabang, tambah/ubah, aktif/nonaktif; harga aktif dipakai saat pesanan dibuat (snapshot harga tersimpan di pesanan).
-- Persediaan: daftar bahan, penyesuaian stok, peringatan stok minimum.
+- Persediaan: daftar bahan, resep pemakaian per layanan/tahap, penyesuaian stok, ledger, dan peringatan stok minimum.
 - Keuangan: pemasukan dari pembayaran, pengeluaran operasional, ringkasan kas dan tagihan belum lunas; tutup kasir harian membandingkan kas tunai sistem dengan uang fisik dan mencatat selisihnya.
-- Laporan: agregasi transaksi dan ekspor CSV.
+- Laporan: agregasi transaksi, rekap pemilik lintas cabang, dan ekspor CSV.
 - Pengaturan: profil usaha (nama, telepon, email, alamat, zona waktu) tersimpan ke database; informasi versi sistem tampil di sidebar, footer, dan Pengaturan → Sistem.
 - Lacak pesanan publik (`/lacak`): pelanggan mengecek status dengan kode pesanan + nomor HP terdaftar, tanpa login.
 - Mode demo tanpa database untuk evaluasi tampilan.
@@ -86,6 +86,9 @@ Saat ini akun yang didukung adalah Pemilik; pembagian peran staf vs pemilik (RBA
 | FR-16 | Impor massal pelanggan dari berkas CSV dengan validasi dan laporan hasil | Penting | Tersedia |
 | FR-17 | Backup data cabang yang dapat diunduh dan dipulihkan | Penting | Tersedia (fitur Pro) |
 | FR-18 | Aktivasi LaundryOS Pro: fitur lanjutan (ekspor laporan CSV, tutup kasir harian, backup & restore) terkunci dan terbuka dengan kode aktivasi bertanda tangan digital yang diterbitkan bagi pendukung Trakteer | Penting | Tersedia (fondasi) |
+| FR-19 | Pemilik mengatur resep bahan per layanan dan tahap; perubahan status serta pemakaian stok dicatat atomik dan ditolak jika stok tidak cukup | Wajib | Tersedia |
+| FR-20 | Pemilik melihat gabungan pesanan dan pemasukan bersih dari semua cabang yang dapat diakses untuk rentang tanggal terpilih | Penting | Tersedia |
+| FR-21 | Backup cabang Pro dijadwalkan harian ke penyimpanan privat dengan retensi 30 hari dan dapat diunduh untuk pemulihan | Penting | Tersedia |
 
 ## 6. Kebutuhan non-fungsional
 
@@ -141,3 +144,4 @@ Hal berikut **belum diputuskan** dan harus dikonfirmasi pemilik usaha sebelum di
 | v0.9.1 | Validasi isi backup, snapshot konsisten, dan restore data cabang dalam satu transaksi database |
 | v0.10.0 | Panel prioritas pesanan berdasarkan tanggal target dan zona waktu cabang; tautan langsung ke pencarian pesanan |
 | v0.11.0 | Riwayat pesanan per pelanggan dengan pencarian, filter status, pagination, dan pembatasan cabang |
+| v0.16.0 | Resep pemakaian stok otomatis, laporan pemilik lintas cabang, backup privat harian, dan kompatibilitas backup lama |

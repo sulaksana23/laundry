@@ -31,13 +31,14 @@ const TABLE_DEFS: TableDef[] = [
   { key: "refunds", table: "laundry_order_refunds", columns: ["id", "branch_id", "order_id", "amount", "reason", "method", "actor_id", "created_at"], uuidColumns: ["id"], dateColumns: [] },
   { key: "expenses", table: "laundry_expenses", columns: ["id", "branch_id", "description", "category", "amount", "method", "incurred_at", "created_at"], uuidColumns: ["id"], dateColumns: ["incurred_at"] },
   { key: "inventoryItems", table: "laundry_inventory_items", columns: ["id", "branch_id", "name", "category", "unit", "quantity", "min_quantity", "unit_price", "created_at", "updated_at"], uuidColumns: ["id"], dateColumns: [] },
+  { key: "serviceInventoryRecipes", table: "laundry_service_inventory_recipes", columns: ["id", "branch_id", "service_id", "item_id", "consume_at_status", "quantity_per_service_unit", "actor_id", "created_at", "updated_at"], uuidColumns: ["id", "item_id"], dateColumns: [] },
   { key: "cashClosings", table: "laundry_cash_closings", columns: ["id", "branch_id", "closing_date", "expected_amount", "counted_amount", "note", "closed_by", "created_at", "updated_at"], uuidColumns: ["id"], dateColumns: ["closing_date"] },
 ];
 
 // Urutan hapus aman terhadap foreign key (anak sebelum induk),
 // urutan sisip adalah kebalikannya untuk tabel yang saling merujuk.
-const DELETE_ORDER: BackupTableKey[] = ["orderStatusHistory", "refunds", "payments", "orders", "cashClosings", "expenses", "inventoryItems", "services", "customers"];
-const INSERT_ORDER: BackupTableKey[] = ["customers", "services", "orders", "orderStatusHistory", "payments", "refunds", "expenses", "inventoryItems", "cashClosings"];
+const DELETE_ORDER: BackupTableKey[] = ["orderStatusHistory", "refunds", "payments", "orders", "serviceInventoryRecipes", "cashClosings", "expenses", "inventoryItems", "services", "customers"];
+const INSERT_ORDER: BackupTableKey[] = ["customers", "services", "orders", "orderStatusHistory", "payments", "refunds", "expenses", "inventoryItems", "serviceInventoryRecipes", "cashClosings"];
 
 function rowsOf(result: unknown): BackupRow[] {
   if (Array.isArray(result)) return result as BackupRow[];

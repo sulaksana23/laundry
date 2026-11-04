@@ -30,6 +30,15 @@ Status pembayaran demo: `unpaid`, `partial`, `paid`. Status pembayaran dan statu
 - Pembatalan masuk ke riwayat status dan audit; refund disimpan pada ledger tersendiri dan mengurangi pemasukan/kas sesuai metode serta tanggal refund.
 - Aplikasi mencatat transaksi refund, tetapi tidak mengirim uang secara otomatis. Pemilik tetap melakukan pengembalian dana melalui kanal pembayaran usaha.
 
+## Resep pemakaian persediaan
+
+- Pemilik mengatur sendiri bahan, jumlah bahan per satuan layanan, dan tahap status saat bahan dipakai. Tidak ada resep atau jumlah bawaan; pesanan tanpa resep tetap mengikuti pencatatan manual.
+- Saat pesanan memasuki tahap yang dipilih, stok dan ledger pemakaian diperbarui dalam transaksi yang sama dengan status pesanan. Jika salah satu bahan tidak cukup, stok dan status tidak berubah.
+- Jumlah stok mengikuti presisi tiga angka desimal. Pemakaian resep dibulatkan ke atas ke 0,001 satuan stok agar tidak tercatat nol.
+- Pembatalan setelah pemakaian tidak mengembalikan stok secara otomatis. Pemilik perlu mencatat koreksi lewat ledger dengan alasan yang sesuai.
+
+Ketentuan resep, tahap pemakaian, pembulatan, dan pembatalan ini adalah perilaku aplikasi yang harus diperiksa pemilik sebelum dipakai untuk transaksi produksi.
+
 Angka dan ketentuan ini bukan kebijakan usaha yang dikonfirmasi.
 
 ## Wajib diputuskan sebelum produksi

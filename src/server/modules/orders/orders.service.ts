@@ -17,6 +17,10 @@ export class OrderConflictError extends Error {
   constructor() { super("Pesanan berubah oleh proses lain. Muat ulang data lalu coba lagi."); this.name = "OrderConflictError"; }
 }
 
+export class InsufficientInventoryError extends Error {
+  constructor() { super("Stok bahan pada resep tidak mencukupi. Tambahkan stok atau sesuaikan resep sebelum melanjutkan."); this.name = "InsufficientInventoryError"; }
+}
+
 export class OrdersService {
   constructor(
     private readonly orders: OrdersRepository,
@@ -72,6 +76,9 @@ export class OrdersService {
     } catch (error) {
       if (error instanceof Error && error.message === "ORDER_CONFLICT") {
         throw new OrderConflictError();
+      }
+      if (error instanceof Error && error.message === "INSUFFICIENT_INVENTORY") {
+        throw new InsufficientInventoryError();
       }
       throw error;
     }

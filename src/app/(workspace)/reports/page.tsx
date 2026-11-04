@@ -10,7 +10,7 @@ import { formatCurrency } from "@/lib/format";
 import { isOrdersDatabaseEnabled } from "@/server/db/mode";
 import { getAuthSession } from "@/server/modules/auth/auth.session";
 import { isProActive } from "@/server/modules/license/license";
-import { getCurrentReportDateRange, getReportData } from "@/server/modules/workspace/operations";
+import { getCurrentReportDateRange, getOwnerBranchReport, getReportData } from "@/server/modules/workspace/operations";
 import { hasPermission } from "@/server/modules/auth/permissions";
 
 export const metadata: Metadata = { title: "Laporan" };
@@ -54,6 +54,11 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
   };
   const maxIncome = Math.max(1, ...report.weeks.map((week) => week.income));
   const maxOrders = Math.max(1, ...report.weeks.map((week) => week.orders));
+  const ownerBranchReports = databaseEnabled && session?.role === "owner"
+    ? await getOwnerBranchReport(session.userId, report.from, report.to)
+    : [];
+  const consolidatedOrders = ownerBranchReports.reduce((total, branch) => total + branch.orders, 0);
+  const consolidatedIncome = ownerBranchReports.reduce((total, branch) => total + branch.income, 0);
 
   return (
     <>
@@ -74,6 +79,11 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
         <Card className="p-4"><p className="text-[11px] text-muted">Jumlah item</p><p className="mt-2 text-base font-semibold">{report.pcsCount.toLocaleString("id-ID")} pcs · {report.pairCount.toLocaleString("id-ID")} pasang</p><p className="mt-1 text-[10px] text-muted">Jumlah menurut satuan</p></Card>
         <Card className="p-4"><p className="text-[11px] text-muted">Pelanggan baru</p><p className="mt-2 text-2xl font-semibold">{report.newCustomers.toLocaleString("id-ID")}</p><p className="mt-1 text-[10px] text-muted">Terdaftar pada rentang ini</p></Card>
       </div>
+      {ownerBranchReports.length > 0 && <Card className="mt-4 overflow-hidden">
+        <div className="flex flex-wrap items-end justify-between gap-3 border-b border-border p-4"><div><h2 className="text-sm font-semibold">Ringkasan semua cabang</h2><p className="mt-1 text-[11px] text-muted">Cabang yang terhubung ke akun pemilik · tanggal lokal masing-masing cabang</p></div><div className="flex gap-5 text-right"><div><p className="text-[10px] text-muted">Total pesanan</p><p className="mt-1 text-sm font-semibold">{consolidatedOrders.toLocaleString("id-ID")}</p></div><div><p className="text-[10px] text-muted">Pemasukan bersih</p><p className="mt-1 text-sm font-semibold">{formatCurrency(consolidatedIncome)}</p></div></div></div>
+        <div className="overflow-x-auto"><table className="w-full min-w-[480px] text-left text-xs"><thead><tr className="bg-surface-raised/50 text-[10px] uppercase tracking-wide text-muted"><th className="px-4 py-3 font-medium">Cabang</th><th className="px-3 py-3 text-right font-medium">Pesanan</th><th className="px-4 py-3 text-right font-medium">Pemasukan bersih</th></tr></thead><tbody>{ownerBranchReports.map((branch) => <tr key={branch.id} className="border-t border-border/70"><td className="px-4 py-3 font-medium">{branch.name}</td><td className="px-3 py-3 text-right">{branch.orders.toLocaleString("id-ID")}</td><td className="px-4 py-3 text-right font-semibold">{formatCurrency(branch.income)}</td></tr>)}</tbody><tfoot><tr className="border-t border-border bg-surface-raised/30 font-semibold"><td className="px-4 py-3">Gabungan</td><td className="px-3 py-3 text-right">{consolidatedOrders.toLocaleString("id-ID")}</td><td className="px-4 py-3 text-right">{formatCurrency(consolidatedIncome)}</td></tr></tfoot></table></div>
+        <p className="border-t border-border px-4 py-3 text-[10px] leading-5 text-muted">Pemasukan dihitung dari pembayaran pada tanggal transaksi dikurangi refund yang tercatat pada tanggal refund. Total pesanan tidak memasukkan pesanan yang dibatalkan.</p>
+      </Card>}
       <div className="mt-4 grid gap-4 xl:grid-cols-[1.35fr_1fr]">
         <Card><CardHeader><div><CardTitle>Pemasukan dan pesanan</CardTitle><p className="mt-1 text-[11px] text-muted">Kelompok tujuh hari pada rentang terpilih</p></div></CardHeader>
           {report.weeks.length ? <div className="space-y-4 p-4">{report.weeks.map((week) => <div key={week.label} className="grid grid-cols-[64px_1fr] items-center gap-3 sm:grid-cols-[72px_1fr_130px]"><span className="text-[11px] text-muted">{week.label}</span><div><div className="h-2 overflow-hidden rounded-full bg-surface-raised"><div className="h-full rounded-full bg-accent" style={{ width: ((week.income / maxIncome) * 100) + "%" }} /></div><div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-surface-raised"><div className="h-full rounded-full bg-sky-300/70" style={{ width: ((week.orders / maxOrders) * 100) + "%" }} /></div></div><span className="col-start-2 text-left text-[10px] text-muted sm:col-start-auto sm:text-right">{formatCurrency(week.income)} · {week.orders} pesanan</span></div>)}</div> : <p className="p-10 text-center text-xs text-muted">Belum ada aktivitas pada rentang ini.</p>}

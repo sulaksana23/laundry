@@ -8,6 +8,7 @@ import { hasPermission } from "@/server/modules/auth/permissions";
 import { redactOrderForRole } from "@/server/modules/orders/order-access";
 import {
   InvalidOrderTransitionError,
+  InsufficientInventoryError,
   OrderConflictError,
   OrderNotFoundError,
 } from "@/server/modules/orders/orders.service";
@@ -50,6 +51,7 @@ export async function PATCH(
   } catch (error) {
     if (error instanceof OrderNotFoundError) return NextResponse.json({ error: error.message }, { status: 404 });
     if (error instanceof InvalidOrderTransitionError) return NextResponse.json({ error: error.message }, { status: 409 });
+    if (error instanceof InsufficientInventoryError) return NextResponse.json({ error: error.message }, { status: 409 });
     if (error instanceof OrderConflictError) return NextResponse.json({ error: error.message }, { status: 409 });
     if (error instanceof SyntaxError || error instanceof z.ZodError) return NextResponse.json({ error: "Body JSON tidak valid." }, { status: 400 });
     return NextResponse.json({ error: "Status pesanan gagal diperbarui." }, { status: 500 });

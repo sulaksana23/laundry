@@ -12,6 +12,8 @@ Starter belum memiliki autentikasi dan jangan dipublikasikan sebagai sistem tran
 - [ ] Redaksi nomor telepon/data pribadi dari log dan telemetry.
 - [ ] Tambahkan audit log untuk perubahan harga, transaksi, pembayaran, status, dan stok.
 - [ ] Siapkan backup terenkripsi, retensi, restore drill, dan prosedur insiden.
+- [x] Jadwalkan backup private cabang Pro harian di Vercel Blob dengan retensi 30 hari dan endpoint Cron yang dilindungi `CRON_SECRET`.
+- [ ] Lakukan uji pemulihan berkala dari salinan terjadwal.
 - [ ] Terapkan dependency update dan pemeriksaan kerentanan pada pipeline.
 - [ ] Tentukan dasar hukum, tujuan pemrosesan, akses, retensi, dan penghapusan data pelanggan.
 - [ ] Periksa konfigurasi header keamanan, CSP, TLS, dan kebijakan upload sebelum rilis.
