@@ -49,7 +49,7 @@
 - [x] Pemilik dapat membuat cabang dan berpindah antara cabang yang terdaftar; data operasional dibatasi ke cabang aktif.
 - [x] Laporan pemilik menggabungkan jumlah pesanan dan pemasukan bersih dari cabang yang dapat diakses.
 - [x] Format backup manual ikut membawa resep bahan dan tetap menerima versi backup sebelumnya.
-- [x] Jadwal backup harian privat dengan retensi 30 hari tersedia melalui Vercel Cron dan Blob; perlu konfigurasi penyimpanan produksi.
+- [x] Backup manual per cabang menyertakan resep bahan dan menerima format versi sebelumnya; tidak membutuhkan layanan penyimpanan tambahan.
 
 ## Tahap 4 — Multi-cabang dan optimasi
 

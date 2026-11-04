@@ -4,7 +4,7 @@ Sistem operasional laundry berbasis **Next.js App Router**, TypeScript, dan Tail
 
 ![Pratinjau fitur LaundryOS](./public/readme-feature-overview.svg)
 
-> **Status saat ini:** LaundryOS menyimpan transaksi dan data operasional per cabang di Neon. Login/register pemilik, akun staf dengan peran Kasir/Operator, audit aktivitas utama, ledger persediaan, resep pemakaian bahan otomatis, laporan cabang dan konsolidasi pemilik, tutup kasir, serta backup/restore tersedia. Backup harian privat memerlukan koneksi Vercel Blob dan `CRON_SECRET`. Jalankan migrasi database sebelum aplikasi memakai perubahan terbaru.
+> **Status saat ini:** LaundryOS menyimpan transaksi dan data operasional per cabang di Neon. Login/register pemilik, akun staf dengan peran Kasir/Operator, audit aktivitas utama, ledger persediaan, resep pemakaian bahan otomatis, laporan cabang dan konsolidasi pemilik, tutup kasir, serta backup/restore manual tersedia. Backup dapat diunduh dan disimpan sendiri tanpa layanan penyimpanan tambahan. Jalankan migrasi database sebelum aplikasi memakai perubahan terbaru.
 
 ## Cakupan fitur lengkap
 
@@ -35,7 +35,7 @@ Daftar berikut adalah cakupan produk yang dituju. Status implementasi sebenarnya
 | Laporan | Rentang tanggal, perbandingan periode sebelumnya, layanan/pelanggan, berat/item, metode pembayaran, ekspor CSV per periode, dan rekap pesanan/pemasukan semua cabang yang dapat diakses pemilik | Rekonsiliasi otomatis |
 | Pengaturan & aktivitas | Profil dan pembuatan cabang, pilihan cabang aktif, akses Pemilik/Kasir/Operator, staf aktif/nonaktif, audit aktivitas utama | Supervisor, izin per tindakan yang dapat dikustomisasi, dan retensi audit lanjutan |
 | Platform | Login/register, sesi bertanda tangan, pembatasan cabang dan peran di server, migrasi PostgreSQL, validasi request | Provider notifikasi otomatis, public API, dan observability terpusat |
-| Backup & restore | Unduh dan pulihkan data cabang dalam transaksi, termasuk pembayaran, refund, harga tambahan, dan resep bahan (fitur Pro); backup otomatis privat harian dengan retensi 30 hari | Koneksi Blob dan `CRON_SECRET` perlu dikonfigurasi untuk mengaktifkan jadwal produksi |
+| Backup & restore | Unduh dan pulihkan data cabang dalam transaksi, termasuk pembayaran, refund, harga tambahan, dan resep bahan (fitur Pro) | Backup dibuat manual lalu disimpan pemilik; tidak memakai penyimpanan berbayar tambahan |
 | Prioritas pesanan | Dashboard menampilkan pesanan yang masih diproses dan targetnya hari ini atau sudah lewat sesuai zona waktu cabang, dengan tautan ke daftar pesanan | Pengingat otomatis |
 | Riwayat pelanggan | Tautan dari daftar pelanggan ke seluruh pesanan pelanggan di cabang aktif, dengan pencarian, filter status, dan pagination | Profil pelanggan lanjutan |
 

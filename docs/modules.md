@@ -25,7 +25,7 @@ Dokumen ini membatasi target produk agar istilah “lengkap” punya cakupan yan
 - Pemilik dapat membatalkan pesanan dan mencatat refund sebagian/penuh setelah pembatalan. Refund memperbarui saldo pembayaran dan laporan; pengiriman dana tetap dilakukan manual di kanal eksternal.
 - Laporan mendukung rentang tanggal maksimal 366 hari, perbandingan dengan periode sebelumnya yang sama panjang, dan ringkasan penerimaan menurut metode untuk dicocokkan dengan mutasi bank/penyedia QRIS.
 - Laporan pemilik merangkum jumlah pesanan dan penerimaan bersih dari cabang yang terhubung ke akun, dengan tanggal lokal tiap cabang.
-- Backup otomatis harian menyimpan file private untuk cabang Pro di Vercel Blob, menjaga 30 hari, dan menyediakan unduhan dari Pengaturan.
+- Pemilik cabang Pro dapat mengunduh dan memulihkan backup JSON manual dari Pengaturan. Salinan perlu disimpan sendiri di tempat aman.
 - Matriks akses awal: Pemilik memiliki akses penuh; Kasir mengelola pesanan, pelanggan, pembayaran, dan keuangan; Operator melihat serta memajukan status pesanan dan melihat persediaan. Pembatalan/refund dibatasi untuk pemilik. Pemilik dapat berpindah di antara cabang yang terdaftar pada akunnya; data modul tetap dibatasi ke cabang aktif.
 
 ## Alur utama pesanan

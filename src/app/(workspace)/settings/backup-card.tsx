@@ -22,7 +22,7 @@ interface StoredDemoLicense {
 const anchorButtonClass =
   "inline-flex h-9 items-center justify-center gap-2 rounded-lg px-3.5 text-sm font-semibold transition duration-150 hover:-translate-y-px";
 
-export function BackupCard({ mode, initialProActive, scheduledBackupConfigured }: { mode: "db" | "demo"; initialProActive: boolean; scheduledBackupConfigured: boolean }) {
+export function BackupCard({ mode, initialProActive }: { mode: "db" | "demo"; initialProActive: boolean }) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [proActive, setProActive] = useState(initialProActive);
@@ -32,9 +32,6 @@ export function BackupCard({ mode, initialProActive, scheduledBackupConfigured }
   const [restoring, setRestoring] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [scheduledBackups, setScheduledBackups] = useState<Array<{ date: string; size: number }>>([]);
-  const [scheduledBackupError, setScheduledBackupError] = useState<string | null>(null);
-  const [scheduledBackupsLoaded, setScheduledBackupsLoaded] = useState(false);
 
   useEffect(() => {
     if (mode !== "demo") return;
@@ -56,30 +53,6 @@ export function BackupCard({ mode, initialProActive, scheduledBackupConfigured }
       window.removeEventListener("laundryos:pro-activated", checkStoredLicense);
     };
   }, [mode]);
-
-  useEffect(() => {
-    if (mode !== "db" || !proActive || !scheduledBackupConfigured) {
-      return;
-    }
-    let active = true;
-    void fetch("/api/backup/automatic", { cache: "no-store" })
-      .then(async (response) => {
-        const result = await response.json() as { backups?: Array<{ date: string; size: number }>; error?: string };
-        if (!response.ok) throw new Error(result.error ?? "Riwayat backup otomatis gagal dimuat.");
-        if (active) {
-          setScheduledBackups(result.backups ?? []);
-          setScheduledBackupError(null);
-          setScheduledBackupsLoaded(true);
-        }
-      })
-      .catch((caughtError) => {
-        if (active) {
-          setScheduledBackupError(caughtError instanceof Error ? caughtError.message : "Riwayat backup otomatis gagal dimuat.");
-          setScheduledBackupsLoaded(true);
-        }
-      });
-    return () => { active = false; };
-  }, [mode, proActive, scheduledBackupConfigured]);
 
   async function handleFile(file: File) {
     setError(null);
@@ -143,13 +116,6 @@ export function BackupCard({ mode, initialProActive, scheduledBackupConfigured }
 
   return (
     <div className="space-y-5">
-      <div className="rounded-lg border border-border bg-surface-raised/40 p-3.5">
-        <p className="text-xs font-semibold text-foreground">Backup otomatis harian</p>
-        {mode !== "db" ? <p className="mt-1 text-xs leading-5 text-muted">Mode demo tidak membuat backup terjadwal.</p> : !scheduledBackupConfigured ? <p className="mt-1 text-xs leading-5 text-amber-100">Belum aktif. Hubungkan private Vercel Blob dan atur CRON_SECRET pada proyek Vercel untuk menyimpan backup di luar database.</p> : <>
-          <p className="mt-1 text-xs leading-5 text-muted">Cabang Pro dicadangkan setiap hari sekitar pukul 03.00 WITA. File disimpan privat dan salinan lebih lama dari 30 hari dihapus otomatis.</p>
-          {!scheduledBackupsLoaded ? <p className="mt-2 text-[11px] text-muted">Memuat riwayat backup…</p> : scheduledBackupError ? <p className="mt-2 text-[11px] text-amber-100" role="status">{scheduledBackupError}</p> : scheduledBackups.length === 0 ? <p className="mt-2 text-[11px] text-muted">Belum ada salinan otomatis. Jadwal berikutnya akan membuat backup pertama.</p> : <ul className="mt-3 grid gap-2 sm:grid-cols-2">{scheduledBackups.map((backup) => <li key={backup.date} className="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2 text-[11px]"><span>{formatShortDate(backup.date)} <span className="text-muted">· {(backup.size / 1024).toFixed(0)} KB</span></span><a className="font-semibold text-accent hover:underline" download href={`/api/backup/automatic?date=${backup.date}`}>Unduh</a></li>)}</ul>}
-        </>}
-      </div>
       <div>
         <p className="text-xs font-semibold text-foreground">Unduh backup</p>
         <p className="mt-1 text-xs leading-5 text-muted">

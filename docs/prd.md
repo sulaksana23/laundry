@@ -88,7 +88,7 @@ Saat ini akun yang didukung adalah Pemilik; pembagian peran staf vs pemilik (RBA
 | FR-18 | Aktivasi LaundryOS Pro: fitur lanjutan (ekspor laporan CSV, tutup kasir harian, backup & restore) terkunci dan terbuka dengan kode aktivasi bertanda tangan digital yang diterbitkan bagi pendukung Trakteer | Penting | Tersedia (fondasi) |
 | FR-19 | Pemilik mengatur resep bahan per layanan dan tahap; perubahan status serta pemakaian stok dicatat atomik dan ditolak jika stok tidak cukup | Wajib | Tersedia |
 | FR-20 | Pemilik melihat gabungan pesanan dan pemasukan bersih dari semua cabang yang dapat diakses untuk rentang tanggal terpilih | Penting | Tersedia |
-| FR-21 | Backup cabang Pro dijadwalkan harian ke penyimpanan privat dengan retensi 30 hari dan dapat diunduh untuk pemulihan | Penting | Tersedia |
+| FR-21 | Backup cabang Pro dapat diunduh dan dipulihkan secara manual tanpa penyimpanan tambahan dari aplikasi | Penting | Tersedia |
 
 ## 6. Kebutuhan non-fungsional
 
