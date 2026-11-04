@@ -37,6 +37,7 @@ Daftar berikut adalah cakupan produk yang dituju. Status implementasi sebenarnya
 | Platform | Layout responsif, komponen UI, TypeScript strict, pola controller/service/repository, migrasi PostgreSQL untuk pesanan | Role terperinci, API produksi, multi-cabang per akun, notifikasi otomatis |
 | Backup & restore | Unduh salinan JSON seluruh data cabang dari snapshot yang konsisten; validasi dan restore dalam satu transaksi (fitur Pro) | Penjadwalan backup otomatis |
 | Prioritas pesanan | Dashboard menampilkan pesanan yang masih diproses dan targetnya hari ini atau sudah lewat sesuai zona waktu cabang, dengan tautan ke daftar pesanan | Pengingat otomatis |
+| Riwayat pelanggan | Tautan dari daftar pelanggan ke seluruh pesanan pelanggan di cabang aktif, dengan pencarian, filter status, dan pagination | Profil pelanggan lanjutan |
 
 Status rinci dan kriteria penerimaan ada di [docs/modules.md](docs/modules.md) dan [docs/roadmap.md](docs/roadmap.md). Nama serta nomor kontak dalam fixture bersifat sintetis/masked.
 

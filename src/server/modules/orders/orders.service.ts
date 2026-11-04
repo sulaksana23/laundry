@@ -1,5 +1,6 @@
 import { canTransitionOrder, createOrderSchema, type CreateOrderInput, type OrderStatus } from "@/features/orders/domain/order";
 import type { OrderListQuery, OrderListResult, OrderPricingPolicy, OrdersRepository } from "@/server/modules/orders/orders.repository";
+import { isUuid } from "@/lib/uuid";
 
 export class OrderNotFoundError extends Error {
   constructor() { super("Pesanan tidak ditemukan."); this.name = "OrderNotFoundError"; }
@@ -25,6 +26,7 @@ export class OrdersService {
 
   list(query: OrderListQuery): Promise<OrderListResult> {
     if (!query.branchId) throw new Error("Branch context wajib tersedia.");
+    if (query.customerId && !isUuid(query.customerId)) throw new Error("ID pelanggan tidak valid.");
     if (!Number.isInteger(query.page) || query.page < 1) throw new Error("Nomor halaman tidak valid.");
     if (!Number.isInteger(query.pageSize) || query.pageSize < 1 || query.pageSize > 100) throw new Error("Ukuran halaman tidak valid.");
     return this.orders.list(query);

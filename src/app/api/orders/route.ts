@@ -4,6 +4,7 @@ import { orderStatuses, type OrderStatus } from "@/features/orders/domain/order"
 import { isOrdersDatabaseEnabled } from "@/server/db/mode";
 import { getAuthSession } from "@/server/modules/auth/auth.session";
 import { getOrdersService } from "@/server/modules/orders/orders.runtime";
+import { isUuid } from "@/lib/uuid";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,11 +25,15 @@ export async function GET(request: Request) {
   const pageSize = Number(url.searchParams.get("pageSize") ?? 100);
   const search = url.searchParams.get("search") ?? undefined;
   const statusValue = url.searchParams.get("status");
+  const customerId = url.searchParams.get("customerId");
   if (!Number.isInteger(page) || page < 1 || !Number.isInteger(pageSize) || pageSize < 1 || pageSize > 100) {
     return NextResponse.json({ error: "Parameter halaman tidak valid." }, { status: 400 });
   }
   if (statusValue && !orderStatuses.some((value) => value === statusValue)) {
     return NextResponse.json({ error: "Filter status tidak valid." }, { status: 400 });
+  }
+  if (customerId !== null && !isUuid(customerId)) {
+    return NextResponse.json({ error: "ID pelanggan tidak valid." }, { status: 400 });
   }
 
   try {
@@ -37,6 +42,7 @@ export async function GET(request: Request) {
       page,
       pageSize,
       search,
+      customerId: customerId ?? undefined,
       status: statusValue as OrderStatus | undefined,
     });
     return NextResponse.json(result);

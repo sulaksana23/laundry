@@ -140,3 +140,4 @@ Hal berikut **belum diputuskan** dan harus dikonfirmasi pemilik usaha sebelum di
 | v0.9.0 | Backup & restore data cabang (FR-17) sebagai fitur Pro: unduh JSON seluruh data cabang dan pulihkan ke cabang yang sama dari Pengaturan |
 | v0.9.1 | Validasi isi backup, snapshot konsisten, dan restore data cabang dalam satu transaksi database |
 | v0.10.0 | Panel prioritas pesanan berdasarkan tanggal target dan zona waktu cabang; tautan langsung ke pencarian pesanan |
+| v0.11.0 | Riwayat pesanan per pelanggan dengan pencarian, filter status, pagination, dan pembatasan cabang |

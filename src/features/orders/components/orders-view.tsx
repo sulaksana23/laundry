@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { CreditCard, Download, History, MessageCircle, Plus, Printer, Search, SlidersHorizontal, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
@@ -32,7 +33,7 @@ const storageKey = "laundryos:orders:v1";
 const filters = ["Semua", "Diterima", "Dicuci", "Dikeringkan", "Disetrika", "Siap diambil", "Selesai"];
 const orderPageSize = 25;
 
-export function OrdersView({ initialOrders, initialTotal = initialOrders.length, initialQuery = "", databaseEnabled = false, availableServices }: { initialOrders: LaundryOrder[]; initialTotal?: number; initialQuery?: string; databaseEnabled?: boolean; availableServices: OrderServiceOption[] }) {
+export function OrdersView({ initialOrders, initialTotal = initialOrders.length, initialQuery = "", customerId, databaseEnabled = false, availableServices }: { initialOrders: LaundryOrder[]; initialTotal?: number; initialQuery?: string; customerId?: string; databaseEnabled?: boolean; availableServices: OrderServiceOption[] }) {
   const router = useRouter();
   const [orders, setOrders] = useState(initialOrders);
   const [currentPage, setCurrentPage] = useState(1);
@@ -110,6 +111,7 @@ export function OrdersView({ initialOrders, initialTotal = initialOrders.length,
       try {
         const params = new URLSearchParams({ page: String(currentPage), pageSize: String(orderPageSize) });
         if (query.trim()) params.set("search", query.trim());
+        if (customerId) params.set("customerId", customerId);
         const status = orderStatuses.find((value) => orderStatusLabels[value] === activeFilter);
         if (status) params.set("status", status);
         const response = await fetch("/api/orders?" + params.toString(), { credentials: "same-origin", signal: controller.signal });
@@ -136,7 +138,7 @@ export function OrdersView({ initialOrders, initialTotal = initialOrders.length,
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [databaseEnabled, currentPage, query, activeFilter, refreshKey]);
+  }, [databaseEnabled, currentPage, query, activeFilter, refreshKey, customerId]);
 
   const visibleOrders = useMemo(() => {
     if (databaseEnabled) return orders;
@@ -302,6 +304,7 @@ export function OrdersView({ initialOrders, initialTotal = initialOrders.length,
 
   return (
     <>
+      {customerId && <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-accent/30 bg-accent/5 px-4 py-3 text-xs"><span>Menampilkan riwayat pesanan pelanggan yang dipilih.</span><Link href="/orders" className="font-semibold text-accent hover:underline">Lihat semua pesanan</Link></div>}
       <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-wrap gap-1.5">{filters.map((filter) => <button key={filter} onClick={() => { setActiveFilter(filter); setCurrentPage(1); }} className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${activeFilter === filter ? "bg-accent text-accent-foreground" : "bg-surface text-muted hover:bg-surface-hover hover:text-foreground"}`}>{filter}</button>)}</div>
         <div className="flex flex-wrap gap-2">

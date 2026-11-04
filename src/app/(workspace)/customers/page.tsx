@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Search, UserPlus } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
@@ -16,16 +17,17 @@ import { ImportCard } from "./import-card";
 export const metadata: Metadata = { title: "Pelanggan" };
 export const dynamic = "force-dynamic";
 
-export default async function CustomersPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
+export default async function CustomersPage({ searchParams }: { searchParams: Promise<{ q?: string | string[] }> }) {
   const session = await getAuthSession();
   const databaseEnabled = Boolean(session) && isOrdersDatabaseEnabled();
-  const query = (await searchParams).q?.trim() ?? "";
+  const rawQuery = (await searchParams).q;
+  const query = typeof rawQuery === "string" ? rawQuery.trim().slice(0, 100) : "";
   const allCustomers: CustomerSummary[] = databaseEnabled
     ? await listCustomers(session!.branchId)
     : demoCustomers.map((customer) => ({ ...customer }));
-  const rows = databaseEnabled
+  const rows = databaseEnabled && query
     ? await listCustomers(session!.branchId, query)
-    : allCustomers.filter((customer) => (customer.name + " " + customer.phone).toLowerCase().includes(query.toLowerCase()));
+    : databaseEnabled ? allCustomers : allCustomers.filter((customer) => (customer.name + " " + customer.phone).toLowerCase().includes(query.toLowerCase()));
   // Halaman ini force-dynamic; jendela aktivitas dihitung dari waktu permintaan ini.
   // eslint-disable-next-line react-hooks/purity
   const cutoff = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Makassar" }).format(Date.now() - 30 * 24 * 60 * 60 * 1000);
@@ -64,7 +66,7 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
         </div>
         <div className="overflow-x-auto"><table className="w-full min-w-[680px] text-left text-xs">
           <thead><tr className="bg-surface-raised/50 text-[10px] uppercase tracking-wide text-muted"><th className="px-4 py-3 font-medium">Pelanggan</th><th className="px-3 py-3 font-medium">Nomor telepon</th><th className="px-3 py-3 font-medium">Pesanan</th><th className="px-3 py-3 font-medium">Total transaksi</th><th className="px-4 py-3 font-medium">Terakhir pesan</th></tr></thead>
-          <tbody>{rows.map((customer) => <tr key={customer.id} className="border-t border-border/70 hover:bg-surface-raised/50"><td className="px-4 py-3"><div className="flex items-center gap-2.5"><span className="flex size-8 items-center justify-center rounded-full bg-surface-hover text-[10px] font-semibold text-accent">{customer.name.split(" ").map((part) => part[0]).slice(0, 2).join("")}</span><div><p className="font-semibold">{customer.name}</p><p className="mt-0.5 text-[10px] text-muted">{customer.id}</p></div></div></td><td className="px-3 py-3 text-muted">{customer.phone}</td><td className="px-3 py-3">{customer.orders} kali</td><td className="px-3 py-3 font-medium">{formatCurrency(customer.totalSpent)}</td><td className="px-4 py-3 text-muted">{customer.lastOrder ? formatShortDate(customer.lastOrder) : "Belum ada pesanan"}</td></tr>)}</tbody>
+          <tbody>{rows.map((customer) => <tr key={customer.id} className="border-t border-border/70 hover:bg-surface-raised/50"><td className="px-4 py-3"><div className="flex items-center gap-2.5"><span className="flex size-8 items-center justify-center rounded-full bg-surface-hover text-[10px] font-semibold text-accent">{customer.name.split(" ").map((part) => part[0]).slice(0, 2).join("")}</span><div><p className="font-semibold">{customer.name}</p><p className="mt-0.5 text-[10px] text-muted">{customer.id}</p></div></div></td><td className="px-3 py-3 text-muted">{customer.phone}</td><td className="px-3 py-3">{databaseEnabled ? <Link href={"/orders?customer=" + encodeURIComponent(customer.id)} className="font-medium text-accent hover:underline" aria-label={"Lihat riwayat pesanan " + customer.name}>{customer.orders} kali · Lihat riwayat</Link> : <span>{customer.orders} kali</span>}</td><td className="px-3 py-3 font-medium">{formatCurrency(customer.totalSpent)}</td><td className="px-4 py-3 text-muted">{customer.lastOrder ? formatShortDate(customer.lastOrder) : "Belum ada pesanan"}</td></tr>)}</tbody>
         </table>
         {rows.length === 0 && <p className="p-10 text-center text-xs text-muted">Tidak ada pelanggan yang cocok dengan pencarian.</p>}
         </div>

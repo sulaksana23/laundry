@@ -54,6 +54,10 @@ export class PostgresOrdersRepository implements OrdersRepository {
   async list(query: OrderListQuery): Promise<OrderListResult> {
     const conditions = ["o.branch_id = $1"];
     const parameters: Array<string | number> = [query.branchId];
+    if (query.customerId) {
+      parameters.push(query.customerId);
+      conditions.push("o.customer_id = $" + parameters.length + "::uuid");
+    }
     if (query.search) {
       parameters.push("%" + query.search.trim() + "%");
       const index = parameters.length;

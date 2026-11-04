@@ -4,6 +4,7 @@ export interface OrderListQuery {
   branchId: string;
   search?: string;
   status?: OrderStatus;
+  customerId?: string;
   page: number;
   pageSize: number;
 }
