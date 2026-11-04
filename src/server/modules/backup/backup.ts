@@ -25,9 +25,10 @@ interface TableDef {
 const TABLE_DEFS: TableDef[] = [
   { key: "customers", table: "laundry_customers", columns: ["id", "branch_id", "name", "phone", "created_at", "updated_at"], uuidColumns: ["id"], dateColumns: [] },
   { key: "services", table: "laundry_services", columns: ["id", "branch_id", "name", "unit", "price_per_unit", "is_active", "description", "duration_minutes", "created_at", "updated_at"], uuidColumns: [], dateColumns: [] },
-  { key: "orders", table: "laundry_orders", columns: ["id", "branch_id", "customer_id", "service_id", "service_name_snapshot", "weight_kg", "quantity", "unit", "unit_price_snapshot", "amount", "paid_amount", "status", "due_at", "received_at", "updated_at"], uuidColumns: ["customer_id"], dateColumns: ["due_at"] },
+  { key: "orders", table: "laundry_orders", columns: ["id", "branch_id", "customer_id", "service_id", "service_name_snapshot", "weight_kg", "quantity", "unit", "unit_price_snapshot", "amount", "paid_amount", "status", "due_at", "received_at", "updated_at", "express_fee", "delivery_fee", "discount_amount"], uuidColumns: ["customer_id"], dateColumns: ["due_at"] },
   { key: "orderStatusHistory", table: "laundry_order_status_history", columns: ["id", "branch_id", "order_id", "previous_status", "next_status", "actor_id", "changed_at"], uuidColumns: ["id"], dateColumns: [] },
   { key: "payments", table: "laundry_payments", columns: ["id", "branch_id", "order_id", "amount", "method", "actor_id", "received_at"], uuidColumns: ["id"], dateColumns: [] },
+  { key: "refunds", table: "laundry_order_refunds", columns: ["id", "branch_id", "order_id", "amount", "reason", "method", "actor_id", "created_at"], uuidColumns: ["id"], dateColumns: [] },
   { key: "expenses", table: "laundry_expenses", columns: ["id", "branch_id", "description", "category", "amount", "method", "incurred_at", "created_at"], uuidColumns: ["id"], dateColumns: ["incurred_at"] },
   { key: "inventoryItems", table: "laundry_inventory_items", columns: ["id", "branch_id", "name", "category", "unit", "quantity", "min_quantity", "unit_price", "created_at", "updated_at"], uuidColumns: ["id"], dateColumns: [] },
   { key: "cashClosings", table: "laundry_cash_closings", columns: ["id", "branch_id", "closing_date", "expected_amount", "counted_amount", "note", "closed_by", "created_at", "updated_at"], uuidColumns: ["id"], dateColumns: ["closing_date"] },
@@ -35,8 +36,8 @@ const TABLE_DEFS: TableDef[] = [
 
 // Urutan hapus aman terhadap foreign key (anak sebelum induk),
 // urutan sisip adalah kebalikannya untuk tabel yang saling merujuk.
-const DELETE_ORDER: BackupTableKey[] = ["orderStatusHistory", "payments", "orders", "cashClosings", "expenses", "inventoryItems", "services", "customers"];
-const INSERT_ORDER: BackupTableKey[] = ["customers", "services", "orders", "orderStatusHistory", "payments", "expenses", "inventoryItems", "cashClosings"];
+const DELETE_ORDER: BackupTableKey[] = ["orderStatusHistory", "refunds", "payments", "orders", "cashClosings", "expenses", "inventoryItems", "services", "customers"];
+const INSERT_ORDER: BackupTableKey[] = ["customers", "services", "orders", "orderStatusHistory", "payments", "refunds", "expenses", "inventoryItems", "cashClosings"];
 
 function rowsOf(result: unknown): BackupRow[] {
   if (Array.isArray(result)) return result as BackupRow[];

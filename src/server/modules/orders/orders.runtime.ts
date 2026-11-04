@@ -6,15 +6,16 @@ import { PostgresOrdersRepository } from "@/server/modules/orders/postgres-order
 export function getOrdersService() {
   const sql = getNeonSql();
   const pricing = {
-    async calculate(input: { serviceName: string; quantity: number }, branchId: string) {
+    async calculate(input: { serviceName: string; quantity: number; expressFee: number; deliveryFee: number; discountAmount: number }, branchId: string) {
       const rows = await sql`SELECT price_per_unit, unit FROM laundry_services WHERE branch_id = ${branchId} AND name = ${input.serviceName} AND is_active = true LIMIT 1`;
       const service = (rows as unknown as Array<{ price_per_unit: number | string; unit: "kg" | "pcs" | "pasang" }>)[0];
       if (!service) throw new Error("Layanan tidak tersedia pada cabang ini.");
       if (service.unit !== "kg" && !Number.isInteger(input.quantity)) throw new Error("Jumlah untuk layanan pcs atau pasang harus berupa bilangan bulat.");
       if (service.unit === "kg" && Math.abs(input.quantity * 100 - Math.round(input.quantity * 100)) > 1e-8) throw new Error("Berat maksimal dua angka desimal.");
       const unitPrice = Number(service.price_per_unit);
-      const amount = service.unit === "kg" ? Math.round(input.quantity * unitPrice) : input.quantity * unitPrice;
-      if (!Number.isSafeInteger(amount)) throw new Error("Total pesanan tidak valid.");
+      const baseAmount = service.unit === "kg" ? Math.round(input.quantity * unitPrice) : input.quantity * unitPrice;
+      const amount = baseAmount + input.expressFee + input.deliveryFee - input.discountAmount;
+      if (!Number.isSafeInteger(amount) || input.discountAmount > baseAmount + input.expressFee + input.deliveryFee) throw new Error("Diskon tidak boleh melebihi subtotal pesanan.");
       return { amount, unit: service.unit, unitPrice };
     },
   };

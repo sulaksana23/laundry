@@ -37,6 +37,32 @@ export async function updateBranchProfile(formData: FormData) {
   revalidatePath("/", "layout");
 }
 
+export async function addBranch(formData: FormData) {
+  const session = await getAuthSession();
+  if (!session || !isOrdersDatabaseEnabled() || session.role !== "owner") throw new Error("Hanya pemilik yang dapat menambah cabang.");
+  const name = String(formData.get("name") ?? "").trim();
+  const timezone = String(formData.get("timezone") ?? "").trim();
+  if (name.length < 2 || name.length > 100) throw new Error("Nama cabang harus 2–100 karakter.");
+  if (!allowedTimezones.includes(timezone)) throw new Error("Zona waktu tidak valid.");
+  const id = randomUUID();
+  await getNeonSql().query(
+    "WITH branch AS (INSERT INTO laundry_branches (id, name, timezone) VALUES ($1, $2, $3) RETURNING id), " +
+    "services AS (INSERT INTO laundry_services (id, branch_id, name, unit, price_per_unit, description, duration_minutes) " +
+    "SELECT seed.id, branch.id, seed.name, 'kg', seed.price, seed.description, seed.duration FROM branch CROSS JOIN (VALUES " +
+    "($7::text, 'Cuci + Setrika', 8000::bigint, 'Cuci, keringkan, dan setrika pakaian.', 2880), " +
+    "($8::text, 'Cuci Kering', 6000::bigint, 'Cuci dan keringkan pakaian.', 1440), " +
+    "($9::text, 'Setrika Saja', 8000::bigint, 'Setrika pakaian bersih.', 1440), " +
+    "($10::text, 'Express 6 Jam', 12000::bigint, 'Prioritas selesai maksimal enam jam.', 360)" +
+    ") AS seed(id, name, price, description, duration) RETURNING id), " +
+    "access AS (INSERT INTO laundry_user_branch_access (user_id, branch_id) SELECT $4::uuid, id FROM branch RETURNING branch_id), " +
+    "audit AS (INSERT INTO laundry_audit_events (id, branch_id, actor_id, action, entity_type, entity_id, metadata) " +
+    "SELECT $5::uuid, branch_id, $6, 'branch.created', 'branch', branch_id, jsonb_build_object('name', $2) FROM access RETURNING id) SELECT branch_id FROM access",
+    [id, name, timezone, session.userId, randomUUID(), session.userId, randomUUID(), randomUUID(), randomUUID(), randomUUID()],
+  );
+  revalidatePath("/");
+  revalidatePath("/settings");
+}
+
 import { saveLicense, verifyLicenseKey } from "@/server/modules/license/license";
 
 export async function activateLicense(licenseKey: string) {

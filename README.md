@@ -26,20 +26,20 @@ Daftar berikut adalah cakupan produk yang dituju. Status implementasi sebenarnya
 
 | Bagian | Tersedia sekarang | Belum tersedia |
 | --- | --- | --- |
-| Dashboard | Ringkasan pendapatan, antrean status, pesanan terbaru, stok menipis, dan tagihan belum lunas dari data tersimpan di Neon; tren 7 hari terakhir | Filter periode dashboard dan konsolidasi cabang |
-| Pesanan | Layanan kg/pcs/pasang, jumlah, snapshot harga, pagination server-side, pembayaran, nota, riwayat status, WhatsApp | Refund, batal/void, dan ekspor lintas halaman |
+| Dashboard | Ringkasan pendapatan, antrean, pesanan terbaru, stok menipis, tagihan belum lunas, tren mingguan; pemilik melihat ringkasan cabang yang dapat diakses | Filter periode dashboard dan laporan konsolidasi semua cabang |
+| Pesanan | Layanan kg/pcs/pasang, biaya express/antar dan diskon, snapshot harga, pagination, pembayaran parsial, pembatalan dan refund beralasan, nota, riwayat, ekspor CSV hasil filter, tautan WhatsApp manual | Notifikasi otomatis melalui provider WhatsApp/SMS/email |
 | Lacak pesanan (publik) | Halaman `/lacak` untuk pelanggan: cek status, tahapan pengerjaan, riwayat status, dan sisa tagihan dengan kode pesanan + nomor HP terdaftar (rate-limited, tanpa login) | Tautan lacak otomatis di struk/WhatsApp |
 | Pelanggan | Tambah, cari, dan impor massal pelanggan dari CSV (validasi nomor, duplikat dilewati, laporan hasil per baris); ekspor CSV seluruh hasil pencarian; daftar Neon dibagi 25 pelanggan per halaman, ringkasan dihitung dari seluruh cabang, dan setiap pelanggan punya tautan ke riwayat pesanan | Profil lanjutan dan kontrol akses terperinci |
-| Layanan & harga | Katalog per cabang; layanan kg/pcs/pasang; harga snapshot pada transaksi | Biaya tambahan, diskon, dan histori perubahan katalog |
-| Persediaan & keuangan | Ledger stok dengan alasan dan jenis pergerakan; pembayaran, pengeluaran, ringkasan metode, tutup kasir harian | Pemakaian stok otomatis dari pesanan, refund/reversal, rekonsiliasi eksternal |
-| Laporan | Rentang tanggal, perbandingan periode sebelumnya setara, layanan, pelanggan, berat dan item, ringkasan metode, CSV per periode | Konsolidasi lintas cabang dan rekonsiliasi data bank/QRIS otomatis |
-| Pengaturan & aktivitas | Profil cabang, peran Pemilik/Kasir/Operator, pengelolaan staf aktif/nonaktif, audit aktivitas utama | Supervisor, hak lintas cabang, dan log administrasi lanjutan |
-| Platform | Layout responsif, komponen UI, TypeScript strict, pola controller/service/repository, migrasi PostgreSQL untuk pesanan | Role terperinci, API produksi, multi-cabang per akun, notifikasi otomatis |
-| Backup & restore | Unduh salinan JSON seluruh data cabang dari snapshot yang konsisten; validasi dan restore dalam satu transaksi (fitur Pro) | Penjadwalan backup otomatis |
+| Layanan & harga | Katalog per cabang; layanan kg/pcs/pasang; harga tersimpan sebagai snapshot pesanan; riwayat perubahan tercatat di aktivitas | Histori harga khusus dan aturan harga otomatis |
+| Persediaan & keuangan | Ledger stok beralasan; pembayaran/pengeluaran; refund dicatat terpisah; ringkasan metode dan tutup kasir | Pemakaian stok otomatis dari pesanan dan rekonsiliasi bank/QRIS |
+| Laporan | Rentang tanggal, perbandingan periode sebelumnya, layanan/pelanggan, berat/item, metode pembayaran, dan ekspor CSV per periode | Rekonsiliasi otomatis dan laporan gabungan beberapa cabang |
+| Pengaturan & aktivitas | Profil dan pembuatan cabang, pilihan cabang aktif, akses Pemilik/Kasir/Operator, staf aktif/nonaktif, audit aktivitas utama | Supervisor, izin per tindakan yang dapat dikustomisasi, dan retensi audit lanjutan |
+| Platform | Login/register, sesi bertanda tangan, pembatasan cabang dan peran di server, migrasi PostgreSQL, validasi request | Provider notifikasi otomatis, public API, dan observability terpusat |
+| Backup & restore | Unduh dan pulihkan data cabang dalam transaksi, termasuk pembayaran, refund, dan harga tambahan (fitur Pro) | Penjadwalan backup otomatis |
 | Prioritas pesanan | Dashboard menampilkan pesanan yang masih diproses dan targetnya hari ini atau sudah lewat sesuai zona waktu cabang, dengan tautan ke daftar pesanan | Pengingat otomatis |
 | Riwayat pelanggan | Tautan dari daftar pelanggan ke seluruh pesanan pelanggan di cabang aktif, dengan pencarian, filter status, dan pagination | Profil pelanggan lanjutan |
 
-Status rinci dan kriteria penerimaan ada di [docs/modules.md](docs/modules.md) dan [docs/roadmap.md](docs/roadmap.md). Nama serta nomor kontak dalam fixture bersifat sintetis/masked.
+Status rinci dan kriteria penerimaan ada di [docs/modules.md](docs/modules.md) dan [docs/roadmap.md](docs/roadmap.md). Stok masih dicatat manual, sedangkan pesan WhatsApp dibuka sebagai tautan untuk dikirim oleh staf. Nama serta nomor kontak dalam fixture bersifat sintetis/masked.
 
 ## PRD dan flowchart
 
@@ -86,7 +86,7 @@ Tautan yang sama juga tersedia sebagai tombol "Dukung pengembangan" di sidebar a
 - Tailwind CSS v4 melalui plugin PostCSS.
 - Zod untuk validasi domain.
 - Lucide React untuk ikon.
-- Pola controller → service → repository disiapkan untuk backend per modul.
+- Pola controller → service → repository dipakai untuk alur operasional server.
 
 ## Menjalankan secara lokal
 

@@ -32,7 +32,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   const result = await getNeonSql().query(
     "WITH updated_order AS (" +
     "UPDATE laundry_orders SET paid_amount = paid_amount + $4, updated_at = now() " +
-    "WHERE id = $3 AND branch_id = $2 AND amount - paid_amount >= $4 " +
+    "WHERE id = $3 AND branch_id = $2 AND status <> 'cancelled' AND amount - paid_amount >= $4 " +
     "RETURNING id, paid_amount, amount" +
     "), inserted_payment AS (" +
     "INSERT INTO laundry_payments (id, branch_id, order_id, amount, method, actor_id, received_at) " +

@@ -20,7 +20,15 @@ Status pembayaran demo: `unpaid`, `partial`, `paid`. Status pembayaran dan statu
 
 - Pesanan per kg menghitung total dari berat × harga katalog per kg, dibulatkan ke Rupiah terdekat seperti alur yang sudah berjalan.
 - Pesanan per pcs/pasang menerima jumlah bulat dan menghitung total dari harga katalog per unit × jumlah. Setiap pesanan menyimpan unit, jumlah, harga unit, dan total sebagai snapshot agar perubahan katalog tidak mengubah nota lama.
-- Biaya tambahan, diskon, express, pajak, pembulatan berat, dan biaya antar tidak ditambahkan otomatis. Tetapkan kebijakan usaha sebelum fitur tambahan tersebut dipakai.
+- Biaya express, biaya antar, dan diskon dapat dicatat manual per pesanan. Total = jumlah × harga snapshot + biaya express + biaya antar − diskon. Server menolak diskon yang melebihi subtotal dan biaya tambahan.
+- Biaya express/antar tidak dihitung otomatis dari jarak atau estimasi waktu; pajak dan aturan pembulatan berat juga belum diterapkan.
+
+## Pembatalan dan refund
+
+- Pemilik dapat membatalkan pesanan yang belum selesai dengan alasan wajib. Pesanan selesai tidak dapat dibatalkan; pembayaran baru juga ditolak setelah pembatalan.
+- Refund hanya dicatat untuk pesanan yang sudah dibatalkan. Nominal boleh sebagian atau penuh, tidak boleh melebihi saldo pembayaran bersih, dan menyimpan alasan, metode, aktor, serta waktu.
+- Pembatalan masuk ke riwayat status dan audit; refund disimpan pada ledger tersendiri dan mengurangi pemasukan/kas sesuai metode serta tanggal refund.
+- Aplikasi mencatat transaksi refund, tetapi tidak mengirim uang secara otomatis. Pemilik tetap melakukan pengembalian dana melalui kanal pembayaran usaha.
 
 Angka dan ketentuan ini bukan kebijakan usaha yang dikonfirmasi.
 
@@ -29,11 +37,11 @@ Angka dan ketentuan ini bukan kebijakan usaha yang dikonfirmasi.
 - Minimum order dan pembulatan berat (misalnya pembulatan per 0,1 kg atau 1 kg).
 - Cara menangani item rusak/hilang, noda khusus, dan komplain pada layanan per pcs/pasang.
 - Cara menghitung layanan express, diskon, biaya pickup/delivery, pajak, dan pembulatan Rupiah.
-- Apakah status bisa mundur, dilewati, dibatalkan, atau perlu persetujuan supervisor.
+- Apakah status boleh mundur/dilewati dan apakah pembatalan perlu persetujuan supervisor.
 - Kapan transaksi dianggap selesai dan kapan pembayaran harus lunas.
-- Kebijakan refund, uang muka, metode pembayaran, dan rekonsiliasi kas.
+- Kebijakan uang muka, bukti refund, dan rekonsiliasi kas.
 - Zona waktu cabang, jam tutup, hari libur, serta definisi omzet dan periode laporan.
-- Hak akses kasir, operator, supervisor, owner, dan admin lintas cabang.
+- Apakah dibutuhkan role supervisor atau admin lintas cabang selain Pemilik/Kasir/Operator.
 
 ## Prinsip implementasi
 

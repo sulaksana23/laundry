@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { CreditCard, Download, History, MessageCircle, Plus, Printer, Search, SlidersHorizontal, X } from "lucide-react";
+import { Ban, CreditCard, Download, History, MessageCircle, Plus, Printer, RotateCcw, Search, SlidersHorizontal, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { Input } from "@/components/ui/input";
@@ -30,7 +30,7 @@ function whatsappUrl(order: LaundryOrder) {
 }
 
 const storageKey = "laundryos:orders:v1";
-const filters = ["Semua", "Diterima", "Dicuci", "Dikeringkan", "Disetrika", "Siap diambil", "Selesai"];
+const filters = ["Semua", "Diterima", "Dicuci", "Dikeringkan", "Disetrika", "Siap diambil", "Selesai", "Dibatalkan"];
 const orderPageSize = 25;
 
 function normalizeStoredOrder(value: unknown): LaundryOrder | null {
@@ -44,7 +44,7 @@ function normalizeStoredOrder(value: unknown): LaundryOrder | null {
   return null;
 }
 
-export function OrdersView({ initialOrders, initialTotal = initialOrders.length, initialQuery = "", customerId, databaseEnabled = false, availableServices, canCreate = true, canAdvance = true, canPay = true, canExport = true, canViewFinance = true }: { initialOrders: LaundryOrder[]; initialTotal?: number; initialQuery?: string; customerId?: string; databaseEnabled?: boolean; availableServices: OrderServiceOption[]; canCreate?: boolean; canAdvance?: boolean; canPay?: boolean; canExport?: boolean; canViewFinance?: boolean }) {
+export function OrdersView({ initialOrders, initialTotal = initialOrders.length, initialQuery = "", customerId, databaseEnabled = false, availableServices, canCreate = true, canAdvance = true, canPay = true, canExport = true, canCancel = false, canViewFinance = true }: { initialOrders: LaundryOrder[]; initialTotal?: number; initialQuery?: string; customerId?: string; databaseEnabled?: boolean; availableServices: OrderServiceOption[]; canCreate?: boolean; canAdvance?: boolean; canPay?: boolean; canExport?: boolean; canCancel?: boolean; canViewFinance?: boolean }) {
   const router = useRouter();
   const [orders, setOrders] = useState(initialOrders);
   const [currentPage, setCurrentPage] = useState(1);
@@ -174,6 +174,9 @@ export function OrdersView({ initialOrders, initialTotal = initialOrders.length,
       serviceName: String(form.get("serviceName") ?? ""),
       quantity: Number(form.get("quantity")),
       dueAt: String(form.get("dueAt") ?? ""),
+      expressFee: Number(form.get("expressFee") ?? 0),
+      deliveryFee: Number(form.get("deliveryFee") ?? 0),
+      discountAmount: Number(form.get("discountAmount") ?? 0),
     };
     const parsed = createOrderSchema.safeParse(input);
     if (!parsed.success) {
@@ -222,7 +225,10 @@ export function OrdersView({ initialOrders, initialTotal = initialOrders.length,
       serviceName: service.name,
       quantity: parsed.data.quantity,
       unit: service.unit,
-      amount: service.unit === "kg" ? Math.round(parsed.data.quantity * service.price) : parsed.data.quantity * service.price,
+      amount: (service.unit === "kg" ? Math.round(parsed.data.quantity * service.price) : parsed.data.quantity * service.price) + parsed.data.expressFee + parsed.data.deliveryFee - parsed.data.discountAmount,
+      expressFee: parsed.data.expressFee,
+      deliveryFee: parsed.data.deliveryFee,
+      discountAmount: parsed.data.discountAmount,
       paidAmount: 0,
       paymentStatus: "unpaid",
       status: "received",
@@ -268,6 +274,50 @@ export function OrdersView({ initialOrders, initialTotal = initialOrders.length,
     setOrders((current) => current.map((order) => order.id === orderId ? { ...order, status: nextStatus } : order));
   }
 
+  async function cancelOrder(order: LaundryOrder) {
+    if (!databaseEnabled || !canCancel) return;
+    const reason = window.prompt("Alasan pembatalan pesanan (wajib):");
+    if (!reason || reason.trim().length < 3) return;
+    setPendingAction(order.id); setError("");
+    try {
+      const response = await fetch(`/api/orders/${encodeURIComponent(order.id)}/cancel`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ reason }) });
+      const result = await response.json();
+      if (!response.ok) { setError(result.error ?? "Pembatalan gagal disimpan."); return; }
+      setOrders((current) => current.map((item) => item.id === order.id ? { ...item, status: "cancelled" } : item));
+      router.refresh();
+    } catch { setError("Tidak dapat menghubungi server. Coba lagi."); }
+    finally { setPendingAction(""); }
+  }
+
+  async function refundOrder(order: LaundryOrder) {
+    if (!databaseEnabled || !canCancel || order.paidAmount < 1) return;
+    const amountInput = window.prompt(`Nominal refund (maks. Rp${order.paidAmount.toLocaleString("id-ID")}) untuk pesanan ${order.id}:`, String(order.paidAmount));
+    if (amountInput === null) return;
+    const amount = Number(amountInput.trim().replace(/[^\d]/g, ""));
+    if (!Number.isSafeInteger(amount) || amount < 1 || amount > order.paidAmount) {
+      setError("Nominal refund harus berupa Rupiah dan tidak boleh melebihi pembayaran bersih.");
+      return;
+    }
+    const methodInput = window.prompt("Metode refund (cash, transfer, qris, other):", "cash");
+    if (methodInput === null) return;
+    const method = methodInput.trim().toLowerCase();
+    if (!["cash", "transfer", "qris", "other"].includes(method)) {
+      setError("Metode refund harus cash, transfer, qris, atau other.");
+      return;
+    }
+    const reason = window.prompt("Alasan refund (wajib):");
+    if (!reason || reason.trim().length < 3) return;
+    setPendingAction(order.id); setError("");
+    try {
+      const response = await fetch(`/api/orders/${encodeURIComponent(order.id)}/refunds`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ amount, method, reason }) });
+      const result = await response.json();
+      if (!response.ok) { setError(result.error ?? "Refund gagal dicatat."); return; }
+      setOrders((current) => current.map((item) => item.id === order.id ? { ...item, paidAmount: result.paidAmount, paymentStatus: result.paidAmount > 0 ? "partial" : "unpaid" } : item));
+      router.refresh();
+    } catch { setError("Tidak dapat menghubungi server. Coba lagi."); }
+    finally { setPendingAction(""); }
+  }
+
   async function recordPayment(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!paymentOrder) return;
@@ -307,6 +357,14 @@ export function OrdersView({ initialOrders, initialTotal = initialOrders.length,
   }
 
   function exportOrders() {
+    if (databaseEnabled) {
+      const params = new URLSearchParams();
+      if (query.trim()) params.set("search", query.trim());
+      const status = orderStatuses.find((value) => orderStatusLabels[value] === activeFilter);
+      if (status) params.set("status", status);
+      window.location.assign("/api/orders/export?" + params.toString());
+      return;
+    }
     const quote = (value: unknown) => "\"" + String(value ?? "").replaceAll("\"", "\"\"") + "\"";
     const rows = [
       ["Pesanan", "Pelanggan", "Telepon", "Layanan", "Jumlah", "Satuan", "Status", "Total (Rp)", "Dibayar (Rp)", "Sisa (Rp)"],
@@ -314,7 +372,7 @@ export function OrdersView({ initialOrders, initialTotal = initialOrders.length,
     ];
     const link = document.createElement("a");
     link.href = URL.createObjectURL(new Blob(["\uFEFF" + rows.map((row) => row.map(quote).join(",")).join("\r\n")], { type: "text/csv;charset=utf-8" }));
-    link.download = databaseEnabled ? "pesanan-halaman-" + currentPage + ".csv" : "pesanan-laundry.csv";
+    link.download = "pesanan-laundry.csv";
     link.click();
     window.setTimeout(() => URL.revokeObjectURL(link.href), 1000);
   }
@@ -327,7 +385,7 @@ export function OrdersView({ initialOrders, initialTotal = initialOrders.length,
         <div className="flex flex-wrap gap-2">
           <div className="relative min-w-[220px] flex-1 lg:flex-none"><Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" /><Input value={query} onChange={(event) => { setQuery(event.target.value); setCurrentPage(1); }} placeholder="Cari nomor atau pelanggan" className="pl-9" /></div>
           <Button variant="secondary" disabled title="Filter lanjutan segera tersedia" className="h-9 px-2.5 text-xs"><SlidersHorizontal size={14} /> <span className="hidden sm:inline">Filter</span></Button>
-          {canExport && <Button variant="secondary" onClick={exportOrders} title="Ekspor pesanan yang ditampilkan pada halaman ini sebagai CSV" aria-label="Ekspor pesanan halaman ini sebagai CSV" className="h-9 px-2.5 text-xs"><Download size={14} /> <span className="hidden sm:inline">Ekspor halaman</span></Button>}
+          {canExport && <Button variant="secondary" onClick={exportOrders} title="Ekspor seluruh pesanan sesuai filter sebagai CSV" aria-label="Ekspor seluruh pesanan sebagai CSV" className="h-9 px-2.5 text-xs"><Download size={14} /> <span className="hidden sm:inline">Ekspor pesanan</span></Button>}
           {canCreate && <Button variant="primary" onClick={() => setDialogOpen(true)}><Plus size={14} /> Pesanan baru</Button>}
         </div>
       </div>
@@ -338,7 +396,7 @@ export function OrdersView({ initialOrders, initialTotal = initialOrders.length,
         <div className="overflow-x-auto" aria-busy={loadingList}>
           <table className="w-full min-w-[880px] text-left text-xs">
             <thead><tr className="bg-surface-raised/50 text-[10px] uppercase tracking-wide text-muted"><th className="px-4 py-3 font-medium">Pesanan / pelanggan</th><th className="px-3 py-3 font-medium">Layanan</th><th className="px-3 py-3 font-medium">Berat</th><th className="px-3 py-3 font-medium">Jatuh tempo</th><th className="px-3 py-3 font-medium">Status</th>{canViewFinance && <th className="px-3 py-3 font-medium">Pembayaran</th>}{canViewFinance && <th className="px-4 py-3 text-right font-medium">Total</th>}<th className="w-40 px-4 py-3 text-right font-medium">Aksi</th></tr></thead>
-            <tbody>{visibleOrders.map((order) => <tr key={order.id} className="border-t border-border/70 transition hover:bg-surface-raised/50"><td className="px-4 py-3"><p className="font-semibold">{order.id}</p><p className="mt-1 text-[10px] text-muted">{order.customerName}{order.customerPhone ? " · " + order.customerPhone : ""}</p></td><td className="px-3 py-3 text-muted">{order.serviceName}</td><td className="px-3 py-3">{order.quantity} {order.unit}</td><td className="px-3 py-3 text-muted">{formatShortDate(order.dueAt)}</td><td className="px-3 py-3"><OrderStatusBadge status={order.status} /></td>{canViewFinance && <td className="px-3 py-3"><PaymentStatusBadge status={order.paymentStatus} /></td>}{canViewFinance && <td className="px-4 py-3 text-right font-semibold">{formatCurrency(order.amount)}</td>}<td className="px-4 py-3 text-right"><div className="flex flex-col items-end gap-1">{canViewFinance && <button type="button" aria-label={"Cetak nota pesanan " + order.id} title="Cetak nota" onClick={() => setReceiptOrder(order)} className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[10px] font-medium text-muted hover:border-accent/50 hover:text-accent"><Printer size={12} /> Nota</button>}<button type="button" aria-label={"Riwayat status pesanan " + order.id} title="Riwayat status" onClick={() => openHistory(order)} className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[10px] font-medium text-muted hover:border-accent/50 hover:text-accent"><History size={12} /> Riwayat</button>{canViewFinance && order.status === "ready" && whatsappUrl(order) && <a href={whatsappUrl(order)!} target="_blank" rel="noopener noreferrer" aria-label={"Kabari pelanggan lewat WhatsApp untuk pesanan " + order.id} title="Kabari pelanggan lewat WhatsApp" className="inline-flex items-center gap-1 rounded-md border border-emerald-300/40 px-2 py-1 text-[10px] font-medium text-emerald-200 hover:bg-emerald-300/10"><MessageCircle size={12} /> WhatsApp</a>}{canPay && order.paymentStatus !== "paid" && <button onClick={() => { setPaymentOrder(order); setError(""); }} className="inline-flex items-center gap-1 rounded-md border border-accent/40 px-2 py-1 text-[10px] font-medium text-accent hover:bg-accent/10"><CreditCard size={12} /> Catat bayar</button>}{canAdvance && (order.status !== "completed" ? <button aria-busy={pendingAction === order.id} disabled={pendingAction === order.id} onClick={() => advanceOrder(order.id, order.status)} className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[10px] font-medium text-muted transition hover:border-accent/50 hover:text-accent disabled:cursor-wait disabled:opacity-50">{pendingAction === order.id ? <><Spinner className="size-3" /> Menyimpan…</> : "Lanjut proses"}</button> : <span className="text-[10px] text-muted">Selesai</span>)}</div></td></tr>)}</tbody>
+            <tbody>{visibleOrders.map((order) => <tr key={order.id} className="border-t border-border/70 transition hover:bg-surface-raised/50"><td className="px-4 py-3"><p className="font-semibold">{order.id}</p><p className="mt-1 text-[10px] text-muted">{order.customerName}{order.customerPhone ? " · " + order.customerPhone : ""}</p></td><td className="px-3 py-3 text-muted">{order.serviceName}</td><td className="px-3 py-3">{order.quantity} {order.unit}</td><td className="px-3 py-3 text-muted">{formatShortDate(order.dueAt)}</td><td className="px-3 py-3"><OrderStatusBadge status={order.status} /></td>{canViewFinance && <td className="px-3 py-3"><PaymentStatusBadge status={order.paymentStatus} /></td>}{canViewFinance && <td className="px-4 py-3 text-right font-semibold">{formatCurrency(order.amount)}</td>}<td className="px-4 py-3 text-right"><div className="flex flex-col items-end gap-1">{canViewFinance && <button type="button" aria-label={"Cetak nota pesanan " + order.id} title="Cetak nota" onClick={() => setReceiptOrder(order)} className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[10px] font-medium text-muted hover:border-accent/50 hover:text-accent"><Printer size={12} /> Nota</button>}<button type="button" aria-label={"Riwayat status pesanan " + order.id} title="Riwayat status" onClick={() => openHistory(order)} className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[10px] font-medium text-muted hover:border-accent/50 hover:text-accent"><History size={12} /> Riwayat</button>{canViewFinance && order.status === "ready" && whatsappUrl(order) && <a href={whatsappUrl(order)!} target="_blank" rel="noopener noreferrer" aria-label={"Kabari pelanggan lewat WhatsApp untuk pesanan " + order.id} title="Kabari pelanggan lewat WhatsApp" className="inline-flex items-center gap-1 rounded-md border border-emerald-300/40 px-2 py-1 text-[10px] font-medium text-emerald-200 hover:bg-emerald-300/10"><MessageCircle size={12} /> WhatsApp</a>}{canCancel && databaseEnabled && order.status !== "completed" && order.status !== "cancelled" && <button disabled={pendingAction === order.id} onClick={() => void cancelOrder(order)} className="inline-flex items-center gap-1 rounded-md border border-danger/30 px-2 py-1 text-[10px] font-medium text-danger hover:bg-danger/10 disabled:opacity-50"><Ban size={12} /> Batalkan</button>}{canCancel && databaseEnabled && order.status === "cancelled" && order.paidAmount > 0 && <button disabled={pendingAction === order.id} onClick={() => void refundOrder(order)} className="inline-flex items-center gap-1 rounded-md border border-amber-300/30 px-2 py-1 text-[10px] font-medium text-amber-200 hover:bg-amber-300/10 disabled:opacity-50"><RotateCcw size={12} /> Refund</button>}{canPay && order.status !== "cancelled" && order.paymentStatus !== "paid" && <button onClick={() => { setPaymentOrder(order); setError(""); }} className="inline-flex items-center gap-1 rounded-md border border-accent/40 px-2 py-1 text-[10px] font-medium text-accent hover:bg-accent/10"><CreditCard size={12} /> Catat bayar</button>}{canAdvance && (order.status !== "completed" && order.status !== "cancelled" ? <button aria-busy={pendingAction === order.id} disabled={pendingAction === order.id} onClick={() => advanceOrder(order.id, order.status)} className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[10px] font-medium text-muted transition hover:border-accent/50 hover:text-accent disabled:cursor-wait disabled:opacity-50">{pendingAction === order.id ? <><Spinner className="size-3" /> Menyimpan…</> : "Lanjut proses"}</button> : <span className="text-[10px] text-muted">{order.status === "cancelled" ? "Dibatalkan" : "Selesai"}</span>)}</div></td></tr>)}</tbody>
           </table>
           {visibleOrders.length === 0 && <div className="p-12 text-center"><p className="text-sm font-medium">Pesanan tidak ditemukan</p><p className="mt-1 text-xs text-muted">Ubah kata kunci atau filter status.</p></div>}
         </div>
@@ -387,6 +445,7 @@ export function OrdersView({ initialOrders, initialTotal = initialOrders.length,
             <label className="block text-xs font-medium">Nomor telepon<Input name="customerPhone" required placeholder="08xx xxxx xxxx" className="mt-1.5" /></label>
             <div className="grid gap-3 sm:grid-cols-2"><label className="block text-xs font-medium">Layanan<Select name="serviceName" required value={selectedServiceName} onChange={(event) => setSelectedServiceName(event.target.value)} className="mt-1.5"><option value="">Pilih layanan</option>{availableServices.map((service) => <option key={service.id} value={service.name}>{service.name} · {formatCurrency(service.price)}/{service.unit}</option>)}</Select></label><label className="block text-xs font-medium">{selectedServiceName && availableServices.find((service) => service.name === selectedServiceName)?.unit === "kg" ? "Berat (kg)" : selectedServiceName ? "Jumlah (" + (availableServices.find((service) => service.name === selectedServiceName)?.unit ?? "unit") + ")" : "Jumlah / berat"}<Input name="quantity" required type="number" min={selectedServiceName && availableServices.find((service) => service.name === selectedServiceName)?.unit === "kg" ? "0.01" : "1"} step={selectedServiceName && availableServices.find((service) => service.name === selectedServiceName)?.unit === "kg" ? "0.01" : "1"} placeholder={selectedServiceName && availableServices.find((service) => service.name === selectedServiceName)?.unit === "kg" ? "3.5" : "1"} className="mt-1.5" /></label></div>
             <label className="block text-xs font-medium">Target selesai<Input name="dueAt" required type="date" className="mt-1.5" /></label>
+            <div className="grid gap-3 sm:grid-cols-3"><label className="block text-xs font-medium">Biaya express (Rp)<Input name="expressFee" type="number" min="0" step="1" defaultValue="0" className="mt-1.5" /></label><label className="block text-xs font-medium">Biaya antar (Rp)<Input name="deliveryFee" type="number" min="0" step="1" defaultValue="0" className="mt-1.5" /></label><label className="block text-xs font-medium">Diskon (Rp)<Input name="discountAmount" type="number" min="0" step="1" defaultValue="0" className="mt-1.5" /></label></div>
             {error && <p role="alert" className="rounded-lg border border-danger/20 bg-danger/10 px-3 py-2 text-xs text-danger">{error}</p>}
             <div className="flex justify-end gap-2 border-t border-border pt-4"><Button type="button" onClick={() => setDialogOpen(false)}>Batal</Button><Button type="submit" variant="primary" isLoading={pendingAction === "create"} loadingText="Menyimpan…">Simpan pesanan</Button></div>
           </form>
@@ -421,6 +480,9 @@ export function OrdersView({ initialOrders, initialTotal = initialOrders.length,
                 <div className="mt-1 flex justify-between gap-3"><span>{receiptOrder.serviceName}</span><span>{receiptOrder.quantity} {receiptOrder.unit}</span></div>
               </div>
               <div className="space-y-1.5 border-t border-border pt-3">
+                {(receiptOrder.expressFee ?? 0) > 0 && <div className="flex justify-between gap-3"><span className="text-muted">Biaya express</span><span>{formatCurrency(receiptOrder.expressFee!)}</span></div>}
+                {(receiptOrder.deliveryFee ?? 0) > 0 && <div className="flex justify-between gap-3"><span className="text-muted">Biaya antar</span><span>{formatCurrency(receiptOrder.deliveryFee!)}</span></div>}
+                {(receiptOrder.discountAmount ?? 0) > 0 && <div className="flex justify-between gap-3"><span className="text-muted">Diskon</span><span>−{formatCurrency(receiptOrder.discountAmount!)}</span></div>}
                 <div className="flex justify-between gap-3"><span className="text-muted">Total tagihan</span><strong>{formatCurrency(receiptOrder.amount)}</strong></div>
                 <div className="flex justify-between gap-3"><span className="text-muted">Sudah dibayar</span><span>{formatCurrency(receiptOrder.paidAmount)}</span></div>
                 <div className="flex justify-between gap-3 border-t border-border pt-2 font-semibold"><span>Sisa tagihan</span><span>{formatCurrency(Math.max(0, receiptOrder.amount - receiptOrder.paidAmount))}</span></div>

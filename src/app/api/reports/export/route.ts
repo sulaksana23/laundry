@@ -37,13 +37,12 @@ export async function GET(request: Request) {
   }
   const result = await getNeonSql().query(
     "WITH bounds AS (SELECT id, timezone, $2::date AS from_date, ($3::date + 1) AS until_date FROM laundry_branches WHERE id = $1) " +
-    "SELECT to_char((p.received_at AT TIME ZONE b.timezone)::date, 'YYYY-MM-DD') AS date, p.method, " +
-    "COUNT(*)::int AS payments, COALESCE(SUM(p.amount), 0)::bigint AS income " +
-    "FROM laundry_payments p CROSS JOIN bounds b WHERE p.branch_id = b.id " +
-    "AND p.received_at >= (b.from_date::timestamp AT TIME ZONE b.timezone) " +
-    "AND p.received_at < (b.until_date::timestamp AT TIME ZONE b.timezone) " +
-    "GROUP BY (p.received_at AT TIME ZONE b.timezone)::date, p.method " +
-    "ORDER BY (p.received_at AT TIME ZONE b.timezone)::date, p.method",
+    "SELECT date, method, SUM(payments)::int AS payments, SUM(income)::bigint AS income FROM (" +
+    "SELECT to_char((p.received_at AT TIME ZONE b.timezone)::date, 'YYYY-MM-DD') AS date, p.method, COUNT(*)::int AS payments, SUM(p.amount)::bigint AS income " +
+    "FROM laundry_payments p CROSS JOIN bounds b WHERE p.branch_id = b.id AND p.received_at >= (b.from_date::timestamp AT TIME ZONE b.timezone) AND p.received_at < (b.until_date::timestamp AT TIME ZONE b.timezone) GROUP BY (p.received_at AT TIME ZONE b.timezone)::date, p.method " +
+    "UNION ALL SELECT to_char((r.created_at AT TIME ZONE b.timezone)::date, 'YYYY-MM-DD'), r.method, -COUNT(*)::int, -SUM(r.amount)::bigint " +
+    "FROM laundry_order_refunds r CROSS JOIN bounds b WHERE r.branch_id = b.id AND r.created_at >= (b.from_date::timestamp AT TIME ZONE b.timezone) AND r.created_at < (b.until_date::timestamp AT TIME ZONE b.timezone) GROUP BY (r.created_at AT TIME ZONE b.timezone)::date, r.method" +
+    ") flows GROUP BY date, method ORDER BY date, method",
     [session.branchId, from, to],
   );
   const rows = Array.isArray(result) ? result as Array<{ date: string; method: string; payments: number | string; income: number | string }> : [];

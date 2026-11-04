@@ -5,7 +5,7 @@
 import { z } from "zod";
 
 export const BACKUP_KIND = "laundryos-branch-backup";
-export const BACKUP_FORMAT_VERSION = 2;
+export const BACKUP_FORMAT_VERSION = 3;
 
 export const BACKUP_TABLE_KEYS = [
   "customers",
@@ -13,6 +13,7 @@ export const BACKUP_TABLE_KEYS = [
   "orders",
   "orderStatusHistory",
   "payments",
+  "refunds",
   "expenses",
   "inventoryItems",
   "cashClosings",
@@ -26,6 +27,7 @@ export const BACKUP_TABLE_LABELS: Record<BackupTableKey, string> = {
   orders: "Pesanan",
   orderStatusHistory: "Riwayat status pesanan",
   payments: "Pembayaran",
+  refunds: "Pengembalian dana",
   expenses: "Pengeluaran",
   inventoryItems: "Persediaan",
   cashClosings: "Tutup kasir",
@@ -82,7 +84,7 @@ const bigintMax = BigInt("9223372036854775807");
 const amount = integer(BigInt(0), bigintMax);
 const positiveAmount = integer(BigInt(1), bigintMax);
 const signedAmount = integer(BigInt("-9223372036854775808"), bigintMax);
-const status = z.enum(["received", "washing", "drying", "ironing", "ready", "completed"]);
+const status = z.enum(["received", "washing", "drying", "ironing", "ready", "completed", "cancelled"]);
 const method = z.enum(["cash", "transfer", "qris", "other"]);
 const common = { id: text.min(1), branch_id: text.min(1) };
 const uuidCommon = { ...common, id: uuid };
@@ -99,6 +101,7 @@ const rowSchemas: Record<BackupTableKey, z.ZodType> = {
     weight_kg: decimal(8, 2), quantity: decimal(10, 3).optional(),
     unit: z.enum(["kg", "pcs", "pasang"]).optional(), unit_price_snapshot: amount.optional(),
     amount, paid_amount: amount, status, due_at: date,
+    express_fee: amount.optional(), delivery_fee: amount.optional(), discount_amount: amount.optional(),
     received_at: date, updated_at: date,
   }),
   orderStatusHistory: z.object({
@@ -107,6 +110,9 @@ const rowSchemas: Record<BackupTableKey, z.ZodType> = {
   }),
   payments: z.object({
     ...uuidCommon, order_id: text.min(1), amount: positiveAmount, method, actor_id: text, received_at: date,
+  }),
+  refunds: z.object({
+    ...uuidCommon, order_id: text.min(1), amount: positiveAmount, reason: text.min(3).max(300), method, actor_id: text, created_at: date,
   }),
   expenses: z.object({
     ...uuidCommon, description: text, category: text, amount: positiveAmount, method, incurred_at: date, created_at: date,
@@ -133,7 +139,7 @@ export function validateBackup(input: unknown): BackupValidation {
   if (candidate.kind !== BACKUP_KIND) {
     return { ok: false, error: "Berkas ini bukan backup LaundryOS (jenis berkas tidak dikenal)." };
   }
-  if (candidate.formatVersion !== 1 && candidate.formatVersion !== BACKUP_FORMAT_VERSION) {
+  if (candidate.formatVersion !== 1 && candidate.formatVersion !== 2 && candidate.formatVersion !== BACKUP_FORMAT_VERSION) {
     return { ok: false, error: `Versi format backup (${String(candidate.formatVersion)}) tidak didukung aplikasi ini.` };
   }
   const branch = candidate.branch;
@@ -150,6 +156,7 @@ export function validateBackup(input: unknown): BackupValidation {
     return { ok: false, error: "Isi tabel pada backup tidak ditemukan." };
   }
   const sourceTables = tables as Record<string, unknown>;
+  if (candidate.formatVersion === 1 || candidate.formatVersion === 2) sourceTables.refunds ??= [];
   for (const key of BACKUP_TABLE_KEYS) {
     const rows = sourceTables[key];
     if (!Array.isArray(rows)) {
@@ -181,6 +188,9 @@ export function validateBackup(input: unknown): BackupValidation {
       const quantity = Number(row.quantity);
       row.unit_price_snapshot = quantity > 0 ? Math.round(Number(row.amount) / quantity) : 0;
     }
+    row.express_fee = row.express_fee ?? 0;
+    row.delivery_fee = row.delivery_fee ?? 0;
+    row.discount_amount = row.discount_amount ?? 0;
   }
   candidate.formatVersion = BACKUP_FORMAT_VERSION;
   for (const key of BACKUP_TABLE_KEYS) {
@@ -212,8 +222,8 @@ export function validateBackup(input: unknown): BackupValidation {
   if (typedTables.orders.some((row) => !customerIds.has(row.customer_id) || !serviceIds.has(row.service_id))) {
     return { ok: false, error: "Pesanan merujuk pelanggan atau layanan yang tidak ada dalam backup." };
   }
-  if ([...typedTables.orderStatusHistory, ...typedTables.payments].some((row) => !orderIds.has(row.order_id))) {
-    return { ok: false, error: "Riwayat status atau pembayaran merujuk pesanan yang tidak ada dalam backup." };
+  if ([...typedTables.orderStatusHistory, ...typedTables.payments, ...typedTables.refunds].some((row) => !orderIds.has(row.order_id))) {
+    return { ok: false, error: "Riwayat status, pembayaran, atau refund merujuk pesanan yang tidak ada dalam backup." };
   }
   return { ok: true, backup: candidate as BranchBackup };
 }

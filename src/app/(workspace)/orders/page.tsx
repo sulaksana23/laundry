@@ -55,7 +55,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
         <Card className="p-3.5"><p className="text-[11px] text-muted">Siap diambil</p><p className="mt-1 text-xl font-semibold">{summary.ready}</p></Card>
         {(!session || hasPermission(session.role, "finance:read")) && <Card className="p-3.5"><p className="text-[11px] text-muted">Belum lunas</p><p className="mt-1 text-xl font-semibold">{summary.unpaid}</p></Card>}
       </div>
-      <OrdersView key={customerId ?? "all"} initialOrders={safeOrders} initialTotal={ordersResult?.total ?? orders.length} initialQuery={initialQuery} customerId={customerId} databaseEnabled={databaseEnabled} availableServices={availableServices} canCreate={session ? hasPermission(session.role, "orders:create") : true} canAdvance={session ? hasPermission(session.role, "orders:advance") : true} canPay={session ? hasPermission(session.role, "payments:record") : true} canExport={session ? hasPermission(session.role, "orders:export") : true} canViewFinance={session ? hasPermission(session.role, "finance:read") : true} />
+      <OrdersView key={customerId ?? "all"} initialOrders={safeOrders} initialTotal={ordersResult?.total ?? orders.length} initialQuery={initialQuery} customerId={customerId} databaseEnabled={databaseEnabled} availableServices={availableServices} canCreate={session ? hasPermission(session.role, "orders:create") : true} canAdvance={session ? hasPermission(session.role, "orders:advance") : true} canPay={session ? hasPermission(session.role, "payments:record") : true} canExport={session ? hasPermission(session.role, "orders:export") : true} canCancel={session?.role === "owner"} canViewFinance={session ? hasPermission(session.role, "finance:read") : true} />
     </>
   );
 }

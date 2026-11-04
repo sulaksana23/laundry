@@ -30,10 +30,11 @@
 - [x] Rate limit percobaan login dan registrasi.
 - [x] Endpoint health check di `/api/health`.
 - [x] Impor massal pelanggan dan ekspor CSV seluruh hasil pencarian lintas halaman.
-- [ ] Ekspor pesanan lintas halaman.
+- [x] Ekspor CSV pesanan lintas halaman mengikuti filter aktif.
 - [ ] Notifikasi pelanggan untuk status dan pesanan siap, menggunakan provider yang dipilih.
 - [x] Filter periode laporan, ringkasan metode pembayaran, dan tutup kasir tunai.
-- [ ] Rekonsiliasi digital terhadap mutasi eksternal, refund, dan pembatalan.
+- [x] Pembatalan pesanan dengan alasan dan audit; refund sebagian/penuh melalui ledger serta pengurangan pemasukan bersih.
+- [ ] Rekonsiliasi digital terhadap mutasi eksternal.
 - [x] Backup/restore, dengan pemulihan saldo stok sebagai saldo awal.
 - [ ] Observability, aksesibilitas, dan uji end-to-end.
 
@@ -43,9 +44,11 @@
 - [x] Ledger stok bercabang untuk saldo awal, pembelian, pemakaian, dan penyesuaian beralasan.
 - [x] Riwayat audit pemilik untuk perubahan transaksi dan konfigurasi utama.
 - [x] Filter laporan tanggal dan CSV mengikuti periode pilihan.
+- [x] Biaya express/antar dan diskon per pesanan dengan validasi server.
+- [x] Pemilik dapat membuat cabang dan berpindah antara cabang yang terdaftar; data operasional dibatasi ke cabang aktif.
 
 ## Tahap 4 — Multi-cabang dan optimasi
 
-- [ ] Dashboard konsolidasi dan laporan per cabang.
-- [ ] Hak akses lintas cabang dan pemindahan order bila diperlukan.
+- [x] Ringkasan pesanan dan pendapatan per cabang pada dashboard pemilik.
+- [ ] Laporan konsolidasi lintas cabang, pengelolaan staf lintas cabang, dan pemindahan order bila diperlukan.
 - [ ] Optimasi query, indeks, caching, dan retensi berdasarkan volume nyata.

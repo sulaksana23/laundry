@@ -17,6 +17,9 @@ type OrderRow = {
   quantity: string | number;
   unit: OrderUnit;
   amount: string | number;
+  express_fee: string | number;
+  delivery_fee: string | number;
+  discount_amount: string | number;
   paid_amount: string | number;
   payment_status: "paid" | "partial" | "unpaid";
   status: OrderStatus;
@@ -27,7 +30,7 @@ type OrderRow = {
 const ORDER_COLUMNS =
   "o.id, c.name AS customer_name, c.phone AS customer_phone, " +
   "o.service_name_snapshot AS service_name, o.quantity, o.unit, o.amount, o.paid_amount, o.status, " +
-  "o.received_at, to_char(o.due_at, 'YYYY-MM-DD') || 'T12:00:00.000Z' AS due_at, " +
+  "o.express_fee, o.delivery_fee, o.discount_amount, o.received_at, to_char(o.due_at, 'YYYY-MM-DD') || 'T12:00:00.000Z' AS due_at, " +
   "CASE WHEN o.paid_amount <= 0 THEN 'unpaid' " +
   "WHEN o.paid_amount < o.amount THEN 'partial' ELSE 'paid' END AS payment_status";
 
@@ -44,6 +47,9 @@ function toLaundryOrder(row: OrderRow): LaundryOrder {
     quantity: Number(row.quantity),
     unit: row.unit,
     amount: Number(row.amount),
+    expressFee: Number(row.express_fee ?? 0),
+    deliveryFee: Number(row.delivery_fee ?? 0),
+    discountAmount: Number(row.discount_amount ?? 0),
     paidAmount: Number(row.paid_amount),
     paymentStatus: row.payment_status,
     status: row.status,
@@ -112,8 +118,8 @@ export class PostgresOrdersRepository implements OrdersRepository {
         "ON CONFLICT (branch_id, phone) DO UPDATE SET name = EXCLUDED.name, updated_at = now() " +
         "RETURNING id" +
       "), inserted_order AS (" +
-        "INSERT INTO laundry_orders (id, branch_id, customer_id, service_id, service_name_snapshot, weight_kg, quantity, unit, unit_price_snapshot, amount, paid_amount, status, due_at) " +
-        "SELECT $5, $2, customer_upsert.id, service.id, service.name, CASE WHEN $10 = 'kg' THEN $6 ELSE 0 END, $6, $10, $11, $7, 0, 'received', $8::date " +
+        "INSERT INTO laundry_orders (id, branch_id, customer_id, service_id, service_name_snapshot, weight_kg, quantity, unit, unit_price_snapshot, amount, paid_amount, status, due_at, express_fee, delivery_fee, discount_amount) " +
+        "SELECT $5, $2, customer_upsert.id, service.id, service.name, CASE WHEN $10 = 'kg' THEN $6 ELSE 0 END, $6, $10, $11, $7, 0, 'received', $8::date, $15, $16, $17 " +
         "FROM customer_upsert CROSS JOIN laundry_services service " +
         "WHERE service.branch_id = $2 AND service.name = $9 AND service.unit = $10 AND service.is_active = true " +
         "RETURNING *" +
@@ -123,11 +129,11 @@ export class PostgresOrdersRepository implements OrdersRepository {
       "), audit AS (" +
         "INSERT INTO laundry_audit_events (id, branch_id, actor_id, action, entity_type, entity_id, metadata) " +
         "SELECT $14::uuid, $2, $13, 'order.created', 'order', id, " +
-        "jsonb_build_object('service', service_name_snapshot, 'quantity', quantity, 'unit', unit, 'unit_price', unit_price_snapshot, 'amount', amount, 'status', status) FROM inserted_order RETURNING id" +
+        "jsonb_build_object('service', service_name_snapshot, 'quantity', quantity, 'unit', unit, 'unit_price', unit_price_snapshot, 'amount', amount, 'express_fee', express_fee, 'delivery_fee', delivery_fee, 'discount', discount_amount, 'status', status) FROM inserted_order RETURNING id" +
       ") " +
       "SELECT " + ORDER_COLUMNS +
       " FROM inserted_order o JOIN laundry_customers c ON c.id = o.customer_id AND c.branch_id = o.branch_id",
-      [randomUUID(), input.branchId, input.customerName, input.customerPhone, id, input.quantity, input.amount, dueDate, input.serviceName, input.unit, input.unitPrice, historyId, input.actorId, randomUUID()],
+      [randomUUID(), input.branchId, input.customerName, input.customerPhone, id, input.quantity, input.amount, dueDate, input.serviceName, input.unit, input.unitPrice, historyId, input.actorId, randomUUID(), input.expressFee, input.deliveryFee, input.discountAmount],
     );
     const row = (rows as OrderRow[])[0];
     if (!row) throw new Error("Layanan tidak tersedia pada cabang ini.");

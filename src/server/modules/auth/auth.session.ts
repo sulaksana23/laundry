@@ -68,8 +68,8 @@ export async function getAuthSession(): Promise<AuthSession | null> {
   const signedSession = parseToken(cookieStore.get(COOKIE_NAME)?.value, secretValue);
   if (!signedSession) return null;
   try {
-    const user = await new AuthRepository().findActiveUser(signedSession.userId);
-    if (!user || user.branchId !== signedSession.branchId) return null;
+    const user = await new AuthRepository().findActiveUserForBranch(signedSession.userId, signedSession.branchId);
+    if (!user) return null;
     return { ...signedSession, ...user };
   } catch {
     return null;

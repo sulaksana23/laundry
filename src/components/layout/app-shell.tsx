@@ -3,12 +3,13 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
-import { Bell, ExternalLink, Heart, LogOut, Menu, Plus, Search, Shirt, X } from "lucide-react";
+import { Bell, Building2, ExternalLink, Heart, LogOut, Menu, Plus, Search, Shirt, X } from "lucide-react";
 import { navigation } from "@/components/layout/navigation";
 import { APP_VERSION_LABEL } from "@/lib/app-info";
 import { cn } from "@/lib/utils";
 import type { AuthRole } from "@/server/modules/auth/auth.repository";
 import { hasPermission } from "@/server/modules/auth/permissions";
+import type { AccessibleBranch } from "@/server/modules/auth/auth.repository";
 
 function Sidebar({ onNavigate, user }: { onNavigate?: () => void; user: { fullName: string; email: string; branchName: string; role: AuthRole; isDemo?: boolean } }) {
   const pathname = usePathname();
@@ -68,14 +69,37 @@ function Sidebar({ onNavigate, user }: { onNavigate?: () => void; user: { fullNa
   );
 }
 
-export function AppShell({ children, user }: { children: React.ReactNode; user: { fullName: string; email: string; branchName: string; role: AuthRole; isDemo?: boolean } }) {
+export function AppShell({ children, user, branches = [], activeBranchId }: { children: React.ReactNode; user: { fullName: string; email: string; branchName: string; role: AuthRole; isDemo?: boolean }; branches?: AccessibleBranch[]; activeBranchId?: string }) {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [branchSwitching, setBranchSwitching] = useState(false);
+  const [branchError, setBranchError] = useState("");
 
   async function signOut() {
     await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" });
     router.replace("/login");
+  }
+
+  async function switchBranch(branchId: string) {
+    if (!branchId || branchId === activeBranchId || branchSwitching) return;
+    setBranchSwitching(true);
+    setBranchError("");
+    try {
+      const response = await fetch("/api/auth/branch", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ branchId }),
+      });
+      const result = await response.json() as { error?: string };
+      if (!response.ok) throw new Error(result.error ?? "Cabang gagal diganti.");
+      router.refresh();
+    } catch (error) {
+      setBranchError(error instanceof Error ? error.message : "Cabang gagal diganti.");
+    } finally {
+      setBranchSwitching(false);
+    }
   }
 
   return (
@@ -96,12 +120,14 @@ export function AppShell({ children, user }: { children: React.ReactNode; user: 
             <span className="text-xs text-muted md:hidden">LaundryOS <span className="mx-1">/</span> <span className="text-foreground">{user.branchName}</span></span>
           </div>
           <div className="flex items-center gap-2">
+            {branches.length > 1 && <label className="flex h-8 items-center gap-1.5 rounded-lg border border-border bg-surface px-2 text-muted"><Building2 size={14} /><span className="sr-only">Cabang aktif</span><select aria-label="Pilih cabang aktif" value={activeBranchId} disabled={branchSwitching} onChange={(event) => void switchBranch(event.target.value)} className="max-w-32 bg-transparent text-xs text-foreground outline-none disabled:opacity-60 sm:max-w-44">{branches.map((branch) => <option key={branch.id} value={branch.id}>{branch.name}</option>)}</select></label>}
             {hasPermission(user.role, "orders:create") && <Link href="/orders" className="inline-flex h-8 items-center justify-center gap-2 rounded-lg bg-accent px-2.5 text-xs font-semibold text-accent-foreground transition hover:brightness-95"><Plus size={14} /> <span className="hidden sm:inline">Pesanan baru</span></Link>}
             <button type="button" aria-label="Notifikasi (segera tersedia)" disabled className="relative rounded-lg border border-border bg-surface p-2 text-muted opacity-55"><Bell size={15} /></button>
             <div className="ml-1 hidden items-center gap-2 border-l border-border pl-3 sm:flex"><div className="flex size-7 items-center justify-center rounded-full bg-[#314036] text-[10px] font-semibold text-accent">{user.fullName.slice(0, 1).toUpperCase()}</div><span className="max-w-36 truncate text-xs font-medium">{user.fullName}</span></div>
             {!user.isDemo && <button type="button" onClick={signOut} aria-label="Keluar dari LaundryOS" className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 text-xs text-muted hover:text-foreground"><LogOut size={14} /><span className="hidden sm:inline">Keluar</span></button>}
           </div>
         </header>
+        {branchError && <p role="alert" className="px-4 pt-2 text-right text-xs text-danger sm:px-6 xl:px-8">{branchError}</p>}
         <main className="mx-auto w-full max-w-[1500px] px-4 py-5 sm:px-6 sm:py-6 xl:px-8"><div key={pathname} className="page-motion">{children}</div></main>
         <footer className="px-6 pb-5 text-center text-[10px] text-muted/70">LaundryOS {APP_VERSION_LABEL} · Demo operasional · © 2026</footer>
       </div>

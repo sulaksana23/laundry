@@ -7,6 +7,7 @@ export const orderStatuses = [
   "ironing",
   "ready",
   "completed",
+  "cancelled",
 ] as const;
 
 export type OrderStatus = (typeof orderStatuses)[number];
@@ -20,6 +21,7 @@ export const orderStatusLabels: Record<OrderStatus, string> = {
   ironing: "Disetrika",
   ready: "Siap diambil",
   completed: "Selesai",
+  cancelled: "Dibatalkan",
 };
 
 export interface LaundryOrder {
@@ -30,6 +32,9 @@ export interface LaundryOrder {
   quantity: number;
   unit: OrderUnit;
   amount: number;
+  expressFee?: number;
+  deliveryFee?: number;
+  discountAmount?: number;
   paidAmount: number;
   paymentStatus: PaymentStatus;
   status: OrderStatus;
@@ -43,6 +48,9 @@ export const createOrderSchema = z.object({
   serviceName: z.string().trim().min(1, "Pilih layanan"),
   quantity: z.coerce.number().positive("Jumlah harus lebih dari 0").max(100000),
   dueAt: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/, "Pilih tanggal selesai yang valid"),
+  expressFee: z.coerce.number().int().min(0).max(100000000).default(0),
+  deliveryFee: z.coerce.number().int().min(0).max(100000000).default(0),
+  discountAmount: z.coerce.number().int().min(0).max(100000000).default(0),
 });
 
 export type CreateOrderInput = z.infer<typeof createOrderSchema>;
@@ -54,6 +62,7 @@ const allowedTransitions: Record<OrderStatus, OrderStatus[]> = {
   ironing: ["ready"],
   ready: ["completed"],
   completed: [],
+  cancelled: [],
 };
 
 export function canTransitionOrder(from: OrderStatus, to: OrderStatus) {

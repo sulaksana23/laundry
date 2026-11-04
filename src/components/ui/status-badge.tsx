@@ -9,6 +9,7 @@ const orderTone: Record<OrderStatus, string> = {
   ironing: "bg-violet-300/10 text-violet-200",
   ready: "bg-accent/15 text-accent",
   completed: "bg-emerald-300/10 text-emerald-200",
+  cancelled: "bg-rose-300/10 text-rose-200",
 };
 
 export function OrderStatusBadge({ status }: { status: OrderStatus }) {

@@ -34,6 +34,11 @@ export interface StaffMember {
   isActive: boolean;
 }
 
+export interface AccessibleBranch {
+  id: string;
+  name: string;
+}
+
 function resultRows<Row>(result: unknown): Row[] {
   if (Array.isArray(result)) return result as Row[];
   if (result && typeof result === "object" && "rows" in result) {
@@ -106,6 +111,34 @@ export class AuthRepository {
     } : null;
   }
 
+  async findActiveUserForBranch(userId: string, branchId: string): Promise<AuthUser | null> {
+    const result = await getNeonSql().query(
+      "SELECT u.id AS user_id, u.email, u.full_name, b.id AS branch_id, b.name AS branch_name, u.role " +
+      "FROM laundry_users u JOIN laundry_user_branch_access access ON access.user_id = u.id " +
+      "JOIN laundry_branches b ON b.id = access.branch_id " +
+      "WHERE u.id = $1::uuid AND access.branch_id = $2 AND u.is_active = true " +
+      "AND (u.role = 'owner' OR u.branch_id = access.branch_id) LIMIT 1",
+      [userId, branchId],
+    );
+    const row = resultRows<Omit<Parameters<typeof toCredentials>[0], "password_hash">>(result)[0];
+    return row ? {
+      userId: row.user_id, email: row.email, fullName: row.full_name,
+      branchId: row.branch_id, branchName: row.branch_name, role: row.role,
+    } : null;
+  }
+
+  async listAccessibleBranches(userId: string): Promise<AccessibleBranch[]> {
+    const result = await getNeonSql().query(
+      "SELECT b.id, b.name FROM laundry_users u " +
+      "JOIN laundry_user_branch_access access ON access.user_id = u.id " +
+      "JOIN laundry_branches b ON b.id = access.branch_id " +
+      "WHERE u.id = $1::uuid AND u.is_active = true " +
+      "AND (u.role = 'owner' OR u.branch_id = access.branch_id) ORDER BY b.name ASC",
+      [userId],
+    );
+    return resultRows<{ id: string; name: string }>(result);
+  }
+
   async listStaff(branchId: string): Promise<StaffMember[]> {
     const result = await getNeonSql().query(
       "SELECT id::text AS user_id, full_name, email, role, is_active FROM laundry_users " +
@@ -121,8 +154,9 @@ export class AuthRepository {
     await getNeonSql().query(
       "WITH created AS (INSERT INTO laundry_users (id, branch_id, full_name, email, password_hash, role) " +
       "VALUES ($1::uuid, $2, $3, $4, $5, $6) RETURNING id, role), " +
+      "access AS (INSERT INTO laundry_user_branch_access (user_id, branch_id) SELECT id, $2 FROM created RETURNING user_id), " +
       "audit AS (INSERT INTO laundry_audit_events (id, branch_id, actor_id, action, entity_type, entity_id, metadata) " +
-      "SELECT $7::uuid, $2, $8, 'staff.created', 'staff', id::text, jsonb_build_object('role', role) FROM created RETURNING id) " +
+      "SELECT $7::uuid, $2, $8, 'staff.created', 'staff', created.id::text, jsonb_build_object('role', role) FROM created JOIN access ON access.user_id = created.id RETURNING id) " +
       "SELECT id FROM created",
       [input.userId, input.branchId, input.fullName, input.email, input.passwordHash, input.role, randomUUID(), input.actorId],
     );
@@ -153,6 +187,10 @@ export class AuthRepository {
           "INSERT INTO laundry_users (id, branch_id, full_name, email, password_hash, role) " +
             "VALUES ($1, $2, $3, $4, $5, 'owner')",
           [input.userId, input.branchId, input.fullName, input.email, input.passwordHash],
+        ),
+        sql.query(
+          "INSERT INTO laundry_user_branch_access (user_id, branch_id) VALUES ($1::uuid, $2)",
+          [input.userId, input.branchId],
         ),
         sql.query(
           "INSERT INTO laundry_services (id, branch_id, name, unit, price_per_unit, description, duration_minutes) VALUES " +
