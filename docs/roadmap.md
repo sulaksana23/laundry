@@ -21,7 +21,7 @@
 ## Tahap 3 — Kesiapan operasional
 
 - [x] Login/registrasi email-password untuk akun Pemilik dan pembatasan pesanan berdasarkan cabang sesi.
-- [ ] Role-based access terperinci, audit log, rate limit, dan uji isolasi cabang lintas akun.
+- [x] Role-based access Pemilik/Kasir/Operator, audit log tindakan utama, dan nonaktifkan staf.
 - [x] Cetak nota ringkasan pesanan dari daftar.
 - [x] Pagination server-side untuk daftar pesanan, pencarian, dan filter status.
 - [x] Panel prioritas pesanan yang masih diproses dan targetnya hari ini atau sudah lewat.
@@ -32,8 +32,17 @@
 - [x] Impor massal pelanggan dan ekspor CSV seluruh hasil pencarian lintas halaman.
 - [ ] Ekspor pesanan lintas halaman.
 - [ ] Notifikasi pelanggan untuk status dan pesanan siap, menggunakan provider yang dipilih.
-- [ ] Rekonsiliasi kas, pembayaran digital, refund, dan laporan terdefinisi.
-- [ ] Backup/restore, observability, aksesibilitas, dan uji end-to-end.
+- [x] Filter periode laporan, ringkasan metode pembayaran, dan tutup kasir tunai.
+- [ ] Rekonsiliasi digital terhadap mutasi eksternal, refund, dan pembatalan.
+- [x] Backup/restore, dengan pemulihan saldo stok sebagai saldo awal.
+- [ ] Observability, aksesibilitas, dan uji end-to-end.
+
+## Pembaruan operasional
+
+- [x] Pesanan satu layanan dengan unit kg, pcs, atau pasang dan snapshot harga per unit.
+- [x] Ledger stok bercabang untuk saldo awal, pembelian, pemakaian, dan penyesuaian beralasan.
+- [x] Riwayat audit pemilik untuk perubahan transaksi dan konfigurasi utama.
+- [x] Filter laporan tanggal dan CSV mengikuti periode pilihan.
 
 ## Tahap 4 — Multi-cabang dan optimasi
 

@@ -5,6 +5,7 @@ import {
   BACKUP_FORMAT_VERSION,
   BACKUP_KIND,
   countBackupRows,
+  validateBackup,
   type BackupRow,
   type BackupTableKey,
   type BranchBackup,
@@ -24,7 +25,7 @@ interface TableDef {
 const TABLE_DEFS: TableDef[] = [
   { key: "customers", table: "laundry_customers", columns: ["id", "branch_id", "name", "phone", "created_at", "updated_at"], uuidColumns: ["id"], dateColumns: [] },
   { key: "services", table: "laundry_services", columns: ["id", "branch_id", "name", "unit", "price_per_unit", "is_active", "description", "duration_minutes", "created_at", "updated_at"], uuidColumns: [], dateColumns: [] },
-  { key: "orders", table: "laundry_orders", columns: ["id", "branch_id", "customer_id", "service_id", "service_name_snapshot", "weight_kg", "amount", "paid_amount", "status", "due_at", "received_at", "updated_at"], uuidColumns: ["customer_id"], dateColumns: ["due_at"] },
+  { key: "orders", table: "laundry_orders", columns: ["id", "branch_id", "customer_id", "service_id", "service_name_snapshot", "weight_kg", "quantity", "unit", "unit_price_snapshot", "amount", "paid_amount", "status", "due_at", "received_at", "updated_at"], uuidColumns: ["customer_id"], dateColumns: ["due_at"] },
   { key: "orderStatusHistory", table: "laundry_order_status_history", columns: ["id", "branch_id", "order_id", "previous_status", "next_status", "actor_id", "changed_at"], uuidColumns: ["id"], dateColumns: [] },
   { key: "payments", table: "laundry_payments", columns: ["id", "branch_id", "order_id", "amount", "method", "actor_id", "received_at"], uuidColumns: ["id"], dateColumns: [] },
   { key: "expenses", table: "laundry_expenses", columns: ["id", "branch_id", "description", "category", "amount", "method", "incurred_at", "created_at"], uuidColumns: ["id"], dateColumns: ["incurred_at"] },
@@ -112,6 +113,9 @@ function insertQueries(sql: ReturnType<typeof getNeonSql>, def: TableDef, rows: 
  * Penghapusan, penyisipan, dan profil cabang dijalankan dalam satu transaksi.
  */
 export async function restoreBranchBackup(branchId: string, backup: BranchBackup): Promise<Record<BackupTableKey, number> & { total: number }> {
+  const validation = validateBackup(backup);
+  if (!validation.ok) throw new Error(validation.error);
+  backup = validation.backup;
   const sql = getNeonSql();
   const queries: ReturnType<typeof sql.query>[] = [];
   for (const key of DELETE_ORDER) {

@@ -16,16 +16,18 @@ export class ServicesService {
     return this.services.list(branchId);
   }
 
-  async create(branchId: string, rawInput: unknown): Promise<LaundryService> {
+  async create(branchId: string, actorId: string, rawInput: unknown): Promise<LaundryService> {
     if (!branchId) throw new Error("Branch context wajib tersedia.");
+    if (!actorId) throw new Error("Aktor wajib tersedia.");
     const input = serviceInputSchema.parse(rawInput);
-    return this.services.create(branchId, input);
+    return this.services.create(branchId, actorId, input);
   }
 
-  async update(branchId: string, id: string, rawInput: unknown): Promise<LaundryService> {
+  async update(branchId: string, actorId: string, id: string, rawInput: unknown): Promise<LaundryService> {
     if (!branchId || !id) throw new Error("Branch context dan ID layanan wajib tersedia.");
+    if (!actorId) throw new Error("Aktor wajib tersedia.");
     const input: ServiceInput = serviceInputSchema.parse(rawInput);
-    const service = await this.services.update(branchId, id, input);
+    const service = await this.services.update(branchId, actorId, id, input);
     if (!service) throw new ServiceNotFoundError();
     return service;
   }

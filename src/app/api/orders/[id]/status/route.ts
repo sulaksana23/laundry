@@ -4,6 +4,8 @@ import { orderStatuses } from "@/features/orders/domain/order";
 import { isOrdersDatabaseEnabled } from "@/server/db/mode";
 import { getAuthSession } from "@/server/modules/auth/auth.session";
 import { getOrdersService } from "@/server/modules/orders/orders.runtime";
+import { hasPermission } from "@/server/modules/auth/permissions";
+import { redactOrderForRole } from "@/server/modules/orders/order-access";
 import {
   InvalidOrderTransitionError,
   OrderConflictError,
@@ -21,6 +23,7 @@ export async function PATCH(
 ) {
   const session = await getAuthSession();
   if (!session) return NextResponse.json({ error: "Silakan masuk untuk melanjutkan." }, { status: 401 });
+  if (!hasPermission(session.role, "orders:advance")) return NextResponse.json({ error: "Akses mengubah status pesanan tidak diizinkan." }, { status: 403 });
   if (!isOrdersDatabaseEnabled()) {
     return NextResponse.json({ error: "PostgreSQL Pesanan hanya aktif pada local development atau Vercel Preview." }, { status: 503 });
   }
@@ -43,7 +46,7 @@ export async function PATCH(
       branchId: session.branchId,
       actorId: session.userId,
     });
-    return NextResponse.json({ order });
+    return NextResponse.json({ order: redactOrderForRole(order, session.role) });
   } catch (error) {
     if (error instanceof OrderNotFoundError) return NextResponse.json({ error: error.message }, { status: 404 });
     if (error instanceof InvalidOrderTransitionError) return NextResponse.json({ error: error.message }, { status: 409 });

@@ -1,7 +1,7 @@
 import "server-only";
 
 import { mockOrders } from "@/features/orders/data/mock-orders";
-import type { OrderStatus, PaymentStatus } from "@/features/orders/domain/order";
+import type { OrderStatus, OrderUnit, PaymentStatus } from "@/features/orders/domain/order";
 import { normalizePhoneNumber } from "@/lib/phone";
 import { getNeonSql } from "@/server/db/neon";
 import { isOrdersDatabaseEnabled } from "@/server/db/mode";
@@ -16,7 +16,8 @@ export interface TrackedOrder {
   code: string;
   customerName: string;
   serviceName: string;
-  weightKg: number;
+  quantity: number;
+  unit: OrderUnit;
   status: OrderStatus;
   paymentStatus: PaymentStatus;
   amount: number;
@@ -46,7 +47,8 @@ type TrackingRow = {
   customer_name: string;
   customer_phone: string;
   service_name: string;
-  weight_kg: string | number;
+  quantity: string | number;
+  unit: OrderUnit;
   amount: string | number;
   paid_amount: string | number;
   payment_status: PaymentStatus;
@@ -61,7 +63,7 @@ type TrackingRow = {
 async function findInDatabase(code: string, phone: string): Promise<TrackedOrder | null> {
   const rows = resultRows<TrackingRow>(await getNeonSql().query(
     "SELECT o.id, o.branch_id, c.name AS customer_name, c.phone AS customer_phone, " +
-    "o.service_name_snapshot AS service_name, o.weight_kg, o.amount, o.paid_amount, o.status, " +
+    "o.service_name_snapshot AS service_name, o.quantity, o.unit, o.amount, o.paid_amount, o.status, " +
     "o.received_at, to_char(o.due_at, 'YYYY-MM-DD') AS due_date, " +
     "CASE WHEN o.paid_amount <= 0 THEN 'unpaid' WHEN o.paid_amount < o.amount THEN 'partial' ELSE 'paid' END AS payment_status, " +
     "b.name AS branch_name, b.phone AS branch_phone, b.timezone AS branch_timezone " +
@@ -82,7 +84,8 @@ async function findInDatabase(code: string, phone: string): Promise<TrackedOrder
     code: row.id,
     customerName: row.customer_name,
     serviceName: row.service_name,
-    weightKg: Number(row.weight_kg),
+    quantity: Number(row.quantity),
+    unit: row.unit,
     status: row.status,
     paymentStatus: row.payment_status,
     amount,
@@ -109,7 +112,8 @@ function findInDemo(code: string, phone: string): TrackedOrder | null {
     code: order.id,
     customerName: order.customerName,
     serviceName: order.serviceName,
-    weightKg: order.weightKg,
+    quantity: order.quantity,
+    unit: order.unit,
     status: order.status,
     paymentStatus: order.paymentStatus,
     amount: order.amount,

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Download, Search, UserPlus } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
@@ -11,6 +12,7 @@ import { formatCurrency, formatShortDate } from "@/lib/format";
 import { isOrdersDatabaseEnabled } from "@/server/db/mode";
 import { getAuthSession } from "@/server/modules/auth/auth.session";
 import { getCustomersService } from "@/server/modules/customers/customers.runtime";
+import { hasPermission } from "@/server/modules/auth/permissions";
 import { createCustomer } from "./actions";
 import { ImportCard } from "./import-card";
 
@@ -19,6 +21,8 @@ export const dynamic = "force-dynamic";
 
 export default async function CustomersPage({ searchParams }: { searchParams: Promise<{ q?: string | string[]; page?: string | string[] }> }) {
   const session = await getAuthSession();
+  if (session && !hasPermission(session.role, "customers:read")) redirect("/");
+  const canManageCustomers = session ? hasPermission(session.role, "customers:write") : false;
   const databaseEnabled = Boolean(session) && isOrdersDatabaseEnabled();
   const params = await searchParams;
   const rawQuery = params.q;
@@ -48,7 +52,7 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
         <Card className="p-3.5"><p className="text-[11px] text-muted">Aktif 30 hari terakhir</p><p className="mt-1 text-xl font-semibold">{activeCustomers.toLocaleString("id-ID")}</p></Card>
         <Card className="p-3.5"><p className="text-[11px] text-muted">Rata-rata nilai transaksi</p><p className="mt-1 text-xl font-semibold">{formatCurrency(average)}</p></Card>
       </div>
-      {databaseEnabled ? (
+      {databaseEnabled && canManageCustomers ? (
         <Card id="tambah" className="mb-4 p-4">
           <div className="mb-3 flex items-center gap-2"><UserPlus size={16} className="text-accent" /><div><h2 className="text-sm font-semibold">Tambah pelanggan</h2><p className="text-[11px] text-muted">Nomor yang sudah terdaftar akan memperbarui nama pelanggan.</p></div></div>
           <form action={createCustomer} className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
@@ -58,7 +62,7 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
           </form>
         </Card>
       ) : <p className="mb-4 rounded-lg border border-border bg-surface px-3 py-2 text-xs text-muted">Mode demo: daftar contoh hanya untuk pratinjau dan tidak disimpan ke Neon.</p>}
-      <ImportCard mode={databaseEnabled ? "db" : "demo"} demoPhones={databaseEnabled ? [] : allCustomers.map((customer) => customer.phone)} />
+      {canManageCustomers && <ImportCard mode={databaseEnabled ? "db" : "demo"} demoPhones={databaseEnabled ? [] : allCustomers.map((customer) => customer.phone)} />}
       <Card className="overflow-hidden">
         <div className="flex flex-col gap-3 border-b border-border p-4 sm:flex-row sm:items-center sm:justify-between">
           <div><h2 className="text-sm font-semibold">Daftar pelanggan</h2><p className="mt-1 text-[11px] text-muted">{databaseEnabled ? "Data cabang tersimpan di Neon" : "Data contoh"} · {total.toLocaleString("id-ID")} pelanggan{query ? " ditemukan" : ""}</p></div>

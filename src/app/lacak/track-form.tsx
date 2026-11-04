@@ -14,7 +14,8 @@ interface TrackedOrderView {
   code: string;
   customerName: string;
   serviceName: string;
-  weightKg: number;
+  quantity: number;
+  unit: "kg" | "pcs" | "pasang";
   status: OrderStatus;
   paymentStatus: "paid" | "partial" | "unpaid";
   amount: number;
@@ -141,7 +142,7 @@ export function TrackForm() {
           </ol>
 
           <dl className="mt-5 space-y-2 border-t border-border pt-4 text-xs">
-            <div className="flex items-center justify-between gap-3"><dt className="text-muted">Layanan</dt><dd className="text-right font-medium">{order.serviceName} · {order.weightKg} kg</dd></div>
+            <div className="flex items-center justify-between gap-3"><dt className="text-muted">Layanan</dt><dd className="text-right font-medium">{order.serviceName} · {order.quantity} {order.unit}</dd></div>
             <div className="flex items-center justify-between gap-3"><dt className="text-muted">Diterima</dt><dd className="text-right font-medium">{formatDateTime(order.receivedAt, order.branchTimezone)}</dd></div>
             <div className="flex items-center justify-between gap-3"><dt className="text-muted">Estimasi selesai</dt><dd className="text-right font-medium">{formatShortDate(order.dueDate + "T12:00:00.000Z")}</dd></div>
             <div className="flex items-center justify-between gap-3"><dt className="text-muted">Total</dt><dd className="text-right font-medium">{formatCurrency(order.amount)}</dd></div>

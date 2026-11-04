@@ -6,13 +6,16 @@ import { PostgresOrdersRepository } from "@/server/modules/orders/postgres-order
 export function getOrdersService() {
   const sql = getNeonSql();
   const pricing = {
-    async calculate(input: { serviceName: string; weightKg: number }, branchId: string) {
-      const rows = await sql`SELECT price_per_unit FROM laundry_services WHERE branch_id = ${branchId} AND name = ${input.serviceName} AND unit = 'kg' AND is_active = true LIMIT 1`;
-      const service = (rows as unknown as Array<{ price_per_unit: number | string }>)[0];
+    async calculate(input: { serviceName: string; quantity: number }, branchId: string) {
+      const rows = await sql`SELECT price_per_unit, unit FROM laundry_services WHERE branch_id = ${branchId} AND name = ${input.serviceName} AND is_active = true LIMIT 1`;
+      const service = (rows as unknown as Array<{ price_per_unit: number | string; unit: "kg" | "pcs" | "pasang" }>)[0];
       if (!service) throw new Error("Layanan tidak tersedia pada cabang ini.");
-      const amount = Math.round(input.weightKg * Number(service.price_per_unit));
+      if (service.unit !== "kg" && !Number.isInteger(input.quantity)) throw new Error("Jumlah untuk layanan pcs atau pasang harus berupa bilangan bulat.");
+      if (service.unit === "kg" && Math.abs(input.quantity * 100 - Math.round(input.quantity * 100)) > 1e-8) throw new Error("Berat maksimal dua angka desimal.");
+      const unitPrice = Number(service.price_per_unit);
+      const amount = service.unit === "kg" ? Math.round(input.quantity * unitPrice) : input.quantity * unitPrice;
       if (!Number.isSafeInteger(amount)) throw new Error("Total pesanan tidak valid.");
-      return amount;
+      return { amount, unit: service.unit, unitPrice };
     },
   };
 

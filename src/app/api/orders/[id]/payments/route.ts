@@ -4,6 +4,7 @@ import { z } from "zod";
 import { isOrdersDatabaseEnabled } from "@/server/db/mode";
 import { getNeonSql } from "@/server/db/neon";
 import { getAuthSession } from "@/server/modules/auth/auth.session";
+import { hasPermission } from "@/server/modules/auth/permissions";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,6 +17,7 @@ const paymentSchema = z.object({
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
   const session = await getAuthSession();
   if (!session) return NextResponse.json({ error: "Silakan masuk untuk melanjutkan." }, { status: 401 });
+  if (!hasPermission(session.role, "payments:record")) return NextResponse.json({ error: "Akses pencatatan pembayaran tidak diizinkan." }, { status: 403 });
   if (!isOrdersDatabaseEnabled()) return NextResponse.json({ error: "Pencatatan pembayaran belum aktif." }, { status: 503 });
 
   let body: unknown;
@@ -35,8 +37,12 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     "), inserted_payment AS (" +
     "INSERT INTO laundry_payments (id, branch_id, order_id, amount, method, actor_id, received_at) " +
     "SELECT $1::uuid, $2, id, $4, $5, $6, now() FROM updated_order RETURNING id" +
+    "), audit AS (" +
+    "INSERT INTO laundry_audit_events (id, branch_id, actor_id, action, entity_type, entity_id, metadata) " +
+    "SELECT $7::uuid, $2, $6, 'payment.recorded', 'order', id, jsonb_build_object('amount', $4, 'method', $5) " +
+    "FROM updated_order RETURNING id" +
     ") SELECT id, paid_amount, amount FROM updated_order",
-    [paymentId, session.branchId, id, parsed.data.amount, parsed.data.method, session.userId],
+    [paymentId, session.branchId, id, parsed.data.amount, parsed.data.method, session.userId, randomUUID()],
   );
   const rows = Array.isArray(result) ? result as Array<{ id: string; paid_amount: number | string; amount: number | string }> : [];
   if (!rows[0]) {

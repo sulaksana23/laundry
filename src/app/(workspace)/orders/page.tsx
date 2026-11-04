@@ -10,6 +10,9 @@ import { getOrdersService } from "@/server/modules/orders/orders.runtime";
 import { getOrderSummary } from "@/server/modules/workspace/operations";
 import { getServicesService } from "@/server/modules/services/services.runtime";
 import { isUuid } from "@/lib/uuid";
+import { hasPermission } from "@/server/modules/auth/permissions";
+import type { OrderUnit } from "@/features/orders/domain/order";
+import { redactOrderForRole } from "@/server/modules/orders/order-access";
 
 export const metadata: Metadata = { title: "Pesanan" };
 export const dynamic = "force-dynamic";
@@ -22,6 +25,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
   const session = await getAuthSession();
   const productionDemo = process.env.VERCEL_ENV === "production" && !isAuthConfigured();
   if (!session && !productionDemo) redirect("/login");
+  if (session && !hasPermission(session.role, "orders:read")) redirect("/");
   const databaseEnabled = Boolean(session) && isOrdersDatabaseEnabled();
   if (customerId && !databaseEnabled) notFound();
   const [ordersResult, servicesResult, databaseSummary] = session && databaseEnabled
@@ -32,7 +36,8 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
       ])
     : [null, null, null];
   const orders = ordersResult?.items ?? mockOrders;
-  const availableServices = (servicesResult ?? serviceCatalog).filter((service) => service.isActive && service.unit === "kg").map(({ id, name, unit, price }) => ({ id, name, unit, price }));
+  const safeOrders = session ? orders.map((order) => redactOrderForRole(order, session.role)) : orders;
+  const availableServices = (servicesResult ?? serviceCatalog).filter((service) => service.isActive).map(({ id, name, unit, price }) => ({ id, name, unit: unit as OrderUnit, price }));
   const todayKey = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Makassar" }).format(new Date());
   const summary = databaseSummary ?? {
     active: orders.filter((order) => order.status !== "completed").length,
@@ -48,9 +53,9 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
         <Card className="p-3.5"><p className="text-[11px] text-muted">Total hari ini</p><p className="mt-1 text-xl font-semibold">{summary.today}</p></Card>
         <Card className="p-3.5"><p className="text-[11px] text-muted">Sedang diproses</p><p className="mt-1 text-xl font-semibold">{summary.active}</p></Card>
         <Card className="p-3.5"><p className="text-[11px] text-muted">Siap diambil</p><p className="mt-1 text-xl font-semibold">{summary.ready}</p></Card>
-        <Card className="p-3.5"><p className="text-[11px] text-muted">Belum lunas</p><p className="mt-1 text-xl font-semibold">{summary.unpaid}</p></Card>
+        {(!session || hasPermission(session.role, "finance:read")) && <Card className="p-3.5"><p className="text-[11px] text-muted">Belum lunas</p><p className="mt-1 text-xl font-semibold">{summary.unpaid}</p></Card>}
       </div>
-      <OrdersView key={customerId ?? "all"} initialOrders={orders} initialTotal={ordersResult?.total ?? orders.length} initialQuery={initialQuery} customerId={customerId} databaseEnabled={databaseEnabled} availableServices={availableServices} />
+      <OrdersView key={customerId ?? "all"} initialOrders={safeOrders} initialTotal={ordersResult?.total ?? orders.length} initialQuery={initialQuery} customerId={customerId} databaseEnabled={databaseEnabled} availableServices={availableServices} canCreate={session ? hasPermission(session.role, "orders:create") : true} canAdvance={session ? hasPermission(session.role, "orders:advance") : true} canPay={session ? hasPermission(session.role, "payments:record") : true} canExport={session ? hasPermission(session.role, "orders:export") : true} canViewFinance={session ? hasPermission(session.role, "finance:read") : true} />
     </>
   );
 }

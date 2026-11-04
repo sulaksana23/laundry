@@ -7,8 +7,10 @@ import { Bell, ExternalLink, Heart, LogOut, Menu, Plus, Search, Shirt, X } from 
 import { navigation } from "@/components/layout/navigation";
 import { APP_VERSION_LABEL } from "@/lib/app-info";
 import { cn } from "@/lib/utils";
+import type { AuthRole } from "@/server/modules/auth/auth.repository";
+import { hasPermission } from "@/server/modules/auth/permissions";
 
-function Sidebar({ onNavigate, user }: { onNavigate?: () => void; user: { fullName: string; email: string; branchName: string; isDemo?: boolean } }) {
+function Sidebar({ onNavigate, user }: { onNavigate?: () => void; user: { fullName: string; email: string; branchName: string; role: AuthRole; isDemo?: boolean } }) {
   const pathname = usePathname();
 
   return (
@@ -23,7 +25,7 @@ function Sidebar({ onNavigate, user }: { onNavigate?: () => void; user: { fullNa
 
       <div className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted">Menu utama</div>
       <nav className="space-y-1" aria-label="Navigasi utama">
-        {navigation.map(({ href, label, icon: Icon, count, dot }) => {
+        {navigation.filter((item) => !item.permission || hasPermission(user.role, item.permission)).map(({ href, label, icon: Icon, dot }) => {
           const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
           return (
             <Link
@@ -38,7 +40,6 @@ function Sidebar({ onNavigate, user }: { onNavigate?: () => void; user: { fullNa
             >
               <Icon size={16} strokeWidth={1.8} className={active ? "text-accent" : "text-muted group-hover:text-foreground"} />
               <span className="flex-1">{label}</span>
-              {count && <span className="rounded-md bg-surface-hover px-1.5 py-0.5 text-[10px] text-muted">{count}</span>}
               {dot && <span className="size-1.5 rounded-full bg-amber-300" />}
             </Link>
           );
@@ -51,7 +52,7 @@ function Sidebar({ onNavigate, user }: { onNavigate?: () => void; user: { fullNa
         <ExternalLink size={13} className="text-muted" />
       </a>
       <div className="mt-auto rounded-xl border border-border bg-surface px-3.5 py-3">
-        <div className="mb-1 text-xs font-semibold">{user.isDemo ? "Mode demo" : "Akun pemilik"}</div>
+        <div className="mb-1 text-xs font-semibold">{user.isDemo ? "Mode demo" : user.role === "owner" ? "Akun pemilik" : user.role === "cashier" ? "Akun kasir" : "Akun operator"}</div>
         <p className="truncate text-[11px] leading-5 text-muted">{user.isDemo ? "Pesanan contoh disimpan di browser ini." : user.email}</p>
         <p className="truncate text-[11px] text-muted">{user.branchName}</p>
         <div className="mt-2.5 flex items-center justify-between gap-3 border-t border-border/70 pt-2.5">
@@ -61,13 +62,13 @@ function Sidebar({ onNavigate, user }: { onNavigate?: () => void; user: { fullNa
       </div>
       <div className="mt-3 flex items-center gap-2.5 rounded-lg px-2.5 py-2">
         <div className="flex size-8 items-center justify-center rounded-full bg-[#314036] text-xs font-bold text-accent">{user.fullName.slice(0, 1).toUpperCase()}</div>
-        <div className="min-w-0 flex-1"><p className="truncate text-xs font-semibold">{user.fullName}</p><p className="truncate text-[10px] text-muted">{user.isDemo ? "Demo" : "Pemilik"}</p></div>
+        <div className="min-w-0 flex-1"><p className="truncate text-xs font-semibold">{user.fullName}</p><p className="truncate text-[10px] text-muted">{user.isDemo ? "Demo" : user.role === "owner" ? "Pemilik" : user.role === "cashier" ? "Kasir" : "Operator"}</p></div>
       </div>
     </aside>
   );
 }
 
-export function AppShell({ children, user }: { children: React.ReactNode; user: { fullName: string; email: string; branchName: string; isDemo?: boolean } }) {
+export function AppShell({ children, user }: { children: React.ReactNode; user: { fullName: string; email: string; branchName: string; role: AuthRole; isDemo?: boolean } }) {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -95,7 +96,7 @@ export function AppShell({ children, user }: { children: React.ReactNode; user: 
             <span className="text-xs text-muted md:hidden">LaundryOS <span className="mx-1">/</span> <span className="text-foreground">{user.branchName}</span></span>
           </div>
           <div className="flex items-center gap-2">
-            <Link href="/orders" className="inline-flex h-8 items-center justify-center gap-2 rounded-lg bg-accent px-2.5 text-xs font-semibold text-accent-foreground transition hover:brightness-95"><Plus size={14} /> <span className="hidden sm:inline">Pesanan baru</span></Link>
+            {hasPermission(user.role, "orders:create") && <Link href="/orders" className="inline-flex h-8 items-center justify-center gap-2 rounded-lg bg-accent px-2.5 text-xs font-semibold text-accent-foreground transition hover:brightness-95"><Plus size={14} /> <span className="hidden sm:inline">Pesanan baru</span></Link>}
             <button type="button" aria-label="Notifikasi (segera tersedia)" disabled className="relative rounded-lg border border-border bg-surface p-2 text-muted opacity-55"><Bell size={15} /></button>
             <div className="ml-1 hidden items-center gap-2 border-l border-border pl-3 sm:flex"><div className="flex size-7 items-center justify-center rounded-full bg-[#314036] text-[10px] font-semibold text-accent">{user.fullName.slice(0, 1).toUpperCase()}</div><span className="max-w-36 truncate text-xs font-medium">{user.fullName}</span></div>
             {!user.isDemo && <button type="button" onClick={signOut} aria-label="Keluar dari LaundryOS" className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 text-xs text-muted hover:text-foreground"><LogOut size={14} /><span className="hidden sm:inline">Keluar</span></button>}

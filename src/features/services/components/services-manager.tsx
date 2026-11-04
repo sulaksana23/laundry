@@ -9,7 +9,7 @@ import { Select } from "@/components/ui/select";
 import type { LaundryService } from "@/features/services/domain/service";
 import { formatCurrency } from "@/lib/format";
 
-type Props = { initialServices: LaundryService[]; databaseEnabled: boolean };
+type Props = { initialServices: LaundryService[]; databaseEnabled: boolean; editable?: boolean };
 
 function durationLabel(minutes: number) {
   if (minutes % 1440 === 0) return (minutes / 1440) + " hari";
@@ -17,7 +17,7 @@ function durationLabel(minutes: number) {
   return minutes + " menit";
 }
 
-export function ServicesManager({ initialServices, databaseEnabled }: Props) {
+export function ServicesManager({ initialServices, databaseEnabled, editable = true }: Props) {
   const [services, setServices] = useState(initialServices);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"all" | "active" | "inactive">("all");
@@ -135,7 +135,7 @@ export function ServicesManager({ initialServices, databaseEnabled }: Props) {
       <Card className="overflow-hidden">
         <div className="flex flex-col gap-3 border-b border-border p-4 sm:flex-row sm:items-center sm:justify-between">
           <div><h2 className="text-sm font-semibold">Katalog layanan</h2><p className="mt-1 text-[11px] text-muted">Harga tersimpan per cabang; pesanan saat ini memakai layanan per kilogram.</p></div>
-          <Button type="button" variant="primary" onClick={openCreate} disabled={!databaseEnabled}><Plus size={14} /> Tambah layanan</Button>
+          {editable && <Button type="button" variant="primary" onClick={openCreate} disabled={!databaseEnabled}><Plus size={14} /> Tambah layanan</Button>}
         </div>
         <div className="flex flex-col gap-3 border-b border-border p-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="relative w-full lg:max-w-sm"><Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" /><Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Cari nama layanan" aria-label="Cari layanan" className="pl-9" /></div>
@@ -158,7 +158,7 @@ export function ServicesManager({ initialServices, databaseEnabled }: Props) {
                   <div><p className="text-[10px] text-muted">Harga per {service.unit}</p><p className="mt-1 text-base font-semibold">{formatCurrency(service.price)}</p></div>
                   <div className="text-right text-[10px] text-muted"><Clock3 size={12} className="ml-auto mb-1" />{durationLabel(service.durationMinutes)}</div>
                 </div>
-                {databaseEnabled && <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
+                {databaseEnabled && editable && <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
                   <Button type="button" variant="ghost" className="h-8 px-2 text-xs" onClick={() => openEdit(service)}><Pencil size={13} /> Ubah</Button>
                   <Button type="button" variant={service.isActive ? "secondary" : "primary"} isLoading={pendingId === service.id} loadingText="Memproses…" className="h-8 px-2 text-xs" onClick={() => void toggleService(service)}>{service.isActive ? "Nonaktifkan" : "Aktifkan"}</Button>
                 </div>}

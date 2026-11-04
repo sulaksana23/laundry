@@ -2,7 +2,7 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import { getNeonSql } from "@/server/db/neon";
 
-export type AuthRole = "owner";
+export type AuthRole = "owner" | "cashier" | "operator";
 
 export interface AuthUser {
   userId: string;
@@ -24,6 +24,14 @@ interface NewOwnerAccount {
   email: string;
   passwordHash: string;
   branchName: string;
+}
+
+export interface StaffMember {
+  userId: string;
+  fullName: string;
+  email: string;
+  role: Exclude<AuthRole, "owner">;
+  isActive: boolean;
 }
 
 function resultRows<Row>(result: unknown): Row[] {
@@ -69,11 +77,67 @@ export class AuthRepository {
     const result = await getNeonSql().query(
       "SELECT u.id AS user_id, u.email, u.full_name, u.branch_id, b.name AS branch_name, u.role, u.password_hash " +
         "FROM laundry_users u JOIN laundry_branches b ON b.id = u.branch_id " +
-        "WHERE lower(u.email) = lower($1) LIMIT 1",
+        "WHERE lower(u.email) = lower($1) AND u.is_active = true LIMIT 1",
       [email],
     );
     const row = resultRows<Parameters<typeof toCredentials>[0]>(result)[0];
     return row ? toCredentials(row) : null;
+  }
+
+  async emailExists(email: string): Promise<boolean> {
+    const result = await getNeonSql().query(
+      "SELECT 1 FROM laundry_users WHERE lower(email) = lower($1) LIMIT 1",
+      [email],
+    );
+    return resultRows(result).length > 0;
+  }
+
+  async findActiveUser(userId: string): Promise<AuthUser | null> {
+    const result = await getNeonSql().query(
+      "SELECT u.id AS user_id, u.email, u.full_name, u.branch_id, b.name AS branch_name, u.role " +
+      "FROM laundry_users u JOIN laundry_branches b ON b.id = u.branch_id " +
+      "WHERE u.id = $1::uuid AND u.is_active = true LIMIT 1",
+      [userId],
+    );
+    const row = resultRows<Omit<Parameters<typeof toCredentials>[0], "password_hash">>(result)[0];
+    return row ? {
+      userId: row.user_id, email: row.email, fullName: row.full_name,
+      branchId: row.branch_id, branchName: row.branch_name, role: row.role,
+    } : null;
+  }
+
+  async listStaff(branchId: string): Promise<StaffMember[]> {
+    const result = await getNeonSql().query(
+      "SELECT id::text AS user_id, full_name, email, role, is_active FROM laundry_users " +
+      "WHERE branch_id = $1 AND role <> 'owner' ORDER BY created_at DESC",
+      [branchId],
+    );
+    return resultRows<{ user_id: string; full_name: string; email: string; role: Exclude<AuthRole, "owner">; is_active: boolean }>(result).map((row) => ({
+      userId: row.user_id, fullName: row.full_name, email: row.email, role: row.role, isActive: row.is_active,
+    }));
+  }
+
+  async createStaff(input: { userId: string; branchId: string; actorId: string; fullName: string; email: string; passwordHash: string; role: Exclude<AuthRole, "owner"> }): Promise<void> {
+    await getNeonSql().query(
+      "WITH created AS (INSERT INTO laundry_users (id, branch_id, full_name, email, password_hash, role) " +
+      "VALUES ($1::uuid, $2, $3, $4, $5, $6) RETURNING id, role), " +
+      "audit AS (INSERT INTO laundry_audit_events (id, branch_id, actor_id, action, entity_type, entity_id, metadata) " +
+      "SELECT $7::uuid, $2, $8, 'staff.created', 'staff', id::text, jsonb_build_object('role', role) FROM created RETURNING id) " +
+      "SELECT id FROM created",
+      [input.userId, input.branchId, input.fullName, input.email, input.passwordHash, input.role, randomUUID(), input.actorId],
+    );
+  }
+
+  async setStaffActive(branchId: string, actorId: string, userId: string, isActive: boolean): Promise<boolean> {
+    const result = await getNeonSql().query(
+      "WITH changed AS (UPDATE laundry_users SET is_active = $4, updated_at = now() " +
+      "WHERE id = $1::uuid AND branch_id = $2 AND role <> 'owner' AND id <> $3::uuid RETURNING id, is_active), " +
+      "audit AS (INSERT INTO laundry_audit_events (id, branch_id, actor_id, action, entity_type, entity_id, metadata) " +
+      "SELECT $5::uuid, $2, $3, CASE WHEN is_active THEN 'staff.activated' ELSE 'staff.deactivated' END, 'staff', id::text, " +
+      "jsonb_build_object('active', is_active) FROM changed RETURNING id) SELECT id FROM changed",
+      [userId, branchId, actorId, isActive, randomUUID()],
+    );
+    return resultRows(result).length > 0;
   }
 
   async createOwnerAccount(input: NewOwnerAccount): Promise<AuthUser> {
@@ -104,8 +168,7 @@ export class AuthRepository {
       }
       await sql.transaction(statements);
     } catch (error) {
-      const existing = await this.findByEmail(input.email).catch(() => null);
-      if (existing) throw new Error("EMAIL_EXISTS");
+      if (await this.emailExists(input.email).catch(() => false)) throw new Error("EMAIL_EXISTS");
       throw error;
     }
 

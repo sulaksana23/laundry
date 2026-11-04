@@ -5,7 +5,7 @@
 import { z } from "zod";
 
 export const BACKUP_KIND = "laundryos-branch-backup";
-export const BACKUP_FORMAT_VERSION = 1;
+export const BACKUP_FORMAT_VERSION = 2;
 
 export const BACKUP_TABLE_KEYS = [
   "customers",
@@ -96,7 +96,9 @@ const rowSchemas: Record<BackupTableKey, z.ZodType> = {
   }),
   orders: z.object({
     ...common, customer_id: uuid, service_id: text.min(1), service_name_snapshot: text,
-    weight_kg: decimal(8, 2, true), amount, paid_amount: amount, status, due_at: date,
+    weight_kg: decimal(8, 2), quantity: decimal(10, 3).optional(),
+    unit: z.enum(["kg", "pcs", "pasang"]).optional(), unit_price_snapshot: amount.optional(),
+    amount, paid_amount: amount, status, due_at: date,
     received_at: date, updated_at: date,
   }),
   orderStatusHistory: z.object({
@@ -131,7 +133,7 @@ export function validateBackup(input: unknown): BackupValidation {
   if (candidate.kind !== BACKUP_KIND) {
     return { ok: false, error: "Berkas ini bukan backup LaundryOS (jenis berkas tidak dikenal)." };
   }
-  if (candidate.formatVersion !== BACKUP_FORMAT_VERSION) {
+  if (candidate.formatVersion !== 1 && candidate.formatVersion !== BACKUP_FORMAT_VERSION) {
     return { ok: false, error: `Versi format backup (${String(candidate.formatVersion)}) tidak didukung aplikasi ini.` };
   }
   const branch = candidate.branch;
@@ -147,8 +149,9 @@ export function validateBackup(input: unknown): BackupValidation {
   if (!tables || typeof tables !== "object") {
     return { ok: false, error: "Isi tabel pada backup tidak ditemukan." };
   }
+  const sourceTables = tables as Record<string, unknown>;
   for (const key of BACKUP_TABLE_KEYS) {
-    const rows = (tables as Record<string, unknown>)[key];
+    const rows = sourceTables[key];
     if (!Array.isArray(rows)) {
       return { ok: false, error: `Tabel ${BACKUP_TABLE_LABELS[key]} tidak ada pada backup.` };
     }
@@ -171,6 +174,15 @@ export function validateBackup(input: unknown): BackupValidation {
     }
   }
   const typedTables = tables as Record<BackupTableKey, BackupRow[]>;
+  for (const row of typedTables.orders) {
+    row.unit = row.unit ?? "kg";
+    row.quantity = row.quantity ?? row.weight_kg;
+    if (row.unit_price_snapshot === undefined) {
+      const quantity = Number(row.quantity);
+      row.unit_price_snapshot = quantity > 0 ? Math.round(Number(row.amount) / quantity) : 0;
+    }
+  }
+  candidate.formatVersion = BACKUP_FORMAT_VERSION;
   for (const key of BACKUP_TABLE_KEYS) {
     const ids = new Set<string>();
     for (const row of typedTables[key]) {

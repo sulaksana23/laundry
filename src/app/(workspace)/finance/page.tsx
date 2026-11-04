@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { ArrowDownLeft, ArrowUpRight, Download, Lock, Plus } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { FormSubmitButton } from "@/components/ui/form-submit-button";
@@ -15,6 +16,7 @@ import { getLicenseStatus } from "@/server/modules/license/license";
 import { INACTIVE_LICENSE } from "@/lib/pro-features";
 import { createExpense, saveCashClosing } from "./actions";
 import { CashClosingCard, type CashClosingView } from "./cash-closing";
+import { hasPermission } from "@/server/modules/auth/permissions";
 
 export const metadata: Metadata = { title: "Keuangan" };
 export const dynamic = "force-dynamic";
@@ -23,7 +25,9 @@ const methodLabel: Record<string, string> = { cash: "Tunai", transfer: "Transfer
 
 export default async function FinancePage() {
   const session = await getAuthSession();
+  if (session && !hasPermission(session.role, "finance:read")) redirect("/");
   const databaseEnabled = Boolean(session) && isOrdersDatabaseEnabled();
+  const canExport = Boolean(session && hasPermission(session.role, "reports:export"));
   const expenses: ExpenseItem[] = databaseEnabled ? await listExpenses(session!.branchId) : demoExpenses.map((item) => ({ ...item }));
   const summary = databaseEnabled ? await getFinanceSummary(session!.branchId) : {
     incomeMonth: mockOrders.reduce((sum, order) => sum + order.paidAmount, 0),
@@ -44,7 +48,7 @@ export default async function FinancePage() {
 
   return (
     <>
-      <PageHeader eyebrow="Arus kas" title="Keuangan" description="Catat pengeluaran dan pantau pembayaran yang masuk serta tagihan tertunda." action={databaseEnabled ? (licenseStatus.active ? <a href="/api/reports/export" className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-surface-raised px-3 text-xs font-semibold hover:bg-surface-hover"><Download size={14} /> Unduh CSV</a> : <Link href="/settings#pro" className="inline-flex h-9 items-center gap-2 rounded-lg border border-amber-300/30 bg-amber-300/5 px-3 text-xs font-semibold text-amber-200 hover:bg-amber-300/10"><Lock size={14} /> Unduh CSV · Pro</Link>) : undefined} />
+      <PageHeader eyebrow="Arus kas" title="Keuangan" description="Catat pengeluaran dan pantau pembayaran yang masuk serta tagihan tertunda." action={canExport && databaseEnabled ? (licenseStatus.active ? <a href="/api/reports/export" className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-surface-raised px-3 text-xs font-semibold hover:bg-surface-hover"><Download size={14} /> Unduh CSV</a> : <Link href="/settings#pro" className="inline-flex h-9 items-center gap-2 rounded-lg border border-amber-300/30 bg-amber-300/5 px-3 text-xs font-semibold text-amber-200 hover:bg-amber-300/10"><Lock size={14} /> Unduh CSV · Pro</Link>) : undefined} />
       <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Card className="p-3.5"><p className="text-[11px] text-muted">Pemasukan bulan ini</p><p className="mt-2 text-xl font-semibold">{formatCurrency(summary.incomeMonth)}</p><p className="mt-1 text-[10px] text-muted">Dari pembayaran pesanan yang dicatat</p></Card>
         <Card className="p-3.5"><p className="text-[11px] text-muted">Pengeluaran bulan ini</p><p className="mt-2 text-xl font-semibold">{formatCurrency(summary.expenseMonth)}</p><p className="mt-1 text-[10px] text-muted">{expenses.length} catatan terbaru</p></Card>

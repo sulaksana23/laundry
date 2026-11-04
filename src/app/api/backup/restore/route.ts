@@ -6,6 +6,9 @@ import { validateBackup } from "@/lib/backup-format";
 import { getAuthSession } from "@/server/modules/auth/auth.session";
 import { isProActive } from "@/server/modules/license/license";
 import { restoreBranchBackup } from "@/server/modules/backup/backup";
+import { hasPermission } from "@/server/modules/auth/permissions";
+import { randomUUID } from "node:crypto";
+import { getNeonSql } from "@/server/db/neon";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +19,7 @@ const MAX_BODY_LENGTH = 12_000_000;
 export async function POST(request: Request) {
   const session = await getAuthSession();
   if (!session) return NextResponse.json({ error: "Sesi tidak ditemukan." }, { status: 401 });
+  if (!hasPermission(session.role, "backup:manage")) return NextResponse.json({ error: "Akses pemulihan backup tidak diizinkan." }, { status: 403 });
   if (!isOrdersDatabaseEnabled()) return NextResponse.json({ error: "Restore memerlukan mode database." }, { status: 503 });
   if (!(await isProActive(session.branchId))) {
     return NextResponse.json({ error: "Backup & restore adalah fitur LaundryOS Pro. Aktifkan Pro di Pengaturan." }, { status: 403 });
@@ -44,13 +48,23 @@ export async function POST(request: Request) {
   }
 
   let counts;
+  let auditRecorded = true;
   try {
     counts = await restoreBranchBackup(session.branchId, validation.backup);
   } catch {
     return NextResponse.json({ error: "Restore gagal. Periksa kembali berkas backup dan coba lagi." }, { status: 500 });
   }
-  for (const path of ["/", "/orders", "/customers", "/services", "/inventory", "/finance", "/reports", "/settings"]) {
+  try {
+    await getNeonSql().query(
+      "INSERT INTO laundry_audit_events (id, branch_id, actor_id, action, entity_type, entity_id, metadata) " +
+      "VALUES ($1::uuid, $2, $3, 'backup.restored', 'backup', 'branch', jsonb_build_object('rows', $4::int))",
+      [randomUUID(), session.branchId, session.userId, counts.total],
+    );
+  } catch {
+    auditRecorded = false;
+  }
+  for (const path of ["/", "/orders", "/customers", "/services", "/inventory", "/finance", "/reports", "/settings", "/activity"]) {
     revalidatePath(path);
   }
-  return NextResponse.json({ ok: true, counts });
+  return NextResponse.json({ ok: true, counts, auditRecorded });
 }
