@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Search, UserPlus } from "lucide-react";
+import { Download, Search, UserPlus } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { FormSubmitButton } from "@/components/ui/form-submit-button";
@@ -62,11 +62,17 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
       <Card className="overflow-hidden">
         <div className="flex flex-col gap-3 border-b border-border p-4 sm:flex-row sm:items-center sm:justify-between">
           <div><h2 className="text-sm font-semibold">Daftar pelanggan</h2><p className="mt-1 text-[11px] text-muted">{databaseEnabled ? "Data cabang tersimpan di Neon" : "Data contoh"} · {total.toLocaleString("id-ID")} pelanggan{query ? " ditemukan" : ""}</p></div>
-          <form method="get" className="relative flex w-full gap-2 sm:w-auto">
-            <Search size={14} className="absolute left-3 top-3 text-muted" />
-            <Input name="q" defaultValue={query} aria-label="Pencarian pelanggan" placeholder="Cari nama atau nomor" className="pl-9 sm:w-64" />
-            <Button type="submit">Cari</Button>
-          </form>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <form method="get" className="relative flex w-full gap-2 sm:w-auto">
+              <Search size={14} className="absolute left-3 top-3 text-muted" />
+              <Input name="q" defaultValue={query} aria-label="Pencarian pelanggan" placeholder="Cari nama atau nomor" className="pl-9 sm:w-64" />
+              <Button type="submit">Cari</Button>
+            </form>
+            {databaseEnabled && <form method="get" action="/api/customers/export" className="shrink-0">
+              {query && <input type="hidden" name="q" value={query} />}
+              <Button type="submit"><Download size={14} /> Ekspor CSV</Button>
+            </form>}
+          </div>
         </div>
         <div className="overflow-x-auto"><table className="w-full min-w-[680px] text-left text-xs">
           <thead><tr className="bg-surface-raised/50 text-[10px] uppercase tracking-wide text-muted"><th className="px-4 py-3 font-medium">Pelanggan</th><th className="px-3 py-3 font-medium">Nomor telepon</th><th className="px-3 py-3 font-medium">Pesanan</th><th className="px-3 py-3 font-medium">Total transaksi</th><th className="px-4 py-3 font-medium">Terakhir pesan</th></tr></thead>

@@ -16,7 +16,7 @@ Dokumen ini membatasi target produk agar istilah “lengkap” punya cakupan yan
 ## Di dalam repository saat ini
 
 - Login dan registrasi memakai Neon serta cookie sesi bertanda tangan saat `DATABASE_URL` dan `AUTH_SECRET` tersedia. Pengguna membuat akunnya sendiri; seeder tidak membuat akun demo login.
-- Pesanan, pelanggan, layanan, persediaan, pembayaran, pengeluaran, dan laporan membaca/menulis data per cabang pada deployment yang dikonfigurasi.
+- Pesanan, pelanggan, layanan, persediaan, pembayaran, pengeluaran, dan laporan membaca/menulis data per cabang pada deployment yang dikonfigurasi. Daftar pelanggan mendukung ekspor CSV seluruh hasil pencarian; ekspor mengalir bertahap dan nilai berbahaya spreadsheet diamankan.
 - Katalog layanan dapat ditambah, diubah, dan diaktifkan/nonaktifkan. Harga dibaca ulang di server saat pesanan dibuat; nama dan total pesanan lama tersimpan sebagai snapshot.
 - Nota ringkasan dapat dicetak; riwayat pelanggan, pencarian, dan pagination pesanan berjalan di server per cabang. Dashboard dan profil Pengaturan memakai data cabang saat database aktif. Refund, role terperinci, serta tampilan audit history belum tersedia.
 - Alur pesanan saat ini memilih layanan per kilogram. Layanan per pcs/pasang sudah ada di katalog, tetapi belum dapat dipilih pada form pesanan.

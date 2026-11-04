@@ -31,4 +31,17 @@ export class CustomersService {
     const items = await this.repository.list(branchId, query, page, pageSize);
     return { items, total, page, pageSize, metrics };
   }
+
+  async *exportPages(branchId: string, search: string, pageSize = 250): AsyncGenerator<CustomerSummary[]> {
+    if (!branchId) throw new Error("Cabang wajib tersedia.");
+    if (!Number.isSafeInteger(pageSize) || pageSize < 1 || pageSize > 500) throw new Error("Ukuran halaman ekspor tidak valid.");
+    const query = search.trim().slice(0, 100);
+    const total = await this.repository.count(branchId, query);
+    const pages = Math.ceil(total / pageSize);
+    for (let page = 1; page <= pages; page += 1) {
+      const rows = await this.repository.list(branchId, query, page, pageSize);
+      if (rows.length === 0) return;
+      yield rows;
+    }
+  }
 }

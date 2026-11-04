@@ -29,7 +29,8 @@
 - [x] Kabari pelanggan lewat WhatsApp (tautan wa.me) saat pesanan siap diambil.
 - [x] Rate limit percobaan login dan registrasi.
 - [x] Endpoint health check di `/api/health`.
-- [ ] Impor massal dan ekspor lintas halaman.
+- [x] Impor massal pelanggan dan ekspor CSV seluruh hasil pencarian lintas halaman.
+- [ ] Ekspor pesanan lintas halaman.
 - [ ] Notifikasi pelanggan untuk status dan pesanan siap, menggunakan provider yang dipilih.
 - [ ] Rekonsiliasi kas, pembayaran digital, refund, dan laporan terdefinisi.
 - [ ] Backup/restore, observability, aksesibilitas, dan uji end-to-end.
