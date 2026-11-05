@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Ban, CreditCard, Download, History, MessageCircle, Plus, Printer, RotateCcw, Search, X } from "lucide-react";
+import { Ban, CreditCard, Download, History, MessageCircle, Plus, Printer, RotateCcw, Search, Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,7 @@ import { OrderStatusBadge, PaymentStatusBadge } from "@/components/ui/status-bad
 import { Card } from "@/components/ui/card";
 import { createOrderSchema, orderStatusLabels, orderStatuses, type CreateOrderInput, type LaundryOrder, type OrderStatus, type OrderUnit } from "@/features/orders/domain/order";
 import { formatCurrency, formatShortDate } from "@/lib/format";
+import { analyzeOrderCsv, type OrderImportAnalysis, type OrderImportRowError } from "@/lib/order-import";
 
 type OrderServiceOption = { id: string; name: string; unit: OrderUnit; price: number };
 
@@ -34,6 +35,13 @@ const filters = ["Semua", "Diterima", "Dicuci", "Dikeringkan", "Disetrika", "Sia
 const orderPageSize = 25;
 type DueFilter = "" | "today" | "overdue";
 type PaymentFilter = "" | "unpaid" | "paid";
+type OrderImportResult = { totalRows: number; validRows: number; inserted: number; invalidRows: number; duplicateFile: boolean; errors: OrderImportRowError[] };
+
+const orderCsvHeaders = ["nama", "no_hp", "layanan", "jumlah", "target_selesai", "biaya_express", "biaya_antar", "diskon", "catatan_internal"];
+
+function csvCell(value: string) {
+  return `"${value.replaceAll("\"", "\"\"")}"`;
+}
 
 function normalizeStoredOrder(value: unknown): LaundryOrder | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
@@ -62,6 +70,14 @@ export function OrdersView({ initialOrders, initialTotal = initialOrders.length,
   const [ready, setReady] = useState(false);
   const [query, setQuery] = useState(initialQuery);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [importFileName, setImportFileName] = useState("");
+  const [importCsvText, setImportCsvText] = useState("");
+  const [importAnalysis, setImportAnalysis] = useState<OrderImportAnalysis | null>(null);
+  const [importReport, setImportReport] = useState<OrderImportResult | null>(null);
+  const [importError, setImportError] = useState("");
+  const [importBusy, setImportBusy] = useState(false);
+  const importFileRef = useRef<HTMLInputElement>(null);
   const [selectedServiceName, setSelectedServiceName] = useState("");
   const [error, setError] = useState("");
   const [pendingAction, setPendingAction] = useState("");
@@ -397,6 +413,113 @@ export function OrdersView({ initialOrders, initialTotal = initialOrders.length,
     window.setTimeout(() => URL.revokeObjectURL(link.href), 1000);
   }
 
+  function downloadOrderCsvTemplate() {
+    const service = availableServices[0];
+    const due = new Date();
+    due.setDate(due.getDate() + 3);
+    const dueAt = due.toISOString().slice(0, 10);
+    const rows = [orderCsvHeaders.map(csvCell).join(",")];
+    if (service) {
+      rows.push([
+        "Ni Made Ayu Lestari", "081234567890", service.name,
+        service.unit === "kg" ? "2.5" : "2", dueAt, "0", "0", "0", "Pisahkan cucian putih",
+      ].map(csvCell).join(","));
+    }
+    const url = URL.createObjectURL(new Blob(["\uFEFF" + rows.join("\r\n")], { type: "text/csv;charset=utf-8" }));
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "contoh-impor-pesanan.csv";
+    anchor.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  async function handleOrderCsvFile(file: File) {
+    setImportError("");
+    setImportReport(null);
+    if (file.size > 512_000) {
+      setImportFileName("");
+      setImportCsvText("");
+      setImportAnalysis(null);
+      setImportError("Berkas melebihi 512 KB. Bagi menjadi beberapa file kecil lalu impor bergantian.");
+      return;
+    }
+    try {
+      const csvText = await file.text();
+      setImportFileName(file.name);
+      setImportCsvText(csvText);
+      setImportAnalysis(analyzeOrderCsv(csvText, availableServices));
+    } catch {
+      setImportFileName("");
+      setImportCsvText("");
+      setImportAnalysis(null);
+      setImportError("File CSV tidak dapat dibaca. Coba simpan ulang sebagai CSV UTF-8.");
+    }
+  }
+
+  async function importOrdersFromFile() {
+    if (!importAnalysis || importAnalysis.fatalError || importAnalysis.valid.length === 0 || importBusy) return;
+    setImportBusy(true);
+    setImportError("");
+    setImportReport(null);
+    try {
+      if (databaseEnabled) {
+        if (!importCsvText) { setImportError("Pilih kembali file CSV yang akan diimpor."); return; }
+        const response = await fetch("/api/orders/import", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ csv: importCsvText }),
+        });
+        const result = await response.json() as { report?: OrderImportResult; error?: string };
+        if (!response.ok || !result.report) { setImportError(result.error ?? "Impor pesanan gagal diproses."); return; }
+        setImportReport(result.report);
+        if (!result.report.duplicateFile && result.report.inserted > 0) {
+          setCurrentPage(1);
+          setQuery("");
+          setActiveFilter("Semua");
+          setDueFilter("");
+          setPaymentFilter("");
+          setRefreshKey((current) => current + 1);
+          router.refresh();
+        }
+        return;
+      }
+
+      const receivedAt = new Date();
+      const newOrders: LaundryOrder[] = importAnalysis.valid.map((candidate) => ({
+        id: "LND-" + receivedAt.toISOString().slice(0, 10).replaceAll("-", "") + "-" + crypto.randomUUID().replaceAll("-", "").slice(0, 12).toUpperCase(),
+        customerName: candidate.customerName,
+        customerPhone: candidate.customerPhone,
+        serviceName: candidate.serviceName,
+        quantity: candidate.quantity,
+        unit: candidate.unit,
+        amount: candidate.amount,
+        expressFee: candidate.expressFee,
+        deliveryFee: candidate.deliveryFee,
+        discountAmount: candidate.discountAmount,
+        internalNote: candidate.internalNote,
+        paidAmount: 0,
+        paymentStatus: "unpaid",
+        status: "received",
+        receivedAt: receivedAt.toISOString(),
+        dueAt: new Date(candidate.dueAt + "T18:00:00").toISOString(),
+      }));
+      setOrders((current) => [...newOrders, ...current]);
+      setTotalOrders((current) => current + newOrders.length);
+      setImportReport({
+        totalRows: importAnalysis.totalRows,
+        validRows: importAnalysis.valid.length,
+        inserted: newOrders.length,
+        invalidRows: importAnalysis.errors.length,
+        duplicateFile: false,
+        errors: importAnalysis.errors,
+      });
+    } catch {
+      setImportError("Koneksi bermasalah. Pesanan belum dipastikan tersimpan; muat ulang daftar sebelum mencoba lagi.");
+    } finally {
+      setImportBusy(false);
+    }
+  }
+
   return (
     <>
       {customerId && <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-accent/30 bg-accent/5 px-4 py-3 text-xs"><span>Menampilkan riwayat pesanan pelanggan yang dipilih.</span><Link href="/orders" className="font-semibold text-accent hover:underline">Lihat semua pesanan</Link></div>}
@@ -414,6 +537,7 @@ export function OrdersView({ initialOrders, initialTotal = initialOrders.length,
             </Select></>}
           </div>
           {canExport && <Button variant="secondary" onClick={exportOrders} title="Ekspor seluruh pesanan sesuai filter sebagai CSV" aria-label="Ekspor seluruh pesanan sebagai CSV" className="h-9 px-2.5 text-xs"><Download size={14} /> <span className="hidden sm:inline">Ekspor pesanan</span></Button>}
+          {canCreate && <Button variant="secondary" onClick={() => { setImportDialogOpen(true); setImportError(""); setImportReport(null); }} title="Impor pesanan dari CSV" className="h-9 px-2.5 text-xs"><Upload size={14} /> <span>Impor CSV</span></Button>}
           {canCreate && <Button variant="primary" onClick={() => setDialogOpen(true)}><Plus size={14} /> Pesanan baru</Button>}
         </div>
       </div>
@@ -439,6 +563,48 @@ export function OrdersView({ initialOrders, initialTotal = initialOrders.length,
           ) : <span className="text-[10px]">Data demo</span>}
         </div>
       </Card>
+
+      {canCreate && importDialogOpen && <div className="animate-overlay-enter fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-5">
+        <button type="button" aria-label="Tutup impor pesanan" className="absolute inset-0 bg-black/65" onClick={() => { if (!importBusy) setImportDialogOpen(false); }} />
+        <section role="dialog" aria-modal="true" aria-labelledby="order-import-title" className="animate-dialog-enter relative z-10 max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-border bg-surface p-4 shadow-2xl sm:p-5">
+          <header className="mb-4 flex items-start justify-between gap-3">
+            <div><p className="text-[10px] font-semibold uppercase tracking-widest text-accent">Impor data</p><h2 id="order-import-title" className="mt-1 text-lg font-semibold">Impor pesanan dari CSV</h2><p className="mt-1 text-xs leading-5 text-muted">Tinjau baris dan harga sebelum menyimpan. Harga diambil dari katalog aktif cabang.</p></div>
+            <button type="button" onClick={() => { if (!importBusy) setImportDialogOpen(false); }} aria-label="Tutup dialog" className="rounded-md p-1.5 text-muted hover:bg-surface-hover"><X size={16} /></button>
+          </header>
+          <div className="mb-4 rounded-lg border border-border bg-surface-raised/40 p-3 text-[11px] leading-5 text-muted">
+            <p>Kolom wajib: <strong>nama, no_hp, layanan, jumlah, target_selesai</strong> (YYYY-MM-DD).</p>
+            <p>Kolom opsional: biaya_express, biaya_antar, diskon, catatan_internal. Maksimum 100 baris dan 512 KB. Pembayaran dimulai belum lunas.</p>
+            <p>Baris tidak valid dilewati. Di database, file yang sama hanya dapat diimpor sekali per cabang. Impor membuat pesanan baru; data ini tidak mengubah pesanan yang sudah ada.</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <input ref={importFileRef} type="file" accept=".csv,text/csv,text/plain" className="hidden" aria-label="Pilih berkas CSV pesanan" onChange={(event) => { const file = event.target.files?.[0]; if (file) void handleOrderCsvFile(file); event.target.value = ""; }} />
+            <Button type="button" variant="secondary" onClick={() => importFileRef.current?.click()}><Upload size={14} /> Pilih file CSV</Button>
+            <Button type="button" variant="secondary" onClick={downloadOrderCsvTemplate}><Download size={14} /> Unduh contoh format</Button>
+            {importFileName && <span className="max-w-full truncate text-xs text-muted">{importFileName}</span>}
+          </div>
+          {!databaseEnabled && <p className="mt-2 text-[11px] text-muted">Mode demo: pesanan hasil impor tersimpan di browser ini saja.</p>}
+          {importError && <p role="alert" className="mt-3 rounded-lg border border-danger/30 bg-danger/10 px-3 py-2.5 text-xs leading-5 text-danger">{importError}</p>}
+          {importAnalysis?.fatalError && <p role="alert" className="mt-3 rounded-lg border border-danger/30 bg-danger/10 px-3 py-2.5 text-xs leading-5 text-danger">{importAnalysis.fatalError}</p>}
+          {importAnalysis && !importAnalysis.fatalError && <div className="mt-4 rounded-lg border border-border bg-surface-raised/30 p-3">
+            <div className="flex flex-wrap gap-1.5 text-[11px]">
+              <span className="rounded-md bg-surface-hover px-2 py-1">Baris: <strong>{importAnalysis.totalRows}</strong></span>
+              <span className="rounded-md bg-emerald-300/10 px-2 py-1 text-emerald-200">Siap diimpor: <strong>{importAnalysis.valid.length}</strong></span>
+              <span className="rounded-md bg-rose-300/10 px-2 py-1 text-rose-200">Bermasalah: <strong>{importAnalysis.errors.length}</strong></span>
+            </div>
+            {importAnalysis.valid.length > 0 && <div className="mt-3 overflow-x-auto"><table className="w-full min-w-[480px] text-left text-[11px]"><thead><tr className="text-muted"><th className="px-2 py-1.5">Pelanggan</th><th className="px-2 py-1.5">Layanan</th><th className="px-2 py-1.5">Jumlah</th><th className="px-2 py-1.5">Target</th><th className="px-2 py-1.5 text-right">Estimasi tagihan</th></tr></thead><tbody>{importAnalysis.valid.slice(0, 5).map((row) => <tr key={row.row} className="border-t border-border/70"><td className="px-2 py-2">{row.customerName}</td><td className="px-2 py-2">{row.serviceName}</td><td className="px-2 py-2">{row.quantity} {row.unit}</td><td className="px-2 py-2">{row.dueAt}</td><td className="px-2 py-2 text-right">{formatCurrency(row.amount)}</td></tr>)}</tbody></table>{importAnalysis.valid.length > 5 && <p className="mt-2 text-[10px] text-muted">Pratinjau 5 dari {importAnalysis.valid.length} baris valid.</p>}</div>}
+            {importAnalysis.errors.length > 0 && <ul className="mt-3 max-h-32 space-y-1 overflow-y-auto text-[11px] leading-5 text-danger">{importAnalysis.errors.slice(0, 10).map((item) => <li key={item.row}>Baris {item.row}: {item.message}</li>)}{importAnalysis.errors.length > 10 && <li>…dan {importAnalysis.errors.length - 10} baris bermasalah lainnya.</li>}</ul>}
+          </div>}
+          {importReport && <div role="status" className="mt-3 rounded-lg border border-border bg-surface-raised/50 p-3 text-xs">
+            <p className="font-semibold">{importReport.duplicateFile ? "File ini sudah pernah diimpor ke cabang ini." : "Impor selesai."}</p>
+            <p className="mt-1 text-muted">Berhasil dibuat: {importReport.inserted} · Bermasalah: {importReport.invalidRows} · Total baris: {importReport.totalRows}</p>
+            {importReport.errors.length > 0 && <ul className="mt-2 max-h-28 space-y-1 overflow-y-auto text-[11px] leading-5 text-danger">{importReport.errors.slice(0, 10).map((item) => <li key={item.row}>Baris {item.row}: {item.message}</li>)}</ul>}
+          </div>}
+          <footer className="mt-4 flex flex-wrap justify-end gap-2 border-t border-border pt-4">
+            <Button type="button" onClick={() => { if (!importBusy) setImportDialogOpen(false); }}>Tutup</Button>
+            <Button type="button" variant="primary" onClick={() => void importOrdersFromFile()} isLoading={importBusy} loadingText="Mengimpor…" disabled={!importAnalysis || Boolean(importAnalysis.fatalError) || importAnalysis.valid.length === 0}>Impor {importAnalysis?.valid.length ?? 0} pesanan</Button>
+          </footer>
+        </section>
+      </div>}
 
       {paymentOrder && <div className="animate-overlay-enter fixed inset-0 z-[60] flex items-center justify-center p-4">
         <button type="button" aria-label="Tutup dialog" className="absolute inset-0 bg-black/65" onClick={() => { setPaymentOrder(null); setError(""); }} />

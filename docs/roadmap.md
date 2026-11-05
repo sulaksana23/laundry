@@ -93,6 +93,13 @@
 - [x] Backup format versi 5 tetap menerima versi sebelumnya dan mengisi catatan kosong untuk pesanan lama.
 - [x] Migrasi database menambahkan kolom catatan tanpa mengubah baris pesanan yang sudah ada.
 
+## Pembaruan v0.21.0 — 5 November 2026
+
+- [x] Impor maksimal 100 pesanan per CSV dengan pratinjau, validasi nomor pelanggan/tanggal/jumlah/layanan, dan laporan kesalahan per baris.
+- [x] Harga dihitung ulang dari katalog aktif cabang; file yang sama dicegah membuat pesanan ganda melalui sidik berkas per cabang.
+- [x] Setiap pesanan impor mendapat riwayat status dan audit yang sama dengan pesanan baru biasa.
+- [x] Impor memakai database dan migrasi yang sudah terhubung, tanpa provider atau layanan berbayar baru.
+
 ## Pekerjaan yang masih perlu keputusan atau verifikasi
 
 - Tetapkan kebijakan operasional final untuk pembulatan berat, express, diskon, pembayaran, refund, pembatalan, dan jam usaha sebelum dipakai sebagai aturan baku.
@@ -100,4 +107,4 @@
 - Lanjutkan uji end-to-end untuk alur pesanan, pembayaran, pemulihan backup, dan pembatasan cabang; audit kode saja tidak membuktikan aplikasi bebas bug.
 - Pantau pemakaian kuota Neon/Vercel dan optimasi query berdasarkan volume nyata sebelum menambah cache, observability eksternal, atau job terjadwal.
 
-Pembaruan ini tidak menambah layanan berbayar, penyimpanan file eksternal, atau job Cron. Namun, rate limit dan pencatatan CSV menggunakan kuota database yang sudah terhubung. HPP tetap estimasi bahan dan tidak mengikutsertakan biaya selain pemakaian persediaan.
+Pembaruan ini tidak menambah layanan berbayar, penyimpanan file eksternal, atau job Cron. Impor CSV menggunakan kuota database yang sudah terhubung, dibatasi 100 baris per berkas; HPP tetap estimasi bahan dan tidak mengikutsertakan biaya selain pemakaian persediaan.
