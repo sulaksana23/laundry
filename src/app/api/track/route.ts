@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { isValidPhoneNumber } from "@/lib/phone";
-import { getClientIp, isRateLimited, recordAttempt } from "@/server/modules/auth/rate-limit";
+import { consumeRateLimitAttempt, getClientIp } from "@/server/modules/auth/rate-limit";
 import { findTrackedOrder } from "@/server/modules/tracking/track-order";
 
 export const runtime = "nodejs";
@@ -15,11 +15,9 @@ function json(body: unknown, status = 200) {
 
 export async function POST(request: Request) {
   const rateKey = `track:${getClientIp(request)}`;
-  if (isRateLimited(rateKey)) {
+  if (await consumeRateLimitAttempt(rateKey)) {
     return json({ error: "Terlalu banyak percobaan. Silakan coba lagi dalam beberapa menit." }, 429);
   }
-  recordAttempt(rateKey);
-
   let payload: unknown;
   try {
     payload = await request.json();

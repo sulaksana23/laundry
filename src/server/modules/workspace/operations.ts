@@ -302,9 +302,11 @@ export async function listAuditEvents(branchId: string): Promise<AuditEvent[]> {
 export interface DashboardData {
   statusCounts: Record<string, number>;
   dailyIncome: { date: string; amount: number }[];
+  timezone: string;
 }
 
-export async function getDashboardData(branchId: string): Promise<DashboardData> {
+export async function getDashboardData(branchId: string, days = 7): Promise<DashboardData> {
+  if (![7, 30, 90].includes(days)) throw new Error("Periode dashboard tidak valid.");
   const sql = getNeonSql();
   const [statusResult, incomeResult] = await Promise.all([
     sql.query(
@@ -313,28 +315,34 @@ export async function getDashboardData(branchId: string): Promise<DashboardData>
       [branchId],
     ),
     sql.query(
-      "WITH branch_clock AS (" +
-      "SELECT id, timezone, now() AT TIME ZONE timezone AS local_now FROM laundry_branches WHERE id = $1" +
-      "), flows AS (" +
-      "SELECT p.branch_id, p.received_at AS happened_at, p.amount FROM laundry_payments p WHERE p.branch_id = $1 " +
-      "UNION ALL SELECT r.branch_id, r.created_at AS happened_at, -r.amount AS amount FROM laundry_order_refunds r WHERE r.branch_id = $1" +
-      ") SELECT to_char((f.happened_at AT TIME ZONE b.timezone)::date, 'YYYY-MM-DD') AS day, " +
-      "COALESCE(SUM(f.amount), 0)::bigint AS amount FROM flows f CROSS JOIN branch_clock b " +
-      "WHERE (f.happened_at AT TIME ZONE b.timezone)::date > b.local_now::date - 7 " +
-      "AND (f.happened_at AT TIME ZONE b.timezone)::date <= b.local_now::date GROUP BY 1 ORDER BY 1",
-      [branchId],
+      "WITH branch_local AS (SELECT id, timezone, (now() AT TIME ZONE timezone)::date AS local_today FROM laundry_branches WHERE id = $1), " +
+      "branch_clock AS (SELECT branch_local.*, ((local_today - $2::int + 1)::timestamp AT TIME ZONE timezone) AS from_at, " +
+      "((local_today + 1)::timestamp AT TIME ZONE timezone) AS until_at FROM branch_local), " +
+      "calendar AS (SELECT (clock.local_today - $2::int + 1 + series.day_offset)::date AS day, clock.timezone " +
+      "FROM branch_clock clock CROSS JOIN generate_series(0, $2::int - 1) AS series(day_offset)), " +
+      "flows AS (SELECT p.branch_id, p.received_at AS happened_at, p.amount FROM laundry_payments p JOIN branch_clock clock " +
+      "ON p.branch_id = clock.id AND p.received_at >= clock.from_at AND p.received_at < clock.until_at " +
+      "UNION ALL SELECT r.branch_id, r.created_at AS happened_at, -r.amount AS amount FROM laundry_order_refunds r JOIN branch_clock clock " +
+      "ON r.branch_id = clock.id AND r.created_at >= clock.from_at AND r.created_at < clock.until_at), " +
+      "daily AS (SELECT (flows.happened_at AT TIME ZONE clock.timezone)::date AS day, SUM(flows.amount)::bigint AS amount " +
+      "FROM flows CROSS JOIN branch_clock clock WHERE (flows.happened_at AT TIME ZONE clock.timezone)::date BETWEEN clock.local_today - $2::int + 1 AND clock.local_today GROUP BY 1) " +
+      "SELECT to_char(calendar.day, 'YYYY-MM-DD') AS day, COALESCE(daily.amount, 0)::bigint AS amount, calendar.timezone " +
+      "FROM calendar LEFT JOIN daily ON daily.day = calendar.day ORDER BY calendar.day",
+      [branchId, days],
     ),
   ]);
   const statusCounts: Record<string, number> = {};
   for (const row of resultRows<{ status: string; count: number | string }>(statusResult)) {
     statusCounts[row.status] = Number(row.count);
   }
+  const dailyRows = resultRows<{ day: string; amount: number | string; timezone: string }>(incomeResult);
   return {
     statusCounts,
-    dailyIncome: resultRows<{ day: string; amount: number | string }>(incomeResult).map((row) => ({
+    dailyIncome: dailyRows.map((row) => ({
       date: row.day,
       amount: Number(row.amount),
     })),
+    timezone: dailyRows[0]?.timezone ?? "Asia/Makassar",
   };
 }
 
@@ -413,7 +421,7 @@ export async function getReportData(branchId: string, requestedFrom?: string, re
   const bounds = "WITH branch AS (SELECT id, timezone FROM laundry_branches WHERE id = $1), bounds AS (" +
     "SELECT id, timezone, $2::date AS from_date, ($3::date + 1) AS until_date, " +
     "($2::date - ($3::date - $2::date + 1)) AS previous_from, $2::date AS previous_until FROM branch) ";
-  const [summaryResult, weeklyResult, servicesResult, methodsResult] = await Promise.all([
+  const [summaryResult, weeklyResult, servicesResult, methodsResult, materialCostResult] = await Promise.all([
     sql.query(
       bounds + "SELECT " +
       "(SELECT COUNT(*) FROM laundry_orders o CROSS JOIN bounds b WHERE o.branch_id = b.id AND o.status <> 'cancelled' AND o.received_at >= (b.from_date::timestamp AT TIME ZONE b.timezone) AND o.received_at < (b.until_date::timestamp AT TIME ZONE b.timezone)) AS order_count, " +
@@ -451,11 +459,22 @@ export async function getReportData(branchId: string, requestedFrom?: string, re
       ") flows GROUP BY method ORDER BY method",
       [branchId, range.from, range.to],
     ),
+    sql.query(
+      bounds + "SELECT COALESCE(SUM(movement.cost_amount), 0)::bigint AS material_cost, " +
+      "COUNT(DISTINCT movement.order_id) FILTER (WHERE movement.cost_amount IS NULL)::int AS incomplete_orders " +
+      "FROM laundry_inventory_movements movement JOIN laundry_orders order_row " +
+      "ON order_row.id = movement.order_id AND order_row.branch_id = movement.branch_id CROSS JOIN bounds b " +
+      "WHERE movement.branch_id = b.id AND movement.movement_type = 'usage' AND movement.order_id IS NOT NULL " +
+      "AND order_row.received_at >= (b.from_date::timestamp AT TIME ZONE b.timezone) " +
+      "AND order_row.received_at < (b.until_date::timestamp AT TIME ZONE b.timezone)",
+      [branchId, range.from, range.to],
+    ),
   ]);
   const summary = resultRows<Record<string, number | string>>(summaryResult)[0] ?? {};
   const weekly = resultRows<{ period: number | string; orders: number | string; income: number | string }>(weeklyResult);
   const services = resultRows<{ name: string; count: number | string }>(servicesResult);
   const methods = resultRows<{ method: string; count: number | string; amount: number | string }>(methodsResult);
+  const materialCost = resultRows<{ material_cost: number | string; incomplete_orders: number | string }>(materialCostResult)[0] ?? {};
   return {
     from: range.from, to: range.to,
     orders: Number(summary.order_count ?? 0), income: Number(summary.income ?? 0),
@@ -465,6 +484,8 @@ export async function getReportData(branchId: string, requestedFrom?: string, re
     weeks: weekly.map((row) => ({ label: "Periode " + row.period, orders: Number(row.orders), income: Number(row.income) })),
     services: services.map((row) => ({ name: row.name, count: Number(row.count) })),
     paymentMethods: methods.map((row) => ({ method: row.method, count: Number(row.count), amount: Number(row.amount) })),
+    materialCostEstimate: Number(materialCost.material_cost ?? 0),
+    hppIncompleteOrders: Number(materialCost.incomplete_orders ?? 0),
   };
 }
 export interface CashClosingItem {

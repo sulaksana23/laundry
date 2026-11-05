@@ -4,7 +4,7 @@ Sistem operasional laundry berbasis **Next.js App Router**, TypeScript, dan Tail
 
 ![Pratinjau fitur LaundryOS](./public/readme-feature-overview.svg)
 
-> **Status saat ini:** LaundryOS menyimpan transaksi dan data operasional per cabang di Neon. Login/register pemilik, akun staf dengan peran Kasir/Operator, audit aktivitas utama, ledger persediaan, resep pemakaian bahan otomatis, laporan cabang dan konsolidasi pemilik, tutup kasir, serta backup/restore manual tersedia. Backup dapat diunduh dan disimpan sendiri tanpa layanan penyimpanan tambahan. Jalankan migrasi database sebelum aplikasi memakai perubahan terbaru.
+> **Status saat ini:** LaundryOS menyimpan transaksi dan data operasional per cabang di Neon. Fitur mencakup login/register, batas percobaan lintas instance melalui Neon, akses staf per cabang, ledger persediaan dan resep otomatis, estimasi HPP bahan, rekonsiliasi mutasi transfer/QRIS berbasis CSV dan konfirmasi manual, dashboard 7/30/90 hari, laporan lintas cabang, serta backup/restore manual. Tidak ada Blob, Cron, gateway pembayaran, atau WhatsApp API berbayar. Deploy menjalankan migrasi database sebelum build.
 
 ## Cakupan fitur lengkap
 
@@ -26,20 +26,20 @@ Daftar berikut adalah cakupan produk yang dituju. Status implementasi sebenarnya
 
 | Bagian | Tersedia sekarang | Belum tersedia |
 | --- | --- | --- |
-| Dashboard | Ringkasan pendapatan, antrean, pesanan terbaru, stok menipis, tagihan belum lunas, tren mingguan; pemilik melihat ringkasan cabang yang dapat diakses | Filter periode dashboard |
-| Pesanan | Layanan kg/pcs/pasang, biaya express/antar dan diskon, snapshot harga, pagination, pembayaran parsial, pembatalan dan refund beralasan, nota, riwayat, ekspor CSV hasil filter, tautan WhatsApp manual | Notifikasi otomatis melalui provider WhatsApp/SMS/email |
-| Lacak pesanan (publik) | Halaman `/lacak` untuk pelanggan: cek status, tahapan pengerjaan, riwayat status, dan sisa tagihan dengan kode pesanan + nomor HP terdaftar (rate-limited, tanpa login) | Tautan lacak otomatis di struk/WhatsApp |
+| Dashboard | Ringkasan pendapatan, antrean, pesanan terbaru, stok menipis, tagihan belum lunas, tren 7/30/90 hari; pemilik melihat ringkasan cabang yang dapat diakses | Peringatan otomatis melalui provider eksternal |
+| Pesanan | Layanan kg/pcs/pasang, biaya express/antar dan diskon, snapshot harga, pagination, pembayaran parsial, pembatalan dan refund beralasan, nota dengan tautan `/lacak`, riwayat, ekspor CSV hasil filter, tautan WhatsApp manual | Notifikasi otomatis melalui provider WhatsApp/SMS/email |
+| Lacak pesanan (publik) | Halaman `/lacak` untuk pelanggan: cek status, tahapan pengerjaan, riwayat status, dan sisa tagihan dengan kode pesanan + nomor HP terdaftar (rate-limited, tanpa login); nota cetak memberi alamat halaman lacak | Pesan pelacakan otomatis |
 | Pelanggan | Tambah, cari, dan impor massal pelanggan dari CSV (validasi nomor, duplikat dilewati, laporan hasil per baris); ekspor CSV seluruh hasil pencarian; daftar Neon dibagi 25 pelanggan per halaman, ringkasan dihitung dari seluruh cabang, dan setiap pelanggan punya tautan ke riwayat pesanan | Profil lanjutan dan kontrol akses terperinci |
 | Layanan & harga | Katalog per cabang; layanan kg/pcs/pasang; harga tersimpan sebagai snapshot pesanan; riwayat perubahan tercatat di aktivitas | Histori harga khusus dan aturan harga otomatis |
-| Persediaan & keuangan | Ledger stok beralasan; resep pemakaian otomatis saat tahap pesanan yang dipilih; stok kurang menahan perubahan status; pembayaran/pengeluaran; refund dicatat terpisah; ringkasan metode dan tutup kasir | Rekonsiliasi bank/QRIS |
-| Laporan | Rentang tanggal, perbandingan periode sebelumnya, layanan/pelanggan, berat/item, metode pembayaran, ekspor CSV per periode, dan rekap pesanan/pemasukan semua cabang yang dapat diakses pemilik | Rekonsiliasi otomatis |
-| Pengaturan & aktivitas | Profil dan pembuatan cabang, pilihan cabang aktif, akses Pemilik/Kasir/Operator, staf aktif/nonaktif, audit aktivitas utama | Supervisor, izin per tindakan yang dapat dikustomisasi, dan retensi audit lanjutan |
+| Persediaan & keuangan | Ledger stok beralasan; resep pemakaian otomatis saat tahap pesanan yang dipilih; stok kurang menahan perubahan status; estimasi HPP; pembayaran/pengeluaran; refund dicatat terpisah; rekonsiliasi CSV manual dengan kecocokan nominal/metode/tanggal dan konfirmasi petugas | Rekonsiliasi otomatis via API penyedia pembayaran |
+| Laporan | Rentang tanggal, perbandingan periode sebelumnya, layanan/pelanggan, berat/item, metode pembayaran, estimasi HPP bahan, ekspor CSV per periode, dan rekap pesanan/pemasukan semua cabang yang dapat diakses pemilik | Biaya tenaga kerja dan biaya tetap |
+| Pengaturan & aktivitas | Profil dan pembuatan cabang, pilihan cabang aktif, akses Pemilik/Kasir/Operator, staf aktif/nonaktif dan akses staf lintas cabang, audit aktivitas utama | Supervisor, izin per tindakan yang dapat dikustomisasi, dan retensi audit lanjutan |
 | Platform | Login/register, sesi bertanda tangan, pembatasan cabang dan peran di server, migrasi PostgreSQL, validasi request | Provider notifikasi otomatis, public API, dan observability terpusat |
 | Backup & restore | Unduh dan pulihkan data cabang dalam transaksi, termasuk pembayaran, refund, harga tambahan, dan resep bahan (fitur Pro) | Backup dibuat manual lalu disimpan pemilik; tidak memakai penyimpanan berbayar tambahan |
 | Prioritas pesanan | Dashboard menampilkan pesanan yang masih diproses dan targetnya hari ini atau sudah lewat sesuai zona waktu cabang, dengan tautan ke daftar pesanan | Pengingat otomatis |
 | Riwayat pelanggan | Tautan dari daftar pelanggan ke seluruh pesanan pelanggan di cabang aktif, dengan pencarian, filter status, dan pagination | Profil pelanggan lanjutan |
 
-Status rinci dan kriteria penerimaan ada di [docs/modules.md](docs/modules.md) dan [docs/roadmap.md](docs/roadmap.md). Pemakaian stok otomatis hanya berlaku jika pemilik sudah mengatur resep layanan; pesan WhatsApp dibuka sebagai tautan untuk dikirim oleh staf. Nama serta nomor kontak dalam fixture bersifat sintetis/masked.
+Status rinci dan kriteria penerimaan ada di [docs/modules.md](docs/modules.md) dan [docs/roadmap.md](docs/roadmap.md). Pemakaian stok otomatis hanya berlaku jika pemilik sudah mengatur resep layanan; HPP adalah estimasi biaya bahan; rekonsiliasi hanya memberi pencocokan untuk dikonfirmasi petugas dan tidak mengubah ledger pembayaran; pesan WhatsApp dibuka sebagai tautan untuk dikirim oleh staf. Nama serta nomor kontak dalam fixture bersifat sintetis/masked.
 
 ## PRD dan flowchart
 

@@ -4,11 +4,11 @@ import { FormSubmitButton } from "@/components/ui/form-submit-button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import type { StaffMember } from "@/server/modules/auth/auth.repository";
-import { createStaffMember, setStaffMemberActive } from "./staff-actions";
+import { addStaffBranchMember, createStaffMember, removeStaffBranchMember, setStaffMemberActive } from "./staff-actions";
 
-export function StaffManager({ staff }: { staff: StaffMember[] }) {
+export function StaffManager({ staff, branchId, branchName }: { staff: StaffMember[]; branchId: string; branchName: string }) {
   return <Card id="staff" className="p-4 sm:p-5">
-    <div className="mb-4 flex items-center gap-2"><UsersRound size={16} className="text-accent" /><div><h2 className="text-sm font-semibold">Akun staf</h2><p className="mt-1 text-[11px] text-muted">Kasir dapat mengelola transaksi; operator hanya melihat dan memproses pesanan.</p></div></div>
+    <div className="mb-4 flex items-center gap-2"><UsersRound size={16} className="text-accent" /><div><h2 className="text-sm font-semibold">Akun staf</h2><p className="mt-1 text-[11px] text-muted">Kasir dapat mengelola transaksi; operator hanya melihat dan memproses pesanan. Peran sama di semua cabang staf; menonaktifkan akun berlaku di semua cabang.</p></div></div>
     <form action={createStaffMember} className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
       <Input name="fullName" required minLength={2} maxLength={100} placeholder="Nama staf" aria-label="Nama staf" />
       <Input name="email" required type="email" maxLength={254} placeholder="Email login" aria-label="Email staf" />
@@ -16,10 +16,14 @@ export function StaffManager({ staff }: { staff: StaffMember[] }) {
       <Select name="role" defaultValue="cashier" aria-label="Peran staf"><option value="cashier">Kasir</option><option value="operator">Operator</option></Select>
       <FormSubmitButton variant="primary" pendingText="Menyimpan…"><UserPlus size={14} /> Tambah staf</FormSubmitButton>
     </form>
+    <form action={addStaffBranchMember} className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto]">
+      <label className="text-[10px] font-medium text-muted">Tambahkan akun staf aktif dari cabang usaha Anda ke {branchName}<Input name="email" required type="email" maxLength={254} placeholder="email staf di cabang lain" aria-label="Email staf dari cabang lain" className="mt-1" /></label>
+      <FormSubmitButton variant="secondary" className="self-end" pendingText="Menambahkan…">Beri akses cabang</FormSubmitButton>
+    </form>
     <div className="mt-4 divide-y divide-border rounded-lg border border-border">
       {staff.map((member) => <div key={member.userId} className="flex flex-wrap items-center justify-between gap-3 px-3 py-2.5 text-xs">
-        <div className="min-w-0"><p className="truncate font-medium">{member.fullName} <span className="text-muted">· {member.role === "cashier" ? "Kasir" : "Operator"}</span></p><p className="truncate text-[10px] text-muted">{member.email}</p></div>
-        <form action={setStaffMemberActive}><input type="hidden" name="userId" value={member.userId} /><input type="hidden" name="active" value={String(!member.isActive)} /><FormSubmitButton variant="secondary" className="h-8 px-2.5 text-[11px]">{member.isActive ? "Nonaktifkan" : "Aktifkan"}</FormSubmitButton></form>
+        <div className="min-w-0"><p className="truncate font-medium">{member.fullName} <span className="text-muted">· {member.role === "cashier" ? "Kasir" : "Operator"}</span></p><p className="truncate text-[10px] text-muted">{member.email}</p><p className="mt-1 text-[10px] text-muted">Akses: {member.branchNames.join(", ") || "—"}</p></div>
+        <div className="flex gap-1.5"><form action={setStaffMemberActive}><input type="hidden" name="userId" value={member.userId} /><input type="hidden" name="active" value={String(!member.isActive)} /><FormSubmitButton variant="secondary" className="h-8 px-2.5 text-[11px]">{member.isActive ? "Nonaktifkan akun" : "Aktifkan akun"}</FormSubmitButton></form>{member.primaryBranchId !== branchId && <form action={removeStaffBranchMember}><input type="hidden" name="userId" value={member.userId} /><FormSubmitButton variant="secondary" className="h-8 px-2.5 text-[11px]">Cabut akses cabang</FormSubmitButton></form>}</div>
       </div>)}
       {staff.length === 0 && <p className="px-3 py-4 text-center text-[11px] text-muted">Belum ada akun staf.</p>}
     </div>

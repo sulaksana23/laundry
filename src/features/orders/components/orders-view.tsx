@@ -362,7 +362,9 @@ export function OrdersView({ initialOrders, initialTotal = initialOrders.length,
       if (query.trim()) params.set("search", query.trim());
       const status = orderStatuses.find((value) => orderStatusLabels[value] === activeFilter);
       if (status) params.set("status", status);
-      window.location.assign("/api/orders/export?" + params.toString());
+      const downloadLink = document.createElement("a");
+      downloadLink.href = "/api/orders/export?" + params.toString();
+      downloadLink.click();
       return;
     }
     const quote = (value: unknown) => "\"" + String(value ?? "").replaceAll("\"", "\"\"") + "\"";
@@ -488,7 +490,7 @@ export function OrdersView({ initialOrders, initialTotal = initialOrders.length,
                 <div className="flex justify-between gap-3 border-t border-border pt-2 font-semibold"><span>Sisa tagihan</span><span>{formatCurrency(Math.max(0, receiptOrder.amount - receiptOrder.paidAmount))}</span></div>
               </div>
               <p className="border-t border-border pt-3 text-[10px] text-muted">Status: {orderStatusLabels[receiptOrder.status]} · {receiptOrder.paymentStatus === "paid" ? "Lunas" : receiptOrder.paymentStatus === "partial" ? "Dibayar sebagian" : "Belum dibayar"}</p>
-              <p className="text-center text-[10px] text-muted">Simpan nota ini untuk pengambilan cucian.</p>
+              <p className="text-center text-[10px] leading-5 text-muted">Simpan nota ini untuk pengambilan cucian. Lacak di <Link href="/lacak" className="font-semibold text-accent">/lacak</Link> dengan memasukkan kode pesanan dan nomor HP yang terdaftar.</p>
             </div>
           </section>
         </div>

@@ -152,7 +152,7 @@ export class PostgresOrdersRepository implements OrdersRepository {
         "ON recipe.branch_id = target.branch_id AND recipe.service_id = target.service_id AND recipe.consume_at_status = $1 " +
         "JOIN laundry_inventory_items item ON item.id = recipe.item_id AND item.branch_id = target.branch_id" +
       "), locked_items AS MATERIALIZED (" +
-        "SELECT item.id, item.branch_id, item.quantity AS on_hand, recipe.required_quantity " +
+        "SELECT item.id, item.branch_id, item.quantity AS on_hand, item.unit_price, item.cost_basis_confirmed, recipe.required_quantity " +
         "FROM configured_recipe recipe JOIN laundry_inventory_items item ON item.id = recipe.item_id " +
         "ORDER BY item.id FOR UPDATE OF item" +
       "), availability AS (" +
@@ -163,10 +163,11 @@ export class PostgresOrdersRepository implements OrdersRepository {
         "UPDATE laundry_inventory_items item SET quantity = item.quantity - locked.required_quantity, updated_at = $2::timestamptz " +
         "FROM locked_items locked CROSS JOIN availability available " +
         "WHERE item.id = locked.id AND available.can_consume AND available.recipe_count = available.locked_count " +
-        "AND EXISTS (SELECT 1 FROM target_order) RETURNING item.id, item.branch_id, locked.required_quantity" +
+        "AND EXISTS (SELECT 1 FROM target_order) RETURNING item.id, item.branch_id, item.unit_price, item.cost_basis_confirmed, locked.required_quantity" +
       "), inserted_movements AS (" +
-        "INSERT INTO laundry_inventory_movements (id, branch_id, item_id, movement_type, quantity_delta, note, actor_id) " +
+        "INSERT INTO laundry_inventory_movements (id, branch_id, item_id, movement_type, quantity_delta, cost_amount, order_id, note, actor_id) " +
         "SELECT gen_random_uuid(), updated.branch_id, updated.id, 'usage', -updated.required_quantity, " +
+        "CASE WHEN updated.cost_basis_confirmed THEN round(updated.required_quantity * updated.unit_price)::bigint ELSE NULL END, $3, " +
         "'Pemakaian otomatis · pesanan ' || $3 || ' · tahap ' || $1, $7 FROM updated_inventory " +
         "RETURNING item_id, branch_id, quantity_delta" +
       "), inventory_audit AS (" +

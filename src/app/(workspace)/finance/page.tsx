@@ -16,6 +16,8 @@ import { getLicenseStatus } from "@/server/modules/license/license";
 import { INACTIVE_LICENSE } from "@/lib/pro-features";
 import { createExpense, saveCashClosing } from "./actions";
 import { CashClosingCard, type CashClosingView } from "./cash-closing";
+import { ReconciliationPanel } from "./reconciliation-panel";
+import { listReconciliationRows } from "@/server/modules/workspace/reconciliation";
 import { hasPermission } from "@/server/modules/auth/permissions";
 
 export const metadata: Metadata = { title: "Keuangan" };
@@ -23,7 +25,8 @@ export const dynamic = "force-dynamic";
 
 const methodLabel: Record<string, string> = { cash: "Tunai", transfer: "Transfer", qris: "QRIS", other: "Lainnya" };
 
-export default async function FinancePage() {
+export default async function FinancePage({ searchParams }: { searchParams?: Promise<{ reconciliationImported?: string; reconciliationSkipped?: string }> }) {
+  const params = await searchParams;
   const session = await getAuthSession();
   if (session && !hasPermission(session.role, "finance:read")) redirect("/");
   const databaseEnabled = Boolean(session) && isOrdersDatabaseEnabled();
@@ -41,6 +44,7 @@ export default async function FinancePage() {
   }));
   const closingOverview = databaseEnabled ? await getCashClosingOverview(session!.branchId) : null;
   const licenseStatus = databaseEnabled ? await getLicenseStatus(session!.branchId) : INACTIVE_LICENSE;
+  const reconciliationRows = databaseEnabled ? await listReconciliationRows(session!.branchId) : [];
   const toClosingView = (item: { date: string; expectedAmount: number; countedAmount: number; note: string | null }): CashClosingView => ({
     date: item.date, expectedAmount: item.expectedAmount, countedAmount: item.countedAmount, note: item.note,
   });
@@ -49,6 +53,7 @@ export default async function FinancePage() {
   return (
     <>
       <PageHeader eyebrow="Arus kas" title="Keuangan" description="Catat pengeluaran dan pantau pembayaran yang masuk serta tagihan tertunda." action={canExport && databaseEnabled ? (licenseStatus.active ? <a href="/api/reports/export" className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-surface-raised px-3 text-xs font-semibold hover:bg-surface-hover"><Download size={14} /> Unduh CSV</a> : <Link href="/settings#pro" className="inline-flex h-9 items-center gap-2 rounded-lg border border-amber-300/30 bg-amber-300/5 px-3 text-xs font-semibold text-amber-200 hover:bg-amber-300/10"><Lock size={14} /> Unduh CSV · Pro</Link>) : undefined} />
+      {params?.reconciliationImported && /^\d+$/.test(params.reconciliationImported) && <p role="status" className="mb-4 rounded-lg border border-emerald-300/20 bg-emerald-300/5 px-3 py-2 text-xs text-emerald-100">{Number(params.reconciliationImported)} transaksi berhasil diimpor; {/^\d+$/.test(params.reconciliationSkipped ?? "") ? Number(params.reconciliationSkipped) : 0} baris biaya atau metode yang tidak didukung dilewati.</p>}
       <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Card className="p-3.5"><p className="text-[11px] text-muted">Pemasukan bulan ini</p><p className="mt-2 text-xl font-semibold">{formatCurrency(summary.incomeMonth)}</p><p className="mt-1 text-[10px] text-muted">Dari pembayaran pesanan yang dicatat</p></Card>
         <Card className="p-3.5"><p className="text-[11px] text-muted">Pengeluaran bulan ini</p><p className="mt-2 text-xl font-semibold">{formatCurrency(summary.expenseMonth)}</p><p className="mt-1 text-[10px] text-muted">{expenses.length} catatan terbaru</p></Card>
@@ -84,6 +89,7 @@ export default async function FinancePage() {
           <div className="border-t border-border p-4"><div className="mb-3 flex items-center gap-3"><span className="rounded-lg bg-rose-300/10 p-2 text-rose-200"><ArrowUpRight size={15} /></span><div className="flex-1"><p className="text-xs font-medium">Pengeluaran hari ini</p><p className="mt-0.5 text-[10px] text-muted">{summary.expensesTodayCount} catatan</p></div><p className="text-xs font-semibold text-rose-100">−{formatCurrency(summary.expensesToday)}</p></div><div className="flex justify-between border-t border-border pt-3 text-xs"><span className="text-muted">Kas bersih hari ini</span><strong>{formatCurrency(summary.incomeToday - summary.expensesToday)}</strong></div></div>
         </Card>
       </div>
+      {databaseEnabled && <ReconciliationPanel rows={reconciliationRows} canManage={Boolean(session && hasPermission(session.role, "finance:manage"))} />}
     </>
   );
 }

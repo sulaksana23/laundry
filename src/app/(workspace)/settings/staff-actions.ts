@@ -48,3 +48,23 @@ export async function setStaffMemberActive(formData: FormData) {
   if (!updated) throw new Error("Akun staf tidak ditemukan atau tidak dapat diubah.");
   revalidatePath("/settings");
 }
+
+export async function addStaffBranchMember(formData: FormData) {
+  const session = await requireOwner();
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error("Email staf tidak valid.");
+  const added = await new AuthService().addStaffBranchAccess(session.branchId, session.userId, email);
+  if (!added) throw new Error("Staf aktif tidak ditemukan atau sudah memiliki akses ke cabang ini.");
+  revalidatePath("/settings");
+  revalidatePath("/", "layout");
+}
+
+export async function removeStaffBranchMember(formData: FormData) {
+  const session = await requireOwner();
+  const userId = String(formData.get("userId") ?? "");
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId)) throw new Error("ID staf tidak valid.");
+  const removed = await new AuthService().removeStaffBranchAccess(session.branchId, session.userId, userId);
+  if (!removed) throw new Error("Akses cabang tidak dapat dihapus. Cabang utama staf harus tetap aktif.");
+  revalidatePath("/settings");
+  revalidatePath("/", "layout");
+}

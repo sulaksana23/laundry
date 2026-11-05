@@ -9,7 +9,7 @@
 
 ## Tahap 2 — Persistensi awal dan aturan usaha (sedang berjalan)
 
-- [ ] Putuskan aturan berat, harga, express, diskon, pembayaran, refund, pembatalan, dan jam operasi.
+- [ ] Putuskan kebijakan usaha final untuk pembulatan berat, express, diskon, pembayaran, refund, pembatalan, dan jam operasi.
 - [ ] Tetapkan role dan alur beberapa cabang.
 - [x] Buat migrasi PostgreSQL awal dan seed katalog layanan sintetis.
 - [x] Implementasikan repository/API pesanan untuk local development dan Preview.
@@ -27,14 +27,14 @@
 - [x] Panel prioritas pesanan yang masih diproses dan targetnya hari ini atau sudah lewat.
 - [x] Riwayat perubahan status pesanan dapat dilihat dari daftar pesanan.
 - [x] Kabari pelanggan lewat WhatsApp (tautan wa.me) saat pesanan siap diambil.
-- [x] Rate limit percobaan login dan registrasi.
+- [x] Rate limit lintas instance untuk login, pendaftaran, tracking publik, dan verifikasi lisensi memakai Neon; fallback lokal saat DB tidak tersedia.
 - [x] Endpoint health check di `/api/health`.
 - [x] Impor massal pelanggan dan ekspor CSV seluruh hasil pencarian lintas halaman.
 - [x] Ekspor CSV pesanan lintas halaman mengikuti filter aktif.
 - [ ] Notifikasi pelanggan untuk status dan pesanan siap, menggunakan provider yang dipilih.
 - [x] Filter periode laporan, ringkasan metode pembayaran, dan tutup kasir tunai.
 - [x] Pembatalan pesanan dengan alasan dan audit; refund sebagian/penuh melalui ledger serta pengurangan pemasukan bersih.
-- [ ] Rekonsiliasi digital terhadap mutasi eksternal.
+- [x] Impor mutasi transfer/QRIS dari CSV, de-duplikasi file, usulan kecocokan yang tepat, dan konfirmasi/abaikan manual dengan audit.
 - [x] Backup/restore, dengan pemulihan saldo stok sebagai saldo awal.
 - [ ] Observability, aksesibilitas, dan uji end-to-end.
 
@@ -54,5 +54,16 @@
 ## Tahap 4 — Multi-cabang dan optimasi
 
 - [x] Ringkasan pesanan dan pendapatan per cabang pada dashboard pemilik.
-- [ ] Pengelolaan staf lintas cabang dan pemindahan order bila diperlukan.
+- [x] Pemilik dapat memberi atau mencabut akses staf kasir/operator ke cabang tambahan; perubahan tercatat di audit.
+- [ ] Pemindahan pesanan antar cabang bila proses usaha memerlukannya.
 - [ ] Optimasi query, indeks, caching, dan retensi berdasarkan volume nyata.
+
+## Pembaruan 5 November 2026
+
+- [x] Dashboard menyediakan tren 7, 30, atau 90 hari menurut tanggal lokal cabang.
+- [x] Nota cetak memuat tautan halaman pelacakan publik `/lacak`.
+- [x] Biaya pembelian stok memperbarui estimasi biaya rata-rata tertimbang; pemakaian resep menyimpan snapshot biaya dan laporan menampilkan estimasi HPP bahan serta jumlah pesanan yang biayanya belum lengkap.
+- [x] Batas percobaan sensitif memakai penyimpanan Neon bersama agar konsisten antar instance Vercel.
+- [x] Dokumentasi keamanan dan cakupan produk diselaraskan dengan fitur yang tersedia.
+
+Fitur ini tidak menambah layanan berbayar, penyimpanan file eksternal, atau job Cron. HPP tetap estimasi bahan dan tidak mengikutsertakan biaya selain pemakaian persediaan.

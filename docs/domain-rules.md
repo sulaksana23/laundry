@@ -39,6 +39,20 @@ Status pembayaran demo: `unpaid`, `partial`, `paid`. Status pembayaran dan statu
 
 Ketentuan resep, tahap pemakaian, pembulatan, dan pembatalan ini adalah perilaku aplikasi yang harus diperiksa pemilik sebelum dipakai untuk transaksi produksi.
 
+## Estimasi biaya bahan / HPP
+
+- Pemilik memasukkan biaya beli per satuan saat mencatat stok awal atau pembelian. Untuk barang yang sudah memiliki biaya tercatat, pembelian berikutnya memperbarui biaya rata-rata tertimbang.
+- Saat resep memotong stok, ledger menyimpan biaya pemakaian berdasarkan biaya rata-rata ketika pemakaian terjadi dan mengaitkannya dengan pesanan. Jika biaya bahan belum diketahui, jumlah pemakaian tetap dicatat tetapi biaya ledger dibiarkan kosong dan laporan menghitung pesanan tersebut sebagai belum lengkap.
+- Laporan HPP menjumlahkan bahan resep yang tercatat untuk pesanan yang diterima pada periode terpilih. Angka ini merupakan estimasi bahan saja, tidak mencakup upah, listrik, sewa, bahan tanpa resep, atau stok yang belum pernah diberi biaya. Mutasi historis sebelum fitur biaya aktif tidak direkonstruksi.
+- Nilai stok dan HPP bukan laporan akuntansi atau laba bersih. Pemilik perlu memeriksa harga beli, resep, dan stok fisik secara berkala.
+
+## Rekonsiliasi transfer dan QRIS
+
+- CSV menggunakan header `tanggal,nominal,metode,referensi,keterangan`. Tanggal mengikuti zona waktu cabang, nominal adalah bilangan bulat Rupiah tanpa separator, dan metode hanya `transfer` atau `qris`.
+- Baris bernominal nol/negatif dan metode lain dilewati. Berkas dibatasi 1 MB dan 1.000 baris; hash berkas mencegah impor berkas identik berulang pada cabang yang sama.
+- Sistem menampilkan kandidat hanya jika cabang, nominal, metode, dan tanggal lokal sama. Petugas memeriksa referensi lalu mengonfirmasi kecocokan atau mengabaikan baris.
+- Rekonsiliasi tidak membuat atau mengubah pembayaran, tidak mengirim refund, dan tidak terhubung ke API bank/QRIS. Baris yang tidak cocok perlu diperiksa manual.
+
 Angka dan ketentuan ini bukan kebijakan usaha yang dikonfirmasi.
 
 ## Wajib diputuskan sebelum produksi

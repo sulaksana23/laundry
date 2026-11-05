@@ -37,16 +37,17 @@ const queueStatuses: { status: OrderStatus; color: string }[] = [
   { status: "ready", color: "bg-accent" },
 ];
 
-function lastSevenDays() {
-  const days: { key: string; label: string }[] = [];
-  for (let offset = 6; offset >= 0; offset--) {
-    const date = new Date(Date.now() - offset * 24 * 60 * 60 * 1000);
-    days.push({
-      key: new Intl.DateTimeFormat("en-CA", { timeZone: TIME_ZONE }).format(date),
-      label: new Intl.DateTimeFormat("id-ID", { weekday: "short", timeZone: TIME_ZONE }).format(date),
-    });
-  }
-  return days;
+function lastDays(count: number, timezone: string) {
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: timezone }).format(new Date());
+  const end = Date.parse(`${today}T00:00:00.000Z`);
+  return Array.from({ length: count }, (_, index) => {
+    const key = new Date(end - (count - index - 1) * 86400000).toISOString().slice(0, 10);
+    const date = new Date(`${key}T12:00:00.000Z`);
+    const label = count === 7
+      ? new Intl.DateTimeFormat("id-ID", { weekday: "short", timeZone: timezone }).format(date)
+      : new Intl.DateTimeFormat("id-ID", { day: "2-digit", month: "short", timeZone: timezone }).format(date);
+    return { key, label };
+  });
 }
 
 function greeting() {
@@ -57,7 +58,10 @@ function greeting() {
   return "Selamat malam";
 }
 
-export default async function DashboardPage() {
+export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ period?: string | string[] }> }) {
+  const params = await searchParams;
+  const rawPeriod = Array.isArray(params.period) ? params.period[0] : params.period;
+  const periodDays = rawPeriod === "30" || rawPeriod === "90" ? Number(rawPeriod) : 7;
   const session = await getAuthSession();
   const databaseEnabled = Boolean(session) && isOrdersDatabaseEnabled();
   const firstName = session ? session.fullName.split(" ")[0] : "Admin";
@@ -78,13 +82,13 @@ export default async function DashboardPage() {
         action={hasPermission(role, "orders:create") ? <Link href="/orders" className="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-accent px-3.5 text-sm font-semibold text-accent-foreground transition hover:brightness-95"><Plus size={15} /> Buat pesanan</Link> : undefined}
       />
       <Suspense fallback={<DashboardSkeleton />}>
-        <DashboardContent branchId={session?.branchId ?? null} userId={session?.userId ?? null} databaseEnabled={databaseEnabled} branchName={branchName} role={role} />
+        <DashboardContent branchId={session?.branchId ?? null} userId={session?.userId ?? null} databaseEnabled={databaseEnabled} branchName={branchName} role={role} periodDays={periodDays} />
       </Suspense>
     </>
   );
 }
 
-async function DashboardContent({ branchId, userId, databaseEnabled, branchName, role }: { branchId: string | null; userId: string | null; databaseEnabled: boolean; branchName: string; role: "owner" | "cashier" | "operator" }) {
+async function DashboardContent({ branchId, userId, databaseEnabled, branchName, role, periodDays }: { branchId: string | null; userId: string | null; databaseEnabled: boolean; branchName: string; role: "owner" | "cashier" | "operator"; periodDays: number }) {
   const canViewFinance = hasPermission(role, "finance:read");
   const canViewReports = hasPermission(role, "reports:read");
   const canViewInventory = hasPermission(role, "inventory:read");
@@ -92,7 +96,7 @@ async function DashboardContent({ branchId, userId, databaseEnabled, branchName,
     ? await Promise.all([
         getOrderSummary(branchId),
         canViewFinance ? getFinanceSummary(branchId) : Promise.resolve(null),
-        canViewFinance ? getDashboardData(branchId) : Promise.resolve(null),
+        canViewFinance ? getDashboardData(branchId, periodDays) : Promise.resolve(null),
         getOrdersService().list({ branchId, page: 1, pageSize: 5 }),
         canViewInventory ? listInventory(branchId) : Promise.resolve([]),
         canViewReports ? getReportData(branchId) : Promise.resolve(null),
@@ -101,15 +105,16 @@ async function DashboardContent({ branchId, userId, databaseEnabled, branchName,
     : [null, null, null, null, null, null, null];
   const branchOverview = databaseEnabled && role === "owner" && userId ? await getOwnerBranchOverview(userId) : [];
 
-  const days = lastSevenDays();
+  const days = lastDays(periodDays, dashboardData?.timezone ?? TIME_ZONE);
   const demoDailyAmounts = [1900000, 2600000, 2200000, 3350000, 2900000, 3900000, 4550000];
   const incomeByDate = new Map((dashboardData?.dailyIncome ?? []).map((row) => [row.date, row.amount]));
   const dailyIncome = days.map((day, index) => ({
     ...day,
-    amount: databaseEnabled ? (incomeByDate.get(day.key) ?? 0) : demoDailyAmounts[index],
+    amount: databaseEnabled ? (incomeByDate.get(day.key) ?? 0) : demoDailyAmounts[index % demoDailyAmounts.length],
   }));
   const maxDailyIncome = Math.max(...dailyIncome.map((day) => day.amount), 1);
-  const incomeWeek = dailyIncome.reduce((total, day) => total + day.amount, 0);
+  const incomePeriod = dailyIncome.reduce((total, day) => total + day.amount, 0);
+  const chartLabelStep = Math.max(1, Math.ceil(dailyIncome.length / 7));
 
   const recentOrders = recentResult?.items ?? mockOrders.slice(0, 5);
   const statusCounts: Record<string, number> = dashboardData?.statusCounts ?? Object.fromEntries(
@@ -147,14 +152,14 @@ async function DashboardContent({ branchId, userId, databaseEnabled, branchName,
 
       {canViewFinance && <section className="mt-4 grid gap-4 lg:grid-cols-[1.55fr_1fr]">
         <Card className="min-w-0">
-          <CardHeader><div><CardTitle>Ringkasan pendapatan</CardTitle><p className="mt-1 text-[11px] text-muted">Tren 7 hari terakhir · {databaseEnabled ? "data tersimpan" : "data demo"}</p></div><span className="rounded-md bg-surface-raised px-2 py-1.5 text-[10px] text-muted">7 hari</span></CardHeader>
+          <CardHeader><div><CardTitle>Ringkasan pendapatan</CardTitle><p className="mt-1 text-[11px] text-muted">Tren {periodDays} hari terakhir · {databaseEnabled ? "data tersimpan" : "data demo"}</p></div><form method="get" className="flex items-center gap-1.5"><label className="sr-only" htmlFor="dashboard-period">Periode grafik</label><select id="dashboard-period" name="period" defaultValue={String(periodDays)} className="h-8 rounded-md border border-border bg-surface-raised px-2 text-[10px] text-foreground"><option value="7">7 hari</option><option value="30">30 hari</option><option value="90">90 hari</option></select><button type="submit" className="h-8 rounded-md border border-border px-2 text-[10px] font-semibold text-muted hover:border-accent/50 hover:text-accent">Terapkan</button></form></CardHeader>
           <div className="px-4 pb-4 pt-3">
-            <div className="mb-3 flex flex-wrap items-baseline gap-2"><p className="text-xl font-semibold sm:text-2xl">{formatCurrency(incomeWeek)}</p><span className="text-[11px] font-medium text-muted">total 7 hari</span></div>
-            <div className="relative flex h-[150px] items-end gap-1.5 border-b border-border pb-0 sm:h-[175px]">
+            <div className="mb-3 flex flex-wrap items-baseline gap-2"><p className="text-xl font-semibold sm:text-2xl">{formatCurrency(incomePeriod)}</p><span className="text-[11px] font-medium text-muted">total {periodDays} hari</span></div>
+            <div className={`relative flex h-[150px] items-end ${periodDays === 7 ? "gap-1.5" : "gap-px"} border-b border-border pb-0 sm:h-[175px]`}>
               <div className="absolute inset-0 flex flex-col justify-between pb-6 pt-2 text-[9px] text-muted/70"><div className="border-t border-dashed border-border/70" /><div className="border-t border-dashed border-border/70" /><div className="border-t border-dashed border-border/70" /><div className="border-t border-dashed border-border/70" /></div>
-              {dailyIncome.map((day, index) => <div key={day.key} className="relative z-10 flex h-full flex-1 items-end"><div className={`chart-bar w-full rounded-t-sm ${index === dailyIncome.length - 1 ? "bg-accent" : "bg-[#657d49]/70 hover:bg-accent/70"}`} style={{ height: `${Math.max((day.amount / maxDailyIncome) * 100, day.amount ? 4 : 1.5)}%`, animationDelay: `${index * 70}ms` }} title={`${day.label}: ${formatCurrency(day.amount)}`} /></div>)}
+              {dailyIncome.map((day, index) => <div key={day.key} className="relative z-10 flex h-full flex-1 items-end"><div className={`chart-bar w-full rounded-t-sm ${index === dailyIncome.length - 1 ? "bg-accent" : "bg-[#657d49]/70 hover:bg-accent/70"}`} style={{ height: `${Math.max((day.amount / maxDailyIncome) * 100, day.amount ? 4 : 1.5)}%`, animationDelay: `${Math.min(index, 12) * 40}ms` }} title={`${day.key}: ${formatCurrency(day.amount)}`} aria-label={`${day.key}: ${formatCurrency(day.amount)}`} /></div>)}
             </div>
-            <div className="mt-2 flex justify-between pl-1 text-[9px] text-muted">{dailyIncome.map((day) => <span key={day.key}>{day.label}</span>)}</div>
+            <div className="mt-2 flex justify-between pl-1 text-[9px] text-muted">{dailyIncome.map((day, index) => <span key={day.key}>{index % chartLabelStep === 0 || index === dailyIncome.length - 1 ? day.label : ""}</span>)}</div>
           </div>
         </Card>
 

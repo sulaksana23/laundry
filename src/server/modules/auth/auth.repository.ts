@@ -32,6 +32,9 @@ export interface StaffMember {
   email: string;
   role: Exclude<AuthRole, "owner">;
   isActive: boolean;
+  primaryBranchId: string;
+  branchIds: string[];
+  branchNames: string[];
 }
 
 export interface AccessibleBranch {
@@ -117,7 +120,7 @@ export class AuthRepository {
       "FROM laundry_users u JOIN laundry_user_branch_access access ON access.user_id = u.id " +
       "JOIN laundry_branches b ON b.id = access.branch_id " +
       "WHERE u.id = $1::uuid AND access.branch_id = $2 AND u.is_active = true " +
-      "AND (u.role = 'owner' OR u.branch_id = access.branch_id) LIMIT 1",
+      "LIMIT 1",
       [userId, branchId],
     );
     const row = resultRows<Omit<Parameters<typeof toCredentials>[0], "password_hash">>(result)[0];
@@ -132,8 +135,7 @@ export class AuthRepository {
       "SELECT b.id, b.name FROM laundry_users u " +
       "JOIN laundry_user_branch_access access ON access.user_id = u.id " +
       "JOIN laundry_branches b ON b.id = access.branch_id " +
-      "WHERE u.id = $1::uuid AND u.is_active = true " +
-      "AND (u.role = 'owner' OR u.branch_id = access.branch_id) ORDER BY b.name ASC",
+      "WHERE u.id = $1::uuid AND u.is_active = true ORDER BY b.name ASC",
       [userId],
     );
     return resultRows<{ id: string; name: string }>(result);
@@ -141,13 +143,51 @@ export class AuthRepository {
 
   async listStaff(branchId: string): Promise<StaffMember[]> {
     const result = await getNeonSql().query(
-      "SELECT id::text AS user_id, full_name, email, role, is_active FROM laundry_users " +
-      "WHERE branch_id = $1 AND role <> 'owner' ORDER BY created_at DESC",
+      "SELECT u.id::text AS user_id, u.full_name, u.email, u.role, u.is_active, u.branch_id AS primary_branch_id, " +
+      "array_agg(access.branch_id ORDER BY branch.name) AS branch_ids, array_agg(branch.name ORDER BY branch.name) AS branch_names " +
+      "FROM laundry_users u JOIN laundry_user_branch_access access ON access.user_id = u.id " +
+      "JOIN laundry_branches branch ON branch.id = access.branch_id " +
+      "WHERE access.branch_id = $1 AND u.role <> 'owner' GROUP BY u.id ORDER BY u.created_at DESC",
       [branchId],
     );
-    return resultRows<{ user_id: string; full_name: string; email: string; role: Exclude<AuthRole, "owner">; is_active: boolean }>(result).map((row) => ({
+    return resultRows<{ user_id: string; full_name: string; email: string; role: Exclude<AuthRole, "owner">; is_active: boolean; primary_branch_id: string; branch_ids: string[]; branch_names: string[] }>(result).map((row) => ({
       userId: row.user_id, fullName: row.full_name, email: row.email, role: row.role, isActive: row.is_active,
+      primaryBranchId: row.primary_branch_id, branchIds: row.branch_ids, branchNames: row.branch_names,
     }));
+  }
+
+  async addStaffBranchAccess(branchId: string, actorId: string, email: string): Promise<boolean> {
+    const result = await getNeonSql().query(
+      "WITH target AS MATERIALIZED (SELECT staff.id FROM laundry_users actor " +
+      "JOIN laundry_user_branch_access actor_access ON actor_access.user_id = actor.id AND actor_access.branch_id = $1 " +
+      "JOIN laundry_users staff ON lower(staff.email) = lower($3) AND staff.role <> 'owner' AND staff.is_active = true " +
+      "JOIN laundry_user_branch_access staff_home_access ON staff_home_access.user_id = staff.id AND staff_home_access.branch_id = staff.branch_id " +
+      "JOIN laundry_user_branch_access owner_home_access ON owner_home_access.user_id = actor.id AND owner_home_access.branch_id = staff.branch_id " +
+      "WHERE actor.id = $2::uuid AND actor.role = 'owner' AND actor.is_active = true), " +
+      "added AS (INSERT INTO laundry_user_branch_access (user_id, branch_id) SELECT id, $1 FROM target " +
+      "ON CONFLICT DO NOTHING RETURNING user_id), audit AS (INSERT INTO laundry_audit_events " +
+      "(id, branch_id, actor_id, action, entity_type, entity_id, metadata) " +
+      "SELECT $4::uuid, $1, $2, 'staff.branch_access_added', 'staff', user_id::text, " +
+      "jsonb_build_object('branch_id', $1) FROM added RETURNING id) SELECT user_id FROM added",
+      [branchId, actorId, email.trim().toLowerCase(), randomUUID()],
+    );
+    return resultRows(result).length > 0;
+  }
+
+  async removeStaffBranchAccess(branchId: string, actorId: string, userId: string): Promise<boolean> {
+    const result = await getNeonSql().query(
+      "WITH eligible AS MATERIALIZED (SELECT staff.id FROM laundry_users actor " +
+      "JOIN laundry_user_branch_access actor_access ON actor_access.user_id = actor.id AND actor_access.branch_id = $1 " +
+      "JOIN laundry_users staff ON staff.id = $3::uuid AND staff.role <> 'owner' AND staff.branch_id <> $1 " +
+      "WHERE actor.id = $2::uuid AND actor.role = 'owner' AND actor.is_active = true), " +
+      "removed AS (DELETE FROM laundry_user_branch_access access USING eligible " +
+      "WHERE access.user_id = eligible.id AND access.branch_id = $1 RETURNING access.user_id), " +
+      "audit AS (INSERT INTO laundry_audit_events (id, branch_id, actor_id, action, entity_type, entity_id, metadata) " +
+      "SELECT $4::uuid, $1, $2, 'staff.branch_access_removed', 'staff', user_id::text, " +
+      "jsonb_build_object('branch_id', $1) FROM removed RETURNING id) SELECT user_id FROM removed",
+      [branchId, actorId, userId, randomUUID()],
+    );
+    return resultRows(result).length > 0;
   }
 
   async createStaff(input: { userId: string; branchId: string; actorId: string; fullName: string; email: string; passwordHash: string; role: Exclude<AuthRole, "owner"> }): Promise<void> {
@@ -164,8 +204,13 @@ export class AuthRepository {
 
   async setStaffActive(branchId: string, actorId: string, userId: string, isActive: boolean): Promise<boolean> {
     const result = await getNeonSql().query(
-      "WITH changed AS (UPDATE laundry_users SET is_active = $4, updated_at = now() " +
-      "WHERE id = $1::uuid AND branch_id = $2 AND role <> 'owner' AND id <> $3::uuid RETURNING id, is_active), " +
+      "WITH eligible AS MATERIALIZED (SELECT staff.id FROM laundry_users actor " +
+      "JOIN laundry_user_branch_access actor_access ON actor_access.user_id = actor.id AND actor_access.branch_id = $2 " +
+      "JOIN laundry_user_branch_access staff_access ON staff_access.user_id = $1::uuid AND staff_access.branch_id = $2 " +
+      "JOIN laundry_users staff ON staff.id = staff_access.user_id AND staff.role <> 'owner' " +
+      "JOIN laundry_user_branch_access owner_home_access ON owner_home_access.user_id = actor.id AND owner_home_access.branch_id = staff.branch_id " +
+      "WHERE actor.id = $3::uuid AND actor.role = 'owner' AND actor.is_active = true AND staff.id <> actor.id), " +
+      "changed AS (UPDATE laundry_users SET is_active = $4, updated_at = now() WHERE id IN (SELECT id FROM eligible) RETURNING id, is_active), " +
       "audit AS (INSERT INTO laundry_audit_events (id, branch_id, actor_id, action, entity_type, entity_id, metadata) " +
       "SELECT $5::uuid, $2, $3, CASE WHEN is_active THEN 'staff.activated' ELSE 'staff.deactivated' END, 'staff', id::text, " +
       "jsonb_build_object('active', is_active) FROM changed RETURNING id) SELECT id FROM changed",

@@ -44,7 +44,7 @@ Saat ini akun yang didukung adalah Pemilik; pembagian peran staf vs pemilik (RBA
 **Di dalam cakupan (sudah tersedia di v0.5.1):**
 
 - Autentikasi pemilik (email + kata sandi, sesi cookie HttpOnly, rate limit percobaan masuk/daftar).
-- Ringkasan (dashboard) data tersimpan: pendapatan bulan berjalan + perubahan vs bulan lalu, pesanan aktif, siap diambil, belum lunas, grafik pendapatan 7 hari, antrean per status, pesanan terbaru, catatan stok menipis dan pembayaran tertunda.
+- Ringkasan (dashboard) data tersimpan: pendapatan bulan berjalan + perubahan vs bulan lalu, pesanan aktif, siap diambil, belum lunas, grafik pendapatan 7/30/90 hari, antrean per status, pesanan terbaru, catatan stok menipis dan pembayaran tertunda.
 - Manajemen pesanan: buat, cari/filter, pagination server-side, ubah status dengan riwayat tercatat, pembayaran (lunas/sebagian/belum), nota ringkasan cetak, tombol WhatsApp untuk pesanan siap, ekspor halaman aktif.
 - Pelanggan: tambah, cari, dan impor massal dari berkas CSV (dengan validasi dan laporan hasil) per cabang.
 - Layanan & harga: katalog per cabang, tambah/ubah, aktif/nonaktif; harga aktif dipakai saat pesanan dibuat (snapshot harga tersimpan di pesanan).
@@ -57,19 +57,17 @@ Saat ini akun yang didukung adalah Pemilik; pembagian peran staf vs pemilik (RBA
 
 **Di luar cakupan saat ini (roadmap, sebagian menunggu keputusan bisnis pemilik):**
 
-- Refund/pembatalan pesanan (aturan belum diputuskan).
-- Peran terperinci staf vs pemilik (RBAC).
 - Impor massal pesanan dari CSV.
-- Backup dan restore data.
 - Notifikasi WhatsApp otomatis via provider.
-- Multi-cabang dalam satu akun.
+- API pembayaran bank/QRIS otomatis.
+- Biaya tenaga kerja, overhead, dan perhitungan laba bersih akuntansi.
 
 ## 5. Kebutuhan fungsional
 
 | ID | Kebutuhan | Prioritas | Status |
 | --- | --- | --- | --- |
 | FR-01 | Pemilik dapat mendaftar dan masuk dengan email + kata sandi; percobaan dibatasi (rate limit) | Wajib | Tersedia |
-| FR-02 | Ringkasan menampilkan metrik, grafik 7 hari, antrean status, pesanan terbaru, dan catatan operasional dari data tersimpan | Wajib | Tersedia |
+| FR-02 | Ringkasan menampilkan metrik, grafik periode 7/30/90 hari, antrean status, pesanan terbaru, dan catatan operasional dari data tersimpan | Wajib | Tersedia |
 | FR-03 | Staf/pemilik dapat membuat pesanan dengan pelanggan, layanan, berat, dan estimasi selesai; kode pesanan unik tercetak di nota | Wajib | Tersedia |
 | FR-04 | Status pesanan bergerak mengikuti alur Diterima → Dicuci → Dikeringkan → Disetrika → Siap diambil → Selesai; setiap perubahan tercatat di riwayat | Wajib | Tersedia |
 | FR-05 | Pembayaran dapat dicatat penuh atau sebagian; sisa tagihan terhitung otomatis | Wajib | Tersedia |
@@ -89,6 +87,9 @@ Saat ini akun yang didukung adalah Pemilik; pembagian peran staf vs pemilik (RBA
 | FR-19 | Pemilik mengatur resep bahan per layanan dan tahap; perubahan status serta pemakaian stok dicatat atomik dan ditolak jika stok tidak cukup | Wajib | Tersedia |
 | FR-20 | Pemilik melihat gabungan pesanan dan pemasukan bersih dari semua cabang yang dapat diakses untuk rentang tanggal terpilih | Penting | Tersedia |
 | FR-21 | Backup cabang Pro dapat diunduh dan dipulihkan secara manual tanpa penyimpanan tambahan dari aplikasi | Penting | Tersedia |
+| FR-22 | Mutasi transfer/QRIS CSV dapat diimpor, dicegah duplikasi berkas, disarankan kecocokan, lalu dikonfirmasi/diabaikan manual tanpa mengubah ledger pembayaran | Penting | Tersedia |
+| FR-23 | Biaya beli persediaan memperbarui estimasi biaya rata-rata dan penggunaan resep menyimpan snapshot HPP untuk laporan | Penting | Tersedia (estimasi bahan) |
+| FR-24 | Pemilik dapat menambah atau mencabut akses cabang untuk akun staf yang sudah ada | Penting | Tersedia |
 
 ## 6. Kebutuhan non-fungsional
 

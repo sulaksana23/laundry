@@ -67,6 +67,18 @@ export class AuthService {
     return this.repository.listStaff(branchId);
   }
 
+  addStaffBranchAccess(branchId: string, actorId: string, email: string): Promise<boolean> {
+    if (!branchId || !actorId || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) {
+      throw new Error("Email staf tidak valid.");
+    }
+    return this.repository.addStaffBranchAccess(branchId, actorId, email);
+  }
+
+  removeStaffBranchAccess(branchId: string, actorId: string, userId: string): Promise<boolean> {
+    if (!branchId || !actorId || !/^[0-9a-f-]{36}$/i.test(userId)) throw new Error("Akun staf tidak valid.");
+    return this.repository.removeStaffBranchAccess(branchId, actorId, userId);
+  }
+
   setStaffActive(branchId: string, actorId: string, userId: string, isActive: boolean): Promise<boolean> {
     if (!branchId || !actorId || !/^[0-9a-f-]{36}$/i.test(userId)) throw new Error("Akun staf tidak valid.");
     return this.repository.setStaffActive(branchId, actorId, userId, isActive);
