@@ -35,6 +35,8 @@ export interface LaundryOrder {
   expressFee?: number;
   deliveryFee?: number;
   discountAmount?: number;
+  /** Catatan operasional internal; jangan tampilkan pada pelacakan publik atau nota pelanggan. */
+  internalNote?: string;
   paidAmount: number;
   paymentStatus: PaymentStatus;
   status: OrderStatus;
@@ -51,6 +53,7 @@ export const createOrderSchema = z.object({
   expressFee: z.coerce.number().int().min(0).max(100000000).default(0),
   deliveryFee: z.coerce.number().int().min(0).max(100000000).default(0),
   discountAmount: z.coerce.number().int().min(0).max(100000000).default(0),
+  internalNote: z.string().trim().max(500, "Catatan internal maksimal 500 karakter").default(""),
 });
 
 export type CreateOrderInput = z.infer<typeof createOrderSchema>;

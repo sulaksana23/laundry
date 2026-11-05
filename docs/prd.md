@@ -1,12 +1,12 @@
 # PRD — LaundryOS
 
-_Dokumen kebutuhan produk (Product Requirements Document) untuk LaundryOS, sistem operasional laundry berbasis web. Dokumen ini mencatat implementasi aplikasi versi **v0.19.0** per 5 November 2026 dan pekerjaan yang masih terbuka. Flowchart pendamping tersedia sebagai berkas draw.io di [docs/flowcharts/laundryos-flowcharts.drawio](flowcharts/laundryos-flowcharts.drawio) dan dirender sebagai gambar di README._
+_Dokumen kebutuhan produk (Product Requirements Document) untuk LaundryOS, sistem operasional laundry berbasis web. Dokumen ini mencatat implementasi aplikasi versi **v0.20.0** per 5 November 2026 dan pekerjaan yang masih terbuka. Flowchart pendamping tersedia sebagai berkas draw.io di [docs/flowcharts/laundryos-flowcharts.drawio](flowcharts/laundryos-flowcharts.drawio) dan dirender sebagai gambar di README._
 
 | | |
 | --- | --- |
 | Produk | LaundryOS |
-| Versi dokumen | 1.4 (5 November 2026) |
-| Versi aplikasi acuan | v0.19.0 |
+| Versi dokumen | 1.5 (5 November 2026) |
+| Versi aplikasi acuan | v0.20.0 |
 | Pemilik produk | Pemilik usaha laundry (Cabang Bangli) |
 | Status | Live di production (Vercel + Neon PostgreSQL) |
 
@@ -41,11 +41,12 @@ Role yang didukung adalah Pemilik, Kasir, dan Operator. Pemilik memberi akun sta
 
 ## 4. Ruang lingkup
 
-**Di dalam cakupan (tersedia di v0.19.0):**
+**Di dalam cakupan (tersedia di v0.20.0):**
 
 - Autentikasi pemilik dan staf (email + kata sandi, sesi cookie HttpOnly, pembatasan percobaan bersama melalui Neon).
 - Ringkasan (dashboard) data tersimpan: pendapatan bulan berjalan + perubahan vs bulan lalu, pesanan aktif, siap diambil, belum lunas, grafik pendapatan 7/30/90 hari, antrean per status, pesanan terbaru, catatan stok menipis dan pembayaran tertunda.
 - Manajemen pesanan: buat, pencarian, filter status/jatuh tempo/pembayaran, pagination server-side, ubah status dengan riwayat tercatat, pembayaran (lunas/sebagian/belum), nota ringkasan cetak, tombol WhatsApp untuk pesanan siap, dan ekspor CSV sesuai filter aktif.
+- Catatan internal pesanan untuk kondisi cucian/instruksi penanganan, dibatasi 500 karakter dan tidak ditampilkan pada pelacakan publik maupun nota pelanggan.
 - Pelanggan: tambah, cari, dan impor massal dari berkas CSV (dengan validasi dan laporan hasil) per cabang.
 - Layanan & harga: katalog per cabang, tambah/ubah, aktif/nonaktif; harga aktif dipakai saat pesanan dibuat (snapshot harga tersimpan di pesanan).
 - Persediaan: daftar bahan, pembelian dan penyesuaian lewat ledger, resep pemakaian per layanan/tahap, peringatan stok minimum, dan snapshot biaya rata-rata untuk estimasi HPP bahan.
@@ -160,3 +161,4 @@ Impor massal pesanan, API pembayaran bank/QRIS, penghitungan biaya tenaga kerja/
 | v0.17.0 | Pencarian global, filter lanjutan pesanan, ringkasan peringatan operasional, dan filter ekspor yang mengikuti pilihan |
 | v0.18.0 | Pencarian/filter stok, filter stok minimum, dan ekspor CSV dengan pembatasan kolom biaya sesuai izin |
 | v0.19.0 | Filter tanggal, barang, dan jenis mutasi persediaan dengan pagination hemat query |
+| v0.20.0 | Catatan internal pesanan dengan batas panjang, privasi pelanggan, dan kompatibilitas backup lama |

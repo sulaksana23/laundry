@@ -25,7 +25,7 @@ interface TableDef {
 const TABLE_DEFS: TableDef[] = [
   { key: "customers", table: "laundry_customers", columns: ["id", "branch_id", "name", "phone", "created_at", "updated_at"], uuidColumns: ["id"], dateColumns: [] },
   { key: "services", table: "laundry_services", columns: ["id", "branch_id", "name", "unit", "price_per_unit", "is_active", "description", "duration_minutes", "created_at", "updated_at"], uuidColumns: [], dateColumns: [] },
-  { key: "orders", table: "laundry_orders", columns: ["id", "branch_id", "customer_id", "service_id", "service_name_snapshot", "weight_kg", "quantity", "unit", "unit_price_snapshot", "amount", "paid_amount", "status", "due_at", "received_at", "updated_at", "express_fee", "delivery_fee", "discount_amount"], uuidColumns: ["customer_id"], dateColumns: ["due_at"] },
+  { key: "orders", table: "laundry_orders", columns: ["id", "branch_id", "customer_id", "service_id", "service_name_snapshot", "weight_kg", "quantity", "unit", "unit_price_snapshot", "amount", "paid_amount", "status", "due_at", "received_at", "updated_at", "express_fee", "delivery_fee", "discount_amount", "internal_note"], uuidColumns: ["customer_id"], dateColumns: ["due_at"] },
   { key: "orderStatusHistory", table: "laundry_order_status_history", columns: ["id", "branch_id", "order_id", "previous_status", "next_status", "actor_id", "changed_at"], uuidColumns: ["id"], dateColumns: [] },
   { key: "payments", table: "laundry_payments", columns: ["id", "branch_id", "order_id", "amount", "method", "actor_id", "received_at"], uuidColumns: ["id"], dateColumns: [] },
   { key: "refunds", table: "laundry_order_refunds", columns: ["id", "branch_id", "order_id", "amount", "reason", "method", "actor_id", "created_at"], uuidColumns: ["id"], dateColumns: [] },

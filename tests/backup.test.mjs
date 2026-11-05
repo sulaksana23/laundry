@@ -61,6 +61,7 @@ test("menolak nilai kolom yang rusak sebelum restore", () => {
     (b) => { b.branch.timezone = null; },
     (b) => { b.exportedAt = null; },
     (b) => { b.tables.inventoryItems[0].quantity = "1.2345"; },
+    (b) => { b.tables.orders[0].internal_note = "x".repeat(501); },
   ]) {
     const backup = backupFixture();
     mutate(backup);
@@ -96,10 +97,11 @@ test("restore mengirim seluruh operasi dalam satu transaksi dan meneruskan kegag
     assert.equal(calls.length, 1);
     assert.equal(calls[0].headers["Neon-Batch-Isolation-Level"], "Serializable");
     const queries = calls[0].body.queries.map((item) => item.query);
-    assert.equal(queries.length, 17);
-    assert.ok(queries.slice(0, 8).every((query) => query.startsWith("DELETE ")));
-    assert.ok(queries.slice(8, 16).every((query) => query.startsWith("INSERT ")));
-    assert.match(queries[16], /^UPDATE laundry_branches/);
+    assert.equal(queries.length, 19);
+    assert.ok(queries.slice(0, 10).every((query) => query.startsWith("DELETE ")));
+    assert.ok(queries.slice(10, 18).every((query) => query.startsWith("INSERT ")));
+    assert.match(queries[18], /^UPDATE laundry_branches/);
+    assert.match(queries[12], /internal_note/);
 
     neonConfig.fetchFunction = async (_url, options) => {
       calls.push({ body: JSON.parse(options.body), headers: options.headers });
@@ -129,7 +131,7 @@ test("ekspor memakai satu snapshot konsisten untuk profil dan tabel", async () =
     const backup = await buildBranchBackup("main");
     assert.equal(backup.branch.id, "main");
     assert.equal(calls.length, 1);
-    assert.equal(calls[0].body.queries.length, 9);
+    assert.equal(calls[0].body.queries.length, 11);
     assert.equal(calls[0].headers["Neon-Batch-Isolation-Level"], "RepeatableRead");
     assert.equal(calls[0].headers["Neon-Batch-Read-Only"], "true");
     assert.equal(validateBackup(backup).ok, true);
@@ -137,4 +139,23 @@ test("ekspor memakai satu snapshot konsisten untuk profil dan tabel", async () =
     neonConfig.fetchFunction = undefined;
     delete process.env.DATABASE_URL;
   }
+});
+
+test("backup lama memberi catatan kosong dan backup baru mempertahankan catatan internal", () => {
+  const legacy = backupFixture();
+  const legacyResult = validateBackup(legacy);
+  assert.equal(legacyResult.ok, true);
+  if (legacyResult.ok) {
+    assert.equal(legacyResult.backup.formatVersion, 5);
+    assert.equal(legacyResult.backup.tables.orders[0].internal_note, "");
+  }
+
+  const current = backupFixture();
+  current.formatVersion = 5;
+  current.tables.refunds = [];
+  current.tables.serviceInventoryRecipes = [];
+  current.tables.orders[0].internal_note = "Noda di lengan kiri";
+  const currentResult = validateBackup(current);
+  assert.equal(currentResult.ok, true);
+  if (currentResult.ok) assert.equal(currentResult.backup.tables.orders[0].internal_note, "Noda di lengan kiri");
 });

@@ -5,7 +5,7 @@
 import { z } from "zod";
 
 export const BACKUP_KIND = "laundryos-branch-backup";
-export const BACKUP_FORMAT_VERSION = 4;
+export const BACKUP_FORMAT_VERSION = 5;
 
 export const BACKUP_TABLE_KEYS = [
   "customers",
@@ -102,7 +102,7 @@ const rowSchemas: Record<BackupTableKey, z.ZodType> = {
     ...common, customer_id: uuid, service_id: text.min(1), service_name_snapshot: text,
     weight_kg: decimal(8, 2), quantity: decimal(10, 3).optional(),
     unit: z.enum(["kg", "pcs", "pasang"]).optional(), unit_price_snapshot: amount.optional(),
-    amount, paid_amount: amount, status, due_at: date,
+    amount, paid_amount: amount, status, due_at: date, internal_note: text.max(500).optional(),
     express_fee: amount.optional(), delivery_fee: amount.optional(), discount_amount: amount.optional(),
     received_at: date, updated_at: date,
   }),
@@ -146,7 +146,7 @@ export function validateBackup(input: unknown): BackupValidation {
   if (candidate.kind !== BACKUP_KIND) {
     return { ok: false, error: "Berkas ini bukan backup LaundryOS (jenis berkas tidak dikenal)." };
   }
-  if (candidate.formatVersion !== 1 && candidate.formatVersion !== 2 && candidate.formatVersion !== 3 && candidate.formatVersion !== BACKUP_FORMAT_VERSION) {
+  if (candidate.formatVersion !== 1 && candidate.formatVersion !== 2 && candidate.formatVersion !== 3 && candidate.formatVersion !== 4 && candidate.formatVersion !== BACKUP_FORMAT_VERSION) {
     return { ok: false, error: `Versi format backup (${String(candidate.formatVersion)}) tidak didukung aplikasi ini.` };
   }
   const branch = candidate.branch;
@@ -190,6 +190,7 @@ export function validateBackup(input: unknown): BackupValidation {
   }
   const typedTables = tables as Record<BackupTableKey, BackupRow[]>;
   for (const row of typedTables.orders) {
+    row.internal_note = row.internal_note ?? "";
     row.unit = row.unit ?? "kg";
     row.quantity = row.quantity ?? row.weight_kg;
     if (row.unit_price_snapshot === undefined) {

@@ -23,6 +23,12 @@ Status pembayaran demo: `unpaid`, `partial`, `paid`. Status pembayaran dan statu
 - Biaya express, biaya antar, dan diskon dapat dicatat manual per pesanan. Total = jumlah × harga snapshot + biaya express + biaya antar − diskon. Server menolak diskon yang melebihi subtotal dan biaya tambahan.
 - Biaya express/antar tidak dihitung otomatis dari jarak atau estimasi waktu; pajak dan aturan pembulatan berat juga belum diterapkan.
 
+## Catatan internal pesanan
+
+- Form penerimaan dapat menyimpan catatan opsional untuk kondisi cucian atau instruksi penanganan. Spasi tepi dihapus dan panjangnya dibatasi 500 karakter.
+- Catatan hanya tersedia pada data pesanan untuk pengguna workspace dan backup cabang. Catatan tidak masuk ke pelacakan publik, nota pelanggan, pesan WhatsApp, atau ekspor CSV pesanan.
+- Catatan menjadi informasi kerja staf; aplikasi tidak menafsirkan isi catatan sebagai keputusan biaya, klaim, atau jaminan penanganan.
+
 ## Pembatalan dan refund
 
 - Pemilik dapat membatalkan pesanan yang belum selesai dengan alasan wajib. Pesanan selesai tidak dapat dibatalkan; pembayaran baru juga ditolak setelah pembatalan.

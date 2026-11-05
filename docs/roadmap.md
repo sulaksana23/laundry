@@ -86,6 +86,13 @@
 - [x] Riwayat mutasi persediaan dapat difilter menurut barang, jenis, dan rentang tanggal di zona waktu cabang.
 - [x] Riwayat memakai pagination 50 baris dengan tombol sebelumnya/berikutnya dan tanpa query hitung total.
 
+## Pembaruan v0.20.0 — 5 November 2026
+
+- [x] Form pesanan menerima catatan operasional internal untuk kondisi cucian dan instruksi penanganan, maksimal 500 karakter.
+- [x] Catatan internal dibatasi pada layar staf dan backup cabang; tidak disertakan pada halaman pelacakan publik, nota pelanggan, atau CSV pesanan.
+- [x] Backup format versi 5 tetap menerima versi sebelumnya dan mengisi catatan kosong untuk pesanan lama.
+- [x] Migrasi database menambahkan kolom catatan tanpa mengubah baris pesanan yang sudah ada.
+
 ## Pekerjaan yang masih perlu keputusan atau verifikasi
 
 - Tetapkan kebijakan operasional final untuk pembulatan berat, express, diskon, pembayaran, refund, pembatalan, dan jam usaha sebelum dipakai sebagai aturan baku.
