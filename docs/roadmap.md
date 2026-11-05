@@ -7,10 +7,10 @@
 - [x] UI demo pesanan: pencarian, filter, buat, validasi, transisi status, dan localStorage.
 - [x] Dokumentasi arsitektur, domain, API, database, keamanan, dan UI.
 
-## Tahap 2 — Persistensi awal dan aturan usaha (sedang berjalan)
+## Tahap 2 — Persistensi dan aturan usaha (fitur inti selesai)
 
 - [ ] Putuskan kebijakan usaha final untuk pembulatan berat, express, diskon, pembayaran, refund, pembatalan, dan jam operasi.
-- [ ] Tetapkan role dan alur beberapa cabang.
+- [x] Implementasikan role Pemilik/Kasir/Operator dan akses beberapa cabang.
 - [x] Buat migrasi PostgreSQL awal dan seed katalog layanan sintetis.
 - [x] Implementasikan repository/API pesanan untuk local development dan Preview.
 - [x] Implementasikan operasi pelanggan, layanan, pembayaran, persediaan, pengeluaran, dan laporan pada Neon.
@@ -62,8 +62,16 @@
 
 - [x] Dashboard menyediakan tren 7, 30, atau 90 hari menurut tanggal lokal cabang.
 - [x] Nota cetak memuat tautan halaman pelacakan publik `/lacak`.
-- [x] Biaya pembelian stok memperbarui estimasi biaya rata-rata tertimbang; pemakaian resep menyimpan snapshot biaya dan laporan menampilkan estimasi HPP bahan serta jumlah pesanan yang biayanya belum lengkap.
-- [x] Batas percobaan sensitif memakai penyimpanan Neon bersama agar konsisten antar instance Vercel.
-- [x] Dokumentasi keamanan dan cakupan produk diselaraskan dengan fitur yang tersedia.
+- [x] Impor mutasi transfer/QRIS menyediakan usulan pencocokan manual tanpa mengubah ledger pembayaran.
+- [x] Staf dapat diberi atau dicabut akses cabang tambahan oleh pemilik.
+- [x] Katalog stok mencatat biaya rata-rata tertimbang dan laporan menampilkan estimasi HPP bahan dengan jumlah biaya yang belum lengkap.
+- [x] Login, pendaftaran, tracking publik, dan verifikasi lisensi memakai rate limit Neon bersama, dengan fallback lokal saat Neon tidak tersedia.
 
-Fitur ini tidak menambah layanan berbayar, penyimpanan file eksternal, atau job Cron. HPP tetap estimasi bahan dan tidak mengikutsertakan biaya selain pemakaian persediaan.
+## Pekerjaan yang masih perlu keputusan atau verifikasi
+
+- Tetapkan kebijakan operasional final untuk pembulatan berat, express, diskon, pembayaran, refund, pembatalan, dan jam usaha sebelum dipakai sebagai aturan baku.
+- Pilih provider notifikasi hanya jika usaha siap menanggung biaya dan mengelola persetujuan pelanggan.
+- Lanjutkan uji end-to-end untuk alur pesanan, pembayaran, pemulihan backup, dan pembatasan cabang; audit kode saja tidak membuktikan aplikasi bebas bug.
+- Pantau pemakaian kuota Neon/Vercel dan optimasi query berdasarkan volume nyata sebelum menambah cache, observability eksternal, atau job terjadwal.
+
+Pembaruan ini tidak menambah layanan berbayar, penyimpanan file eksternal, atau job Cron. Namun, rate limit dan pencatatan CSV menggunakan kuota database yang sudah terhubung. HPP tetap estimasi bahan dan tidak mengikutsertakan biaya selain pemakaian persediaan.

@@ -1,12 +1,12 @@
 # PRD — LaundryOS
 
-_Dokumen kebutuhan produk (Product Requirements Document) untuk LaundryOS, sistem operasional laundry berbasis web. Dokumen ini menggambarkan produk sebagaimana berjalan pada versi **v0.5.1** dan arah pengembangan berikutnya. Flowchart pendamping tersedia sebagai berkas draw.io di [docs/flowcharts/laundryos-flowcharts.drawio](flowcharts/laundryos-flowcharts.drawio) dan dirender sebagai gambar di README._
+_Dokumen kebutuhan produk (Product Requirements Document) untuk LaundryOS, sistem operasional laundry berbasis web. Dokumen ini mencatat implementasi aplikasi versi **v0.16.0** per 5 November 2026 dan pekerjaan yang masih terbuka. Flowchart pendamping tersedia sebagai berkas draw.io di [docs/flowcharts/laundryos-flowcharts.drawio](flowcharts/laundryos-flowcharts.drawio) dan dirender sebagai gambar di README._
 
 | | |
 | --- | --- |
 | Produk | LaundryOS |
-| Versi dokumen | 1.0 (3 November 2026) |
-| Versi aplikasi acuan | v0.5.1 |
+| Versi dokumen | 1.1 (5 November 2026) |
+| Versi aplikasi acuan | v0.16.0 |
 | Pemilik produk | Pemilik usaha laundry (Cabang Bangli) |
 | Status | Live di production (Vercel + Neon PostgreSQL) |
 
@@ -33,27 +33,27 @@ LaundryOS menyelesaikan ketiganya dalam satu aplikasi web yang responsif penuh d
 
 | Persona | Deskripsi | Kebutuhan utama |
 | --- | --- | --- |
-| **Pemilik** | Mengelola satu cabang, sering memantau dari HP | Ringkasan bisnis, keuangan, laporan, pengaturan profil usaha |
-| **Staf/kasir** | Menerima dan memproses pesanan di outlet | Membuat pesanan cepat, mengubah status, mencatat pembayaran |
+| **Pemilik** | Mengelola satu atau beberapa cabang, sering memantau dari HP | Ringkasan bisnis, keuangan, laporan, pengaturan profil usaha, staf, dan cabang |
+| **Kasir/operator** | Bekerja pada cabang yang diberikan pemilik | Menjalankan tugas pesanan sesuai peran dan akses cabang |
 | **Pelanggan** | Menyerahkan cucian ke outlet | Mengecek status cucian tanpa login, tahu sisa tagihan dan kapan bisa diambil |
 
-Saat ini akun yang didukung adalah Pemilik; pembagian peran staf vs pemilik (RBAC) ada di roadmap dan menunggu keputusan aturan dari pemilik usaha.
+Role yang didukung adalah Pemilik, Kasir, dan Operator. Pemilik memberi akun staf akses ke cabang; izin tetap diperiksa di server dan beberapa tindakan keuangan sensitif hanya tersedia bagi pemilik.
 
 ## 4. Ruang lingkup
 
-**Di dalam cakupan (sudah tersedia di v0.5.1):**
+**Di dalam cakupan (tersedia di v0.16.0):**
 
-- Autentikasi pemilik (email + kata sandi, sesi cookie HttpOnly, rate limit percobaan masuk/daftar).
+- Autentikasi pemilik dan staf (email + kata sandi, sesi cookie HttpOnly, pembatasan percobaan bersama melalui Neon).
 - Ringkasan (dashboard) data tersimpan: pendapatan bulan berjalan + perubahan vs bulan lalu, pesanan aktif, siap diambil, belum lunas, grafik pendapatan 7/30/90 hari, antrean per status, pesanan terbaru, catatan stok menipis dan pembayaran tertunda.
-- Manajemen pesanan: buat, cari/filter, pagination server-side, ubah status dengan riwayat tercatat, pembayaran (lunas/sebagian/belum), nota ringkasan cetak, tombol WhatsApp untuk pesanan siap, ekspor halaman aktif.
+- Manajemen pesanan: buat, cari/filter, pagination server-side, ubah status dengan riwayat tercatat, pembayaran (lunas/sebagian/belum), nota ringkasan cetak, tombol WhatsApp untuk pesanan siap, dan ekspor CSV sesuai filter aktif.
 - Pelanggan: tambah, cari, dan impor massal dari berkas CSV (dengan validasi dan laporan hasil) per cabang.
 - Layanan & harga: katalog per cabang, tambah/ubah, aktif/nonaktif; harga aktif dipakai saat pesanan dibuat (snapshot harga tersimpan di pesanan).
-- Persediaan: daftar bahan, resep pemakaian per layanan/tahap, penyesuaian stok, ledger, dan peringatan stok minimum.
-- Keuangan: pemasukan dari pembayaran, pengeluaran operasional, ringkasan kas dan tagihan belum lunas; tutup kasir harian membandingkan kas tunai sistem dengan uang fisik dan mencatat selisihnya.
-- Laporan: agregasi transaksi, rekap pemilik lintas cabang, dan ekspor CSV.
-- Pengaturan: profil usaha (nama, telepon, email, alamat, zona waktu) tersimpan ke database; informasi versi sistem tampil di sidebar, footer, dan Pengaturan → Sistem.
+- Persediaan: daftar bahan, pembelian dan penyesuaian lewat ledger, resep pemakaian per layanan/tahap, peringatan stok minimum, dan snapshot biaya rata-rata untuk estimasi HPP bahan.
+- Keuangan: pemasukan dari pembayaran, pengeluaran operasional, ringkasan kas dan tagihan belum lunas; tutup kasir harian; rekonsiliasi CSV transfer/QRIS yang menunggu pemeriksaan dan konfirmasi manual.
+- Laporan: agregasi transaksi, rekap pemilik lintas cabang, rentang tanggal, estimasi HPP bahan, dan ekspor CSV.
+- Pengaturan: profil usaha, cabang, akun staf, akses lintas cabang, backup/restore manual Pro, dan informasi versi sistem.
 - Lacak pesanan publik (`/lacak`): pelanggan mengecek status dengan kode pesanan + nomor HP terdaftar, tanpa login.
-- Mode demo tanpa database untuk evaluasi tampilan.
+- Mode demo tanpa database untuk evaluasi tampilan; demo tidak menyimpan perubahan transaksi ke Neon.
 
 **Di luar cakupan saat ini (roadmap, sebagian menunggu keputusan bisnis pemilik):**
 
@@ -66,9 +66,9 @@ Saat ini akun yang didukung adalah Pemilik; pembagian peran staf vs pemilik (RBA
 
 | ID | Kebutuhan | Prioritas | Status |
 | --- | --- | --- | --- |
-| FR-01 | Pemilik dapat mendaftar dan masuk dengan email + kata sandi; percobaan dibatasi (rate limit) | Wajib | Tersedia |
+| FR-01 | Pemilik dapat mendaftar dan staf dapat masuk dengan email + kata sandi; percobaan dibatasi lintas instance | Wajib | Tersedia |
 | FR-02 | Ringkasan menampilkan metrik, grafik periode 7/30/90 hari, antrean status, pesanan terbaru, dan catatan operasional dari data tersimpan | Wajib | Tersedia |
-| FR-03 | Staf/pemilik dapat membuat pesanan dengan pelanggan, layanan, berat, dan estimasi selesai; kode pesanan unik tercetak di nota | Wajib | Tersedia |
+| FR-03 | Pemilik/kasir dapat membuat pesanan dengan pelanggan, layanan, jumlah, dan estimasi selesai; kode pesanan unik tercetak di nota | Wajib | Tersedia |
 | FR-04 | Status pesanan bergerak mengikuti alur Diterima → Dicuci → Dikeringkan → Disetrika → Siap diambil → Selesai; setiap perubahan tercatat di riwayat | Wajib | Tersedia |
 | FR-05 | Pembayaran dapat dicatat penuh atau sebagian; sisa tagihan terhitung otomatis | Wajib | Tersedia |
 | FR-06 | Pesanan siap diambil dapat dikabari ke pelanggan via WhatsApp dalam satu ketuk | Wajib | Tersedia |
@@ -90,12 +90,13 @@ Saat ini akun yang didukung adalah Pemilik; pembagian peran staf vs pemilik (RBA
 | FR-22 | Mutasi transfer/QRIS CSV dapat diimpor, dicegah duplikasi berkas, disarankan kecocokan, lalu dikonfirmasi/diabaikan manual tanpa mengubah ledger pembayaran | Penting | Tersedia |
 | FR-23 | Biaya beli persediaan memperbarui estimasi biaya rata-rata dan penggunaan resep menyimpan snapshot HPP untuk laporan | Penting | Tersedia (estimasi bahan) |
 | FR-24 | Pemilik dapat menambah atau mencabut akses cabang untuk akun staf yang sudah ada | Penting | Tersedia |
+| FR-25 | Percobaan masuk, daftar, pelacakan publik, dan verifikasi lisensi dibatasi lintas instance Vercel | Penting | Tersedia; fallback lokal saat Neon bermasalah |
 
 ## 6. Kebutuhan non-fungsional
 
 | Aspek | Kebutuhan |
 | --- | --- |
-| Responsif | Semua halaman berfungsi penuh pada lebar 320px–desktop tanpa geser horizontal; daftar kompleks berubah menjadi kartu di layar kecil; teks data produksi yang panjang tidak terpotong |
+| Responsif | Alur utama dapat digunakan pada ponsel hingga desktop; tabel lebar menggulir di dalam kontainernya dan tidak memaksa seluruh halaman melebar |
 | Keamanan | Kata sandi ter-hash; sesi cookie HttpOnly + Secure di production; validasi server untuk semua input; data terisolasi per cabang pada setiap query; pelacakan publik mewajibkan nomor HP yang cocok dan dibatasi percobaannya (rate limit), respons tidak menyimpan cache |
 | Kinerja | Ringkasan memakai streaming (skeleton tampil lebih dulu); halaman publik ringan |
 | Keandalan | Migrasi database berjalan otomatis saat build; endpoint `/api/health` melaporkan status dan versi |
@@ -116,12 +117,14 @@ Tiga alur digambarkan pada flowchart draw.io pendamping:
 
 ## 9. Asumsi dan keputusan terbuka
 
-Hal berikut **belum diputuskan** dan harus dikonfirmasi pemilik usaha sebelum dibangun (sesuai aturan domain di [docs/domain-rules.md](domain-rules.md)):
+Hal berikut **sudah memiliki perilaku aplikasi**, tetapi tetap memerlukan persetujuan pemilik sebelum dijadikan kebijakan usaha baku (sesuai aturan domain di [docs/domain-rules.md](domain-rules.md)):
 
 1. Aturan refund dan pembatalan pesanan (kapan boleh, siapa menyetujui, bagaimana kas disesuaikan).
-2. Pembagian hak akses staf vs pemilik.
+2. Aturan pembulatan, express/diskon, minimum order, pembayaran, dan kapan pesanan dianggap selesai.
 3. Kebijakan tutup kasir (siapa menutup, apakah selisih perlu persetujuan).
-4. Provider notifikasi WhatsApp otomatis dan anggarannya.
+4. Provider notifikasi otomatis, persetujuan pelanggan, dan anggarannya. Saat ini WhatsApp hanya dibuka sebagai tautan yang dikirim staf.
+
+Impor massal pesanan, API pembayaran bank/QRIS, penghitungan biaya tenaga kerja/overhead, serta observability terpusat belum tersedia. Tambahkan hanya setelah kebutuhan dan dampak kuota/biayanya jelas.
 
 ## 10. Riwayat versi aplikasi
 
@@ -145,4 +148,6 @@ Hal berikut **belum diputuskan** dan harus dikonfirmasi pemilik usaha sebelum di
 | v0.9.1 | Validasi isi backup, snapshot konsisten, dan restore data cabang dalam satu transaksi database |
 | v0.10.0 | Panel prioritas pesanan berdasarkan tanggal target dan zona waktu cabang; tautan langsung ke pencarian pesanan |
 | v0.11.0 | Riwayat pesanan per pelanggan dengan pencarian, filter status, pagination, dan pembatasan cabang |
-| v0.16.0 | Resep pemakaian stok otomatis, laporan pemilik lintas cabang, backup privat harian, dan kompatibilitas backup lama |
+| v0.14.0 | Penyelesaian modul operasional, layanan kg/pcs/pasang, akses berbasis peran, audit, dan laporan |
+| v0.15.0 | Akses lintas cabang untuk staf, ringkasan pemilik, pembatalan/refund, dan ekspor pesanan |
+| v0.16.0 | Resep dan HPP bahan, backup/restore manual, tren dashboard, rate limit Neon bersama, dan rekonsiliasi CSV transfer/QRIS |
