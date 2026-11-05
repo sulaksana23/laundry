@@ -1,15 +1,18 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { AlertTriangle, Plus } from "lucide-react";
+import Link from "next/link";
+import { AlertTriangle, Filter, Plus } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { FormSubmitButton } from "@/components/ui/form-submit-button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { inventoryItems as demoInventory } from "@/features/orders/data/mock-orders";
 import { formatCurrency, formatShortDate } from "@/lib/format";
+import { isUuid } from "@/lib/uuid";
 import { isOrdersDatabaseEnabled } from "@/server/db/mode";
 import { getAuthSession } from "@/server/modules/auth/auth.session";
-import { listInventory, listInventoryMovements, listServiceInventoryRecipes, type InventoryItem } from "@/server/modules/workspace/operations";
+import { inventoryMovementTypes, listInventory, listInventoryMovements, listServiceInventoryRecipes, type InventoryItem, type InventoryMovementType } from "@/server/modules/workspace/operations";
 import { getServicesService } from "@/server/modules/services/services.runtime";
 import { createInventoryItem, deleteServiceInventoryRecipe, saveServiceInventoryRecipe } from "./actions";
 import { hasPermission } from "@/server/modules/auth/permissions";
@@ -20,22 +23,63 @@ export const dynamic = "force-dynamic";
 
 const movementLabels: Record<string, string> = { opening: "Saldo awal", purchase: "Pembelian", adjustment: "Penyesuaian", usage: "Pemakaian" };
 const recipeStatusLabels: Record<string, string> = { washing: "Dicuci", drying: "Dikeringkan", ironing: "Disetrika", ready: "Siap diambil", completed: "Selesai" };
+const movementTypeLabels: Record<InventoryMovementType, string> = { opening: "Saldo awal", purchase: "Pembelian", usage: "Pemakaian", adjustment: "Penyesuaian" };
 
-export default async function InventoryPage() {
+function firstParam(value: string | string[] | undefined) {
+  return typeof value === "string" ? value : "";
+}
+
+function isDateOnly(value: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const date = new Date(value + "T00:00:00.000Z");
+  return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
+
+export default async function InventoryPage({ searchParams }: { searchParams: Promise<{ movementPage?: string | string[]; movementItem?: string | string[]; movementType?: string | string[]; movementFrom?: string | string[]; movementTo?: string | string[] }> }) {
+  const params = await searchParams;
   const session = await getAuthSession();
   if (session && !hasPermission(session.role, "inventory:read")) redirect("/");
   const canManageInventory = session ? hasPermission(session.role, "inventory:manage") : false;
   const canViewInventoryCost = session ? hasPermission(session.role, "finance:read") : true;
   const databaseEnabled = Boolean(session) && isOrdersDatabaseEnabled();
+  const movementPageValue = firstParam(params.movementPage);
+  const movementPageNumber = /^[1-9]\d{0,4}$/.test(movementPageValue) ? Number(movementPageValue) : 1;
+  const movementPage = movementPageNumber <= 10000 ? movementPageNumber : 1;
+  const rawItemId = firstParam(params.movementItem);
+  const movementItem = isUuid(rawItemId) ? rawItemId : undefined;
+  const rawType = firstParam(params.movementType);
+  const movementType = inventoryMovementTypes.find((type) => type === rawType);
+  const rawFrom = firstParam(params.movementFrom);
+  const rawTo = firstParam(params.movementTo);
+  const movementFrom = isDateOnly(rawFrom) ? rawFrom : undefined;
+  const movementTo = isDateOnly(rawTo) ? rawTo : undefined;
+  const invalidMovementDates = Boolean((rawFrom && !movementFrom) || (rawTo && !movementTo) || (movementFrom && movementTo && movementFrom > movementTo));
   const items: InventoryItem[] = databaseEnabled
     ? await listInventory(session!.branchId)
     : demoInventory.map((item) => ({ ...item }));
-  const movements = databaseEnabled ? await listInventoryMovements(session!.branchId) : [];
+  const movements = databaseEnabled
+    ? await listInventoryMovements(session!.branchId, {
+        page: movementPage,
+        itemId: movementItem,
+        type: movementType,
+        from: invalidMovementDates ? undefined : movementFrom,
+        to: invalidMovementDates ? undefined : movementTo,
+      })
+    : { items: [], page: 1, hasNextPage: false };
   const services = databaseEnabled && canManageInventory ? await getServicesService().list(session!.branchId) : [];
   const recipes = databaseEnabled && canManageInventory ? await listServiceInventoryRecipes(session!.branchId) : [];
   const lowStockCount = items.filter((item) => item.stock <= item.minStock).length;
   const valuation = items.reduce((total, item) => total + item.stock * item.price, 0);
   const itemsForTable = canViewInventoryCost ? items : items.map((item) => ({ ...item, price: 0 }));
+  const movementPageHref = (page: number) => {
+    const query = new URLSearchParams();
+    if (movementItem) query.set("movementItem", movementItem);
+    if (movementType) query.set("movementType", movementType);
+    if (movementFrom) query.set("movementFrom", movementFrom);
+    if (movementTo) query.set("movementTo", movementTo);
+    query.set("movementPage", String(page));
+    return "/inventory?" + query.toString() + "#riwayat-pergerakan";
+  };
 
   return (
     <>
@@ -74,9 +118,25 @@ export default async function InventoryPage() {
       </Card>}
       {lowStockCount > 0 && <div className="mb-4 flex items-start gap-3 rounded-xl border border-amber-200/15 bg-amber-200/5 p-3.5"><AlertTriangle size={16} className="mt-0.5 shrink-0 text-amber-200" /><div><p className="text-xs font-semibold text-amber-100">Ada {lowStockCount} barang yang mencapai batas minimum</p><p className="mt-1 text-[11px] text-muted">Periksa jumlah stok sebelum menerima pesanan dalam jumlah besar.</p></div></div>}
       <InventoryTable items={itemsForTable} canManageInventory={canManageInventory} canViewCost={canViewInventoryCost} canExport={databaseEnabled} />
-      {databaseEnabled && <Card className="mt-4 overflow-hidden">
-        <div className="border-b border-border p-4"><h2 className="text-sm font-semibold">Riwayat pergerakan stok</h2><p className="mt-1 text-[11px] text-muted">50 perubahan terbaru · cabang aktif. Biaya pemakaian adalah estimasi saat biaya stok sudah tercatat.</p></div>
-        {movements.length === 0 ? <p className="p-8 text-center text-xs text-muted">Belum ada pergerakan stok tercatat.</p> : <div className="overflow-x-auto"><table className="w-full min-w-[760px] text-left text-xs"><thead><tr className="bg-surface-raised/50 text-[10px] uppercase tracking-wide text-muted"><th className="px-4 py-3 font-medium">Waktu</th><th className="px-3 py-3 font-medium">Barang</th><th className="px-3 py-3 font-medium">Jenis</th><th className="px-3 py-3 font-medium">Perubahan</th><th className="px-3 py-3 font-medium">Alasan</th><th className="px-4 py-3 font-medium">Pengguna</th></tr></thead><tbody>{movements.map((movement) => <tr key={movement.id} className="border-t border-border/70"><td className="px-4 py-3 text-muted">{formatShortDate(movement.createdAt)} · {new Date(movement.createdAt).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", timeZone: movement.timezone })} {movement.timezone}</td><td className="px-3 py-3 font-medium">{movement.itemName}</td><td className="px-3 py-3 text-muted">{movementLabels[movement.type] ?? movement.type}</td><td className={movement.delta > 0 ? "px-3 py-3 font-semibold text-emerald-200" : "px-3 py-3 font-semibold text-rose-200"}>{movement.delta > 0 ? "+" : ""}{movement.delta} {movement.unit}</td><td className="max-w-64 truncate px-3 py-3 text-muted" title={movement.note}>{movement.note}</td><td className="px-4 py-3 text-muted">{movement.actorName}</td></tr>)}</tbody></table></div>}
+      {databaseEnabled && <Card id="riwayat-pergerakan" className="mt-4 scroll-mt-20 overflow-hidden">
+        <div className="border-b border-border p-4"><h2 className="text-sm font-semibold">Riwayat pergerakan stok</h2><p className="mt-1 text-[11px] text-muted">50 mutasi per halaman · cabang aktif · tanggal mengikuti zona waktu cabang.</p></div>
+        <form method="get" action="/inventory#riwayat-pergerakan" className="grid gap-2 border-b border-border p-4 sm:grid-cols-2 xl:grid-cols-[1.3fr_1fr_1fr_1fr_auto_auto] xl:items-end">
+          <label className="text-[11px] font-medium text-muted">Barang<Select name="movementItem" defaultValue={movementItem ?? ""} aria-label="Filter mutasi berdasarkan barang" className="mt-1 h-8 px-2 text-xs"><option value="">Semua barang</option>{items.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</Select></label>
+          <label className="text-[11px] font-medium text-muted">Jenis mutasi<Select name="movementType" defaultValue={movementType ?? ""} aria-label="Filter jenis mutasi" className="mt-1 h-8 px-2 text-xs"><option value="">Semua jenis</option>{inventoryMovementTypes.map((type) => <option key={type} value={type}>{movementTypeLabels[type]}</option>)}</Select></label>
+          <label className="text-[11px] font-medium text-muted">Dari tanggal<Input name="movementFrom" type="date" defaultValue={movementFrom ?? ""} aria-label="Tanggal awal mutasi" className="mt-1 h-8 px-2 text-xs" /></label>
+          <label className="text-[11px] font-medium text-muted">Sampai tanggal<Input name="movementTo" type="date" defaultValue={movementTo ?? ""} aria-label="Tanggal akhir mutasi" className="mt-1 h-8 px-2 text-xs" /></label>
+          <FormSubmitButton variant="primary" pendingText="Memuat…" className="h-8 px-2.5 text-xs"><Filter size={13} /> Terapkan</FormSubmitButton>
+          <Link href="/inventory#riwayat-pergerakan" className="inline-flex h-8 items-center justify-center rounded-lg border border-border px-2.5 text-xs font-semibold text-muted transition hover:bg-surface-hover hover:text-foreground">Reset</Link>
+        </form>
+        {invalidMovementDates && <p role="alert" className="border-b border-border px-4 py-2 text-xs text-danger">Rentang tanggal tidak valid. Periksa tanggal awal dan akhir.</p>}
+        {movements.items.length === 0 ? <p className="p-8 text-center text-xs text-muted">{movementItem || movementType || movementFrom || movementTo ? "Tidak ada mutasi yang cocok dengan filter ini." : "Belum ada pergerakan stok tercatat."}</p> : <div className="overflow-x-auto"><table className="w-full min-w-[760px] text-left text-xs"><thead><tr className="bg-surface-raised/50 text-[10px] uppercase tracking-wide text-muted"><th className="px-4 py-3 font-medium">Waktu</th><th className="px-3 py-3 font-medium">Barang</th><th className="px-3 py-3 font-medium">Jenis</th><th className="px-3 py-3 font-medium">Perubahan</th><th className="px-3 py-3 font-medium">Alasan</th><th className="px-4 py-3 font-medium">Pengguna</th></tr></thead><tbody>{movements.items.map((movement) => <tr key={movement.id} className="border-t border-border/70"><td className="px-4 py-3 text-muted">{formatShortDate(movement.createdAt)} · {new Date(movement.createdAt).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", timeZone: movement.timezone })} {movement.timezone}</td><td className="px-3 py-3 font-medium">{movement.itemName}</td><td className="px-3 py-3 text-muted">{movementLabels[movement.type] ?? movement.type}</td><td className={movement.delta > 0 ? "px-3 py-3 font-semibold text-emerald-200" : "px-3 py-3 font-semibold text-rose-200"}>{movement.delta > 0 ? "+" : ""}{movement.delta} {movement.unit}</td><td className="max-w-64 truncate px-3 py-3 text-muted" title={movement.note}>{movement.note}</td><td className="px-4 py-3 text-muted">{movement.actorName}</td></tr>)}</tbody></table></div>}
+        {(movements.page > 1 || movements.hasNextPage) && <nav aria-label="Halaman riwayat persediaan" className="flex items-center justify-between border-t border-border px-4 py-3 text-xs">
+          <span className="text-muted">Halaman {movements.page}</span>
+          <div className="flex gap-2">
+            {movements.page > 1 ? <Link href={movementPageHref(movements.page - 1)} className="rounded-lg border border-border px-3 py-1.5 font-medium hover:bg-surface-hover">Sebelumnya</Link> : <span className="rounded-lg border border-border px-3 py-1.5 text-muted opacity-50">Sebelumnya</span>}
+            {movements.hasNextPage ? <Link href={movementPageHref(movements.page + 1)} className="rounded-lg border border-border px-3 py-1.5 font-medium hover:bg-surface-hover">Berikutnya</Link> : <span className="rounded-lg border border-border px-3 py-1.5 text-muted opacity-50">Berikutnya</span>}
+          </div>
+        </nav>}
       </Card>}
     </>
   );

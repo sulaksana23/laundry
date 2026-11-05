@@ -104,7 +104,47 @@ export interface InventoryMovement {
   createdAt: string;
 }
 
-export async function listInventoryMovements(branchId: string): Promise<InventoryMovement[]> {
+export const inventoryMovementTypes = ["opening", "purchase", "usage", "adjustment"] as const;
+export type InventoryMovementType = (typeof inventoryMovementTypes)[number];
+
+export interface InventoryMovementQuery {
+  page: number;
+  itemId?: string;
+  type?: InventoryMovementType;
+  from?: string;
+  to?: string;
+}
+
+export interface InventoryMovementPage {
+  items: InventoryMovement[];
+  page: number;
+  hasNextPage: boolean;
+}
+
+const inventoryMovementPageSize = 50;
+
+export async function listInventoryMovements(branchId: string, query: InventoryMovementQuery): Promise<InventoryMovementPage> {
+  const page = Number.isSafeInteger(query.page) && query.page > 0 ? Math.min(query.page, 10000) : 1;
+  const conditions = ["movement.branch_id = $1"];
+  const parameters: Array<string | number> = [branchId];
+  if (query.itemId) {
+    parameters.push(query.itemId);
+    conditions.push("item.id = $" + parameters.length + "::uuid");
+  }
+  if (query.type) {
+    parameters.push(query.type);
+    conditions.push("movement.movement_type = $" + parameters.length);
+  }
+  if (query.from) {
+    parameters.push(query.from);
+    conditions.push("movement.created_at >= ($" + parameters.length + "::date::timestamp AT TIME ZONE branch.timezone)");
+  }
+  if (query.to) {
+    parameters.push(query.to);
+    conditions.push("movement.created_at < (($" + parameters.length + "::date + 1)::timestamp AT TIME ZONE branch.timezone)");
+  }
+  const limitIndex = parameters.push(inventoryMovementPageSize + 1);
+  const offsetIndex = parameters.push((page - 1) * inventoryMovementPageSize);
   const rows = resultRows<{
     id: string; item_name: string; unit: string; movement_type: string;
     quantity_delta: number | string; note: string; actor_name: string; timezone: string; created_at: string | Date;
@@ -114,14 +154,19 @@ export async function listInventoryMovements(branchId: string): Promise<Inventor
     "FROM laundry_inventory_movements movement JOIN laundry_branches branch ON branch.id = movement.branch_id " +
     "JOIN laundry_inventory_items item ON item.id = movement.item_id AND item.branch_id = movement.branch_id " +
     "LEFT JOIN laundry_users users ON users.id::text = movement.actor_id AND users.branch_id = movement.branch_id " +
-    "WHERE movement.branch_id = $1 ORDER BY movement.created_at DESC, movement.id DESC LIMIT 50",
-    [branchId],
+    "WHERE " + conditions.join(" AND ") + " ORDER BY movement.created_at DESC, movement.id DESC LIMIT $" + limitIndex + " OFFSET $" + offsetIndex,
+    parameters,
   ));
-  return rows.map((row) => ({
-    id: row.id, itemName: row.item_name, unit: row.unit, type: row.movement_type,
-    delta: Number(row.quantity_delta), note: row.note, actorName: row.actor_name, timezone: row.timezone,
-    createdAt: new Date(String(row.created_at)).toISOString(),
-  }));
+  const hasNextPage = rows.length > inventoryMovementPageSize;
+  return {
+    items: rows.slice(0, inventoryMovementPageSize).map((row) => ({
+      id: row.id, itemName: row.item_name, unit: row.unit, type: row.movement_type,
+      delta: Number(row.quantity_delta), note: row.note, actorName: row.actor_name, timezone: row.timezone,
+      createdAt: new Date(String(row.created_at)).toISOString(),
+    })),
+    page,
+    hasNextPage,
+  };
 }
 
 export type InventoryRecipeStatus = "washing" | "drying" | "ironing" | "ready" | "completed";
