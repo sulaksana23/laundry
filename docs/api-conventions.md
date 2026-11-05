@@ -11,6 +11,7 @@ API operasional menggunakan Next.js Route Handler pada `/api`. Endpoint belum me
 | `POST` | `/api/auth/logout` | Menghapus sesi | Sesi |
 | `GET` | `/api/auth/session` | Membaca pengguna pada sesi | Sesi |
 | `POST` | `/api/auth/branch` | Mengganti cabang aktif | Sesi dan keanggotaan cabang |
+| `GET` | `/api/search?q=...` | Cari hingga 5 pesanan dan 5 pelanggan pada cabang aktif | Sesi dan izin baca; minimal 2 karakter |
 | `GET`, `POST` | `/api/orders` | Daftar terfilter/paginated dan membuat pesanan | Sesi serta izin pesanan |
 | `GET` | `/api/orders/export` | Ekspor pesanan dengan filter aktif | Sesi dan izin ekspor |
 | `PATCH` | `/api/orders/{id}/status` | Memajukan status pesanan | Sesi dan izin status |
@@ -28,6 +29,8 @@ API operasional menggunakan Next.js Route Handler pada `/api`. Endpoint belum me
 | `POST` | `/api/license/verify` | Memverifikasi kode LaundryOS Pro | Publik, rate-limited |
 | `GET` | `/api/backup/export` | Mengunduh backup cabang | Pemilik, fitur Pro |
 | `POST` | `/api/backup/restore` | Memulihkan backup cabang | Pemilik, fitur Pro |
+
+`GET /api/orders` menerima filter `search`, `status`, `customerId`, `due` (`today`/`overdue`), dan `payment` (`unpaid`/`paid`). Filter tanggal memakai zona waktu cabang. Filter pembayaran mensyaratkan izin `finance:read`. Ekspor pesanan mengikuti filter yang sama.
 
 Daftar direktori pelanggan dan halaman workspace memuat data melalui Server Component, bukan endpoint `GET /api/customers`. Mutasi keuangan, resep, staf, cabang, dan rekonsiliasi juga menggunakan Server Actions yang memvalidasi sesi dan izin.
 

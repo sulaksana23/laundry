@@ -4,7 +4,7 @@ Sistem operasional laundry berbasis **Next.js App Router**, TypeScript, dan Tail
 
 ![Pratinjau fitur LaundryOS](./public/readme-feature-overview.svg)
 
-> **Status saat ini:** LaundryOS menyimpan transaksi dan data operasional per cabang di Neon. Fitur mencakup login/register, batas percobaan lintas instance melalui Neon, akses staf per cabang, ledger persediaan dan resep otomatis, estimasi HPP bahan, rekonsiliasi mutasi transfer/QRIS berbasis CSV dan konfirmasi manual, dashboard 7/30/90 hari, laporan lintas cabang, serta backup/restore manual. Tidak ada Blob, Cron, gateway pembayaran, atau WhatsApp API berbayar. Deploy menjalankan migrasi database sebelum build.
+> **Status saat ini:** LaundryOS menyimpan transaksi dan data operasional per cabang di Neon. Fitur mencakup login/register, batas percobaan lintas instance melalui Neon, akses staf per cabang, pencarian global, filter pesanan lanjutan, peringatan operasional di dashboard, ledger persediaan dan resep otomatis, estimasi HPP bahan, rekonsiliasi mutasi transfer/QRIS berbasis CSV dan konfirmasi manual, dashboard 7/30/90 hari, laporan lintas cabang, serta backup/restore manual. Tidak ada Blob, Cron, gateway pembayaran, atau WhatsApp API berbayar. Deploy menjalankan migrasi database sebelum build.
 
 ## Cakupan fitur lengkap
 
@@ -26,15 +26,15 @@ Daftar berikut adalah cakupan produk yang dituju. Status implementasi sebenarnya
 
 | Bagian | Tersedia sekarang | Belum tersedia |
 | --- | --- | --- |
-| Dashboard | Ringkasan pendapatan, antrean, pesanan terbaru, stok menipis, tagihan belum lunas, tren 7/30/90 hari; pemilik melihat ringkasan cabang yang dapat diakses | Peringatan otomatis melalui provider eksternal |
-| Pesanan | Layanan kg/pcs/pasang, biaya express/antar dan diskon, snapshot harga, pagination, pembayaran parsial, pembatalan dan refund beralasan, nota dengan tautan `/lacak`, riwayat, ekspor CSV hasil filter, tautan WhatsApp manual | Notifikasi otomatis melalui provider WhatsApp/SMS/email |
+| Dashboard | Ringkasan pendapatan, antrean, pesanan terbaru, stok menipis, tagihan belum lunas, tren 7/30/90 hari, dan kartu peringatan operasional; pemilik melihat ringkasan cabang yang dapat diakses | Notifikasi otomatis melalui provider eksternal |
+| Pesanan | Layanan kg/pcs/pasang, biaya express/antar dan diskon, snapshot harga, pencarian global dan filter status/jatuh tempo/pembayaran, pagination, pembayaran parsial, pembatalan dan refund beralasan, nota dengan tautan `/lacak`, riwayat, ekspor CSV hasil filter, tautan WhatsApp manual | Notifikasi otomatis melalui provider WhatsApp/SMS/email |
 | Lacak pesanan (publik) | Halaman `/lacak` untuk pelanggan: cek status, tahapan pengerjaan, riwayat status, dan sisa tagihan dengan kode pesanan + nomor HP terdaftar (rate-limited, tanpa login); nota cetak memberi alamat halaman lacak | Pesan pelacakan otomatis |
 | Pelanggan | Tambah, cari, dan impor massal pelanggan dari CSV (validasi nomor, duplikat dilewati, laporan hasil per baris); ekspor CSV seluruh hasil pencarian; daftar Neon dibagi 25 pelanggan per halaman, ringkasan dihitung dari seluruh cabang, dan setiap pelanggan punya tautan ke riwayat pesanan | Profil lanjutan dan kontrol akses terperinci |
 | Layanan & harga | Katalog per cabang; layanan kg/pcs/pasang; harga tersimpan sebagai snapshot pesanan; riwayat perubahan tercatat di aktivitas | Histori harga khusus dan aturan harga otomatis |
 | Persediaan & keuangan | Ledger stok beralasan; resep pemakaian otomatis saat tahap pesanan yang dipilih; stok kurang menahan perubahan status; estimasi HPP; pembayaran/pengeluaran; refund dicatat terpisah; rekonsiliasi CSV manual dengan kecocokan nominal/metode/tanggal dan konfirmasi petugas | Rekonsiliasi otomatis via API penyedia pembayaran |
 | Laporan | Rentang tanggal, perbandingan periode sebelumnya, layanan/pelanggan, berat/item, metode pembayaran, estimasi HPP bahan, ekspor CSV per periode, dan rekap pesanan/pemasukan semua cabang yang dapat diakses pemilik | Biaya tenaga kerja dan biaya tetap |
 | Pengaturan & aktivitas | Profil dan pembuatan cabang, pilihan cabang aktif, akses Pemilik/Kasir/Operator, staf aktif/nonaktif dan akses staf lintas cabang, audit aktivitas utama | Supervisor, izin per tindakan yang dapat dikustomisasi, dan retensi audit lanjutan |
-| Platform | Login/register, sesi bertanda tangan, pembatasan cabang dan peran di server, migrasi PostgreSQL, validasi request | Provider notifikasi otomatis, public API, dan observability terpusat |
+| Platform | Login/register, sesi bertanda tangan, pembatasan cabang dan peran di server, pencarian global dengan batas hasil, migrasi PostgreSQL, validasi request | Provider notifikasi otomatis, public API, dan observability terpusat |
 | Backup & restore | Unduh dan pulihkan data cabang dalam transaksi, termasuk pembayaran, refund, harga tambahan, dan resep bahan (fitur Pro) | Backup dibuat manual lalu disimpan pemilik; tidak memakai penyimpanan berbayar tambahan |
 | Prioritas pesanan | Dashboard menampilkan pesanan yang masih diproses dan targetnya hari ini atau sudah lewat sesuai zona waktu cabang, dengan tautan ke daftar pesanan | Pengingat otomatis |
 | Riwayat pelanggan | Tautan dari daftar pelanggan ke seluruh pesanan pelanggan di cabang aktif, dengan pencarian, filter status, dan pagination | Profil pelanggan lanjutan |
@@ -43,7 +43,7 @@ Status rinci dan kriteria penerimaan ada di [docs/modules.md](docs/modules.md) d
 
 ## PRD dan flowchart
 
-Dokumen kebutuhan produk lengkap tersedia di **[docs/prd.md](docs/prd.md)** — latar belakang, persona, kebutuhan fungsional (FR-01 s.d. FR-25), kebutuhan non-fungsional, model data ringkas, keputusan terbuka, dan riwayat versi.
+Dokumen kebutuhan produk lengkap tersedia di **[docs/prd.md](docs/prd.md)** — latar belakang, persona, kebutuhan fungsional (FR-01 s.d. FR-28), kebutuhan non-fungsional, model data ringkas, keputusan terbuka, dan riwayat versi.
 
 Flowchart tersedia sebagai berkas **[draw.io](docs/flowcharts/laundryos-flowcharts.drawio)** (3 halaman diagram; buka dan edit di [app.diagrams.net](https://app.diagrams.net) atau ekstensi Draw.io Integration di VS Code). Pratinjau statisnya:
 

@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
-import { Bell, Building2, ExternalLink, Heart, LogOut, Menu, Plus, Search, Shirt, X } from "lucide-react";
+import { Bell, Building2, ExternalLink, Heart, LogOut, Menu, Plus, Shirt, X } from "lucide-react";
+import { GlobalSearch } from "@/components/layout/global-search";
 import { navigation } from "@/components/layout/navigation";
 import { APP_VERSION_LABEL } from "@/lib/app-info";
 import { cn } from "@/lib/utils";
@@ -114,15 +115,13 @@ export function AppShell({ children, user, branches = [], activeBranchId }: { ch
         <header className="sticky top-0 z-20 flex h-[60px] items-center justify-between border-b border-border bg-background/90 px-4 backdrop-blur-md sm:px-6 xl:px-8">
           <div className="flex items-center gap-3">
             <button onClick={() => setMobileOpen(true)} aria-label="Buka menu" className="rounded-lg p-2 text-muted hover:bg-surface-hover lg:hidden"><Menu size={18} /></button>
-            <div className="hidden h-9 w-[280px] items-center gap-2 rounded-lg border border-border bg-surface px-3 md:flex">
-              <Search size={15} className="text-muted" /><input aria-label="Pencarian global" disabled placeholder="Pencarian global segera tersedia" className="w-full bg-transparent text-xs outline-none placeholder:text-muted disabled:cursor-not-allowed" />
-            </div>
+            {!user.isDemo && <GlobalSearch />}
             <span className="text-xs text-muted md:hidden">LaundryOS <span className="mx-1">/</span> <span className="text-foreground">{user.branchName}</span></span>
           </div>
           <div className="flex items-center gap-2">
             {branches.length > 1 && <label className="flex h-8 items-center gap-1.5 rounded-lg border border-border bg-surface px-2 text-muted"><Building2 size={14} /><span className="sr-only">Cabang aktif</span><select aria-label="Pilih cabang aktif" value={activeBranchId} disabled={branchSwitching} onChange={(event) => void switchBranch(event.target.value)} className="max-w-32 bg-transparent text-xs text-foreground outline-none disabled:opacity-60 sm:max-w-44">{branches.map((branch) => <option key={branch.id} value={branch.id}>{branch.name}</option>)}</select></label>}
             {hasPermission(user.role, "orders:create") && <Link href="/orders" className="inline-flex h-8 items-center justify-center gap-2 rounded-lg bg-accent px-2.5 text-xs font-semibold text-accent-foreground transition hover:brightness-95"><Plus size={14} /> <span className="hidden sm:inline">Pesanan baru</span></Link>}
-            <button type="button" aria-label="Notifikasi (segera tersedia)" disabled className="relative rounded-lg border border-border bg-surface p-2 text-muted opacity-55"><Bell size={15} /></button>
+            <Link href="/#operational-alerts" aria-label="Lihat peringatan operasional" title="Peringatan operasional" className="relative rounded-lg border border-border bg-surface p-2 text-muted transition hover:border-accent/50 hover:text-accent"><Bell size={15} /></Link>
             <div className="ml-1 hidden items-center gap-2 border-l border-border pl-3 sm:flex"><div className="flex size-7 items-center justify-center rounded-full bg-[#314036] text-[10px] font-semibold text-accent">{user.fullName.slice(0, 1).toUpperCase()}</div><span className="max-w-36 truncate text-xs font-medium">{user.fullName}</span></div>
             {!user.isDemo && <button type="button" onClick={signOut} aria-label="Keluar dari LaundryOS" className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 text-xs text-muted hover:text-foreground"><LogOut size={14} /><span className="hidden sm:inline">Keluar</span></button>}
           </div>

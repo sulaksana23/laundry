@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Ban, CreditCard, Download, History, MessageCircle, Plus, Printer, RotateCcw, Search, SlidersHorizontal, X } from "lucide-react";
+import { Ban, CreditCard, Download, History, MessageCircle, Plus, Printer, RotateCcw, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { Input } from "@/components/ui/input";
@@ -32,6 +32,8 @@ function whatsappUrl(order: LaundryOrder) {
 const storageKey = "laundryos:orders:v1";
 const filters = ["Semua", "Diterima", "Dicuci", "Dikeringkan", "Disetrika", "Siap diambil", "Selesai", "Dibatalkan"];
 const orderPageSize = 25;
+type DueFilter = "" | "today" | "overdue";
+type PaymentFilter = "" | "unpaid" | "paid";
 
 function normalizeStoredOrder(value: unknown): LaundryOrder | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
@@ -44,17 +46,20 @@ function normalizeStoredOrder(value: unknown): LaundryOrder | null {
   return null;
 }
 
-export function OrdersView({ initialOrders, initialTotal = initialOrders.length, initialQuery = "", customerId, databaseEnabled = false, availableServices, canCreate = true, canAdvance = true, canPay = true, canExport = true, canCancel = false, canViewFinance = true }: { initialOrders: LaundryOrder[]; initialTotal?: number; initialQuery?: string; customerId?: string; databaseEnabled?: boolean; availableServices: OrderServiceOption[]; canCreate?: boolean; canAdvance?: boolean; canPay?: boolean; canExport?: boolean; canCancel?: boolean; canViewFinance?: boolean }) {
+export function OrdersView({ initialOrders, initialTotal = initialOrders.length, initialQuery = "", initialStatus, initialDueFilter = "", initialPaymentFilter = "", todayLocal = "", customerId, databaseEnabled = false, availableServices, canCreate = true, canAdvance = true, canPay = true, canExport = true, canCancel = false, canViewFinance = true }: { initialOrders: LaundryOrder[]; initialTotal?: number; initialQuery?: string; initialStatus?: OrderStatus; initialDueFilter?: DueFilter; initialPaymentFilter?: PaymentFilter; todayLocal?: string; customerId?: string; databaseEnabled?: boolean; availableServices: OrderServiceOption[]; canCreate?: boolean; canAdvance?: boolean; canPay?: boolean; canExport?: boolean; canCancel?: boolean; canViewFinance?: boolean }) {
   const router = useRouter();
   const [orders, setOrders] = useState(initialOrders);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalOrders, setTotalOrders] = useState(initialTotal);
   const [loadingList, setLoadingList] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
-  const lastRequest = useRef({ page: 1, query: initialQuery, activeFilter: "Semua", refreshKey: 0 });
+  const initialActiveFilter = initialStatus ? orderStatusLabels[initialStatus] : "Semua";
+  const [activeFilter, setActiveFilter] = useState(initialActiveFilter);
+  const [dueFilter, setDueFilter] = useState<DueFilter>(initialDueFilter);
+  const [paymentFilter, setPaymentFilter] = useState<PaymentFilter>(initialPaymentFilter);
+  const lastRequest = useRef({ page: 1, query: initialQuery, activeFilter: initialActiveFilter, dueFilter: initialDueFilter, paymentFilter: initialPaymentFilter, refreshKey: 0 });
   const [ready, setReady] = useState(false);
   const [query, setQuery] = useState(initialQuery);
-  const [activeFilter, setActiveFilter] = useState("Semua");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedServiceName, setSelectedServiceName] = useState("");
   const [error, setError] = useState("");
@@ -113,8 +118,8 @@ export function OrdersView({ initialOrders, initialTotal = initialOrders.length,
   useEffect(() => {
     if (!databaseEnabled) return;
     const previous = lastRequest.current;
-    if (previous.page === currentPage && previous.query === query && previous.activeFilter === activeFilter && previous.refreshKey === refreshKey) return;
-    lastRequest.current = { page: currentPage, query, activeFilter, refreshKey };
+    if (previous.page === currentPage && previous.query === query && previous.activeFilter === activeFilter && previous.dueFilter === dueFilter && previous.paymentFilter === paymentFilter && previous.refreshKey === refreshKey) return;
+    lastRequest.current = { page: currentPage, query, activeFilter, dueFilter, paymentFilter, refreshKey };
 
     const controller = new AbortController();
     const timer = window.setTimeout(async () => {
@@ -126,6 +131,8 @@ export function OrdersView({ initialOrders, initialTotal = initialOrders.length,
         if (customerId) params.set("customerId", customerId);
         const status = orderStatuses.find((value) => orderStatusLabels[value] === activeFilter);
         if (status) params.set("status", status);
+        if (dueFilter) params.set("due", dueFilter);
+        if (paymentFilter) params.set("payment", paymentFilter);
         const response = await fetch("/api/orders?" + params.toString(), { credentials: "same-origin", signal: controller.signal });
         const result = await response.json() as { items?: LaundryOrder[]; total?: number; error?: string };
         if (!response.ok || !Array.isArray(result.items) || !Number.isSafeInteger(result.total) || (result.total ?? -1) < 0) {
@@ -150,16 +157,20 @@ export function OrdersView({ initialOrders, initialTotal = initialOrders.length,
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [databaseEnabled, currentPage, query, activeFilter, refreshKey, customerId]);
+  }, [databaseEnabled, currentPage, query, activeFilter, dueFilter, paymentFilter, refreshKey, customerId]);
 
   const visibleOrders = useMemo(() => {
     if (databaseEnabled) return orders;
     return orders.filter((order) => {
       const matchesQuery = `${order.id} ${order.customerName} ${order.customerPhone}`.toLowerCase().includes(query.toLowerCase());
       const matchesFilter = activeFilter === "Semua" || orderStatusLabels[order.status] === activeFilter;
-      return matchesQuery && matchesFilter;
+      const isActive = order.status !== "completed" && order.status !== "cancelled";
+      const dueDate = order.dueAt.slice(0, 10);
+      const matchesDue = !dueFilter || (isActive && (dueFilter === "today" ? dueDate === todayLocal : dueDate < todayLocal));
+      const matchesPayment = !paymentFilter || (order.status !== "cancelled" && (paymentFilter === "paid" ? order.paymentStatus === "paid" : order.paymentStatus !== "paid"));
+      return matchesQuery && matchesFilter && matchesDue && matchesPayment;
     });
-  }, [orders, query, activeFilter, databaseEnabled]);
+  }, [orders, query, activeFilter, dueFilter, paymentFilter, todayLocal, databaseEnabled]);
   const totalPages = databaseEnabled ? Math.max(1, Math.ceil(totalOrders / orderPageSize)) : 1;
   const rangeStart = totalOrders > 0 ? (currentPage - 1) * orderPageSize + 1 : 0;
   const rangeEnd = Math.min(currentPage * orderPageSize, totalOrders);
@@ -205,6 +216,8 @@ export function OrdersView({ initialOrders, initialTotal = initialOrders.length,
         setCurrentPage(1);
         setQuery("");
         setActiveFilter("Semua");
+        setDueFilter("");
+        setPaymentFilter("");
         setRefreshKey((current) => current + 1);
         router.refresh();
         setDialogOpen(false);
@@ -362,6 +375,8 @@ export function OrdersView({ initialOrders, initialTotal = initialOrders.length,
       if (query.trim()) params.set("search", query.trim());
       const status = orderStatuses.find((value) => orderStatusLabels[value] === activeFilter);
       if (status) params.set("status", status);
+      if (dueFilter) params.set("due", dueFilter);
+      if (paymentFilter) params.set("payment", paymentFilter);
       const downloadLink = document.createElement("a");
       downloadLink.href = "/api/orders/export?" + params.toString();
       downloadLink.click();
@@ -386,7 +401,15 @@ export function OrdersView({ initialOrders, initialTotal = initialOrders.length,
         <div className="flex flex-wrap gap-1.5">{filters.map((filter) => <button key={filter} onClick={() => { setActiveFilter(filter); setCurrentPage(1); }} className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${activeFilter === filter ? "bg-accent text-accent-foreground" : "bg-surface text-muted hover:bg-surface-hover hover:text-foreground"}`}>{filter}</button>)}</div>
         <div className="flex flex-wrap gap-2">
           <div className="relative min-w-[220px] flex-1 lg:flex-none"><Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" /><Input value={query} onChange={(event) => { setQuery(event.target.value); setCurrentPage(1); }} placeholder="Cari nomor atau pelanggan" className="pl-9" /></div>
-          <Button variant="secondary" disabled title="Filter lanjutan segera tersedia" className="h-9 px-2.5 text-xs"><SlidersHorizontal size={14} /> <span className="hidden sm:inline">Filter</span></Button>
+          <div className="flex flex-wrap gap-2">
+            <label className="sr-only" htmlFor="order-due-filter">Filter jatuh tempo</label>
+            <Select id="order-due-filter" value={dueFilter} onChange={(event) => { setDueFilter(event.target.value as DueFilter); setCurrentPage(1); }} aria-label="Filter jatuh tempo" className="h-9 min-w-36 w-auto px-2 text-xs">
+              <option value="">Semua jatuh tempo</option><option value="today">Target hari ini</option><option value="overdue">Terlambat</option>
+            </Select>
+            {canViewFinance && <><label className="sr-only" htmlFor="order-payment-filter">Filter pembayaran</label><Select id="order-payment-filter" value={paymentFilter} onChange={(event) => { setPaymentFilter(event.target.value as PaymentFilter); setCurrentPage(1); }} aria-label="Filter pembayaran" className="h-9 min-w-36 w-auto px-2 text-xs">
+              <option value="">Semua pembayaran</option><option value="unpaid">Belum lunas</option><option value="paid">Lunas</option>
+            </Select></>}
+          </div>
           {canExport && <Button variant="secondary" onClick={exportOrders} title="Ekspor seluruh pesanan sesuai filter sebagai CSV" aria-label="Ekspor seluruh pesanan sebagai CSV" className="h-9 px-2.5 text-xs"><Download size={14} /> <span className="hidden sm:inline">Ekspor pesanan</span></Button>}
           {canCreate && <Button variant="primary" onClick={() => setDialogOpen(true)}><Plus size={14} /> Pesanan baru</Button>}
         </div>

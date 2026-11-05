@@ -5,6 +5,8 @@ export interface OrderListQuery {
   search?: string;
   status?: OrderStatus;
   customerId?: string;
+  dueFilter?: "today" | "overdue";
+  paymentFilter?: "unpaid" | "paid";
   page: number;
   pageSize: number;
 }

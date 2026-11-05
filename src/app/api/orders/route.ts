@@ -29,11 +29,22 @@ export async function GET(request: Request) {
   const search = url.searchParams.get("search") ?? undefined;
   const statusValue = url.searchParams.get("status");
   const customerId = url.searchParams.get("customerId");
+  const dueFilterValue = url.searchParams.get("due");
+  const paymentFilterValue = url.searchParams.get("payment");
   if (!Number.isInteger(page) || page < 1 || !Number.isInteger(pageSize) || pageSize < 1 || pageSize > 100) {
     return NextResponse.json({ error: "Parameter halaman tidak valid." }, { status: 400 });
   }
   if (statusValue && !orderStatuses.some((value) => value === statusValue)) {
     return NextResponse.json({ error: "Filter status tidak valid." }, { status: 400 });
+  }
+  if (dueFilterValue && dueFilterValue !== "today" && dueFilterValue !== "overdue") {
+    return NextResponse.json({ error: "Filter tanggal target tidak valid." }, { status: 400 });
+  }
+  if (paymentFilterValue && paymentFilterValue !== "unpaid" && paymentFilterValue !== "paid") {
+    return NextResponse.json({ error: "Filter pembayaran tidak valid." }, { status: 400 });
+  }
+  if (paymentFilterValue && !hasPermission(session.role, "finance:read")) {
+    return NextResponse.json({ error: "Akses filter pembayaran tidak diizinkan." }, { status: 403 });
   }
   if (customerId !== null && !isUuid(customerId)) {
     return NextResponse.json({ error: "ID pelanggan tidak valid." }, { status: 400 });
@@ -47,6 +58,8 @@ export async function GET(request: Request) {
       search,
       customerId: customerId ?? undefined,
       status: statusValue as OrderStatus | undefined,
+      dueFilter: dueFilterValue ? dueFilterValue as "today" | "overdue" : undefined,
+      paymentFilter: paymentFilterValue ? paymentFilterValue as "unpaid" | "paid" : undefined,
     });
     return NextResponse.json({ ...result, items: result.items.map((order) => redactOrderForRole(order, session.role)) });
   } catch {

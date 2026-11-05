@@ -4,8 +4,8 @@ Dokumen ini membatasi target produk agar istilah “lengkap” punya cakupan yan
 
 | Modul | Tujuan | Cakupan awal | Kriteria penerimaan produksi |
 | --- | --- | --- | --- |
-| Dashboard | Ringkasan operasional | KPI, omzet, antrean, catatan stok, tren 7/30/90 hari | Nilai berasal dari query server dan rentang waktu lokal cabang jelas |
-| Pesanan | Mengelola cucian | Penerimaan, layanan kg/pcs/pasang, biaya express/antar, diskon, estimasi selesai, status, pembayaran, pembatalan/refund, ekspor | Nomor unik, validasi server, histori status, snapshot harga/unit, ledger refund, cetak/nota, pencarian dan pagination |
+| Dashboard | Ringkasan operasional | KPI, omzet, antrean, catatan stok, tren 7/30/90 hari, peringatan operasional | Nilai berasal dari query server dan rentang waktu lokal cabang jelas |
+| Pesanan | Mengelola cucian | Penerimaan, layanan kg/pcs/pasang, biaya express/antar, diskon, estimasi selesai, status, pembayaran, filter target/pembayaran, pembatalan/refund, ekspor | Nomor unik, validasi server, histori status, snapshot harga/unit, ledger refund, cetak/nota, pencarian dan pagination |
 | Pelanggan | Data dan loyalitas | Identitas, kontak, jumlah transaksi | Dedup nomor kontak sesuai keputusan usaha, histori pesanan, hak akses |
 | Layanan | Katalog harga | Nama, satuan, durasi, harga, status aktif | Perubahan harga tidak mengubah invoice lama |
 | Persediaan | Bahan operasional | Barang, stok, batas minimum, resep konsumsi otomatis per layanan/tahap, biaya rata-rata, estimasi HPP bahan, pembelian/pemakaian/penyesuaian dengan alasan | Saldo bergerak melalui ledger per cabang; status pesanan ditahan saat resep membutuhkan stok yang tidak cukup; biaya tidak diketahui ditandai belum lengkap |
@@ -18,6 +18,9 @@ Dokumen ini membatasi target produk agar istilah “lengkap” punya cakupan yan
 - Login dan registrasi memakai Neon serta cookie sesi bertanda tangan saat `DATABASE_URL` dan `AUTH_SECRET` tersedia. Pengguna membuat akunnya sendiri; seeder tidak membuat akun demo login. Cabang aktif di sesi harus cocok dengan keanggotaan akses pengguna.
 - Pesanan, pelanggan, layanan, persediaan, pembayaran, pengeluaran, dan laporan membaca/menulis data per cabang pada deployment yang dikonfigurasi. Daftar pelanggan mendukung ekspor CSV seluruh hasil pencarian; ekspor mengalir bertahap dan nilai berbahaya spreadsheet diamankan.
 - Katalog layanan dapat ditambah, diubah, dan diaktifkan/nonaktifkan. Harga dibaca ulang di server saat pesanan dibuat; jumlah, unit, harga unit, dan total menjadi snapshot pesanan.
+- Pencarian global di header mencari maksimal lima pesanan dan lima pelanggan per cabang. Request didebounce, hasil minimum dua karakter, dan endpoint memeriksa izin baca dari sesi.
+- Daftar pesanan mendukung filter target hari ini/terlambat menurut zona waktu cabang serta pembayaran lunas/belum lunas; filter keuangan tidak diberikan ke peran yang tidak memiliki izin melihat keuangan. Ekspor pesanan mengikuti filter tersebut.
+- Peringatan Dashboard merangkum pesanan terlambat/target hari ini, siap diambil, stok minimum, dan tagihan belum lunas dari data yang sudah dimuat halaman; kartu ini tidak menambah query atau layanan notifikasi terpisah.
 - Nota ringkasan dapat dicetak dan memberi tautan `/lacak`; riwayat pelanggan, pencarian, pagination, dan ekspor pesanan berjalan per cabang. Pemilik mengatur staf, memberi akses staf ke cabang tambahan, membuat/memilih cabang yang boleh diakses, dan melihat aktivitas audit.
 - Layanan per kg, pcs, dan pasang tersedia pada form pesanan. Pcs/pasang menerima jumlah bulat; harga katalog per unit dikalikan jumlah.
 - Riwayat persediaan mencatat jenis pergerakan, selisih, alasan, pengguna, dan waktu. Pemilik dapat mengatur pemakaian otomatis per layanan dan tahap; tanpa resep, stok tetap dikelola manual.

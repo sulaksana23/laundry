@@ -1,12 +1,12 @@
 # PRD — LaundryOS
 
-_Dokumen kebutuhan produk (Product Requirements Document) untuk LaundryOS, sistem operasional laundry berbasis web. Dokumen ini mencatat implementasi aplikasi versi **v0.16.0** per 5 November 2026 dan pekerjaan yang masih terbuka. Flowchart pendamping tersedia sebagai berkas draw.io di [docs/flowcharts/laundryos-flowcharts.drawio](flowcharts/laundryos-flowcharts.drawio) dan dirender sebagai gambar di README._
+_Dokumen kebutuhan produk (Product Requirements Document) untuk LaundryOS, sistem operasional laundry berbasis web. Dokumen ini mencatat implementasi aplikasi versi **v0.17.0** per 5 November 2026 dan pekerjaan yang masih terbuka. Flowchart pendamping tersedia sebagai berkas draw.io di [docs/flowcharts/laundryos-flowcharts.drawio](flowcharts/laundryos-flowcharts.drawio) dan dirender sebagai gambar di README._
 
 | | |
 | --- | --- |
 | Produk | LaundryOS |
-| Versi dokumen | 1.1 (5 November 2026) |
-| Versi aplikasi acuan | v0.16.0 |
+| Versi dokumen | 1.2 (5 November 2026) |
+| Versi aplikasi acuan | v0.17.0 |
 | Pemilik produk | Pemilik usaha laundry (Cabang Bangli) |
 | Status | Live di production (Vercel + Neon PostgreSQL) |
 
@@ -41,11 +41,11 @@ Role yang didukung adalah Pemilik, Kasir, dan Operator. Pemilik memberi akun sta
 
 ## 4. Ruang lingkup
 
-**Di dalam cakupan (tersedia di v0.16.0):**
+**Di dalam cakupan (tersedia di v0.17.0):**
 
 - Autentikasi pemilik dan staf (email + kata sandi, sesi cookie HttpOnly, pembatasan percobaan bersama melalui Neon).
 - Ringkasan (dashboard) data tersimpan: pendapatan bulan berjalan + perubahan vs bulan lalu, pesanan aktif, siap diambil, belum lunas, grafik pendapatan 7/30/90 hari, antrean per status, pesanan terbaru, catatan stok menipis dan pembayaran tertunda.
-- Manajemen pesanan: buat, cari/filter, pagination server-side, ubah status dengan riwayat tercatat, pembayaran (lunas/sebagian/belum), nota ringkasan cetak, tombol WhatsApp untuk pesanan siap, dan ekspor CSV sesuai filter aktif.
+- Manajemen pesanan: buat, pencarian, filter status/jatuh tempo/pembayaran, pagination server-side, ubah status dengan riwayat tercatat, pembayaran (lunas/sebagian/belum), nota ringkasan cetak, tombol WhatsApp untuk pesanan siap, dan ekspor CSV sesuai filter aktif.
 - Pelanggan: tambah, cari, dan impor massal dari berkas CSV (dengan validasi dan laporan hasil) per cabang.
 - Layanan & harga: katalog per cabang, tambah/ubah, aktif/nonaktif; harga aktif dipakai saat pesanan dibuat (snapshot harga tersimpan di pesanan).
 - Persediaan: daftar bahan, pembelian dan penyesuaian lewat ledger, resep pemakaian per layanan/tahap, peringatan stok minimum, dan snapshot biaya rata-rata untuk estimasi HPP bahan.
@@ -53,6 +53,7 @@ Role yang didukung adalah Pemilik, Kasir, dan Operator. Pemilik memberi akun sta
 - Laporan: agregasi transaksi, rekap pemilik lintas cabang, rentang tanggal, estimasi HPP bahan, dan ekspor CSV.
 - Pengaturan: profil usaha, cabang, akun staf, akses lintas cabang, backup/restore manual Pro, dan informasi versi sistem.
 - Lacak pesanan publik (`/lacak`): pelanggan mengecek status dengan kode pesanan + nomor HP terdaftar, tanpa login.
+- Pencarian global pesanan/pelanggan serta ringkasan peringatan operasional berbasis data yang sudah dimuat di Dashboard.
 - Mode demo tanpa database untuk evaluasi tampilan; demo tidak menyimpan perubahan transaksi ke Neon.
 
 **Di luar cakupan saat ini (roadmap, sebagian menunggu keputusan bisnis pemilik):**
@@ -91,6 +92,9 @@ Role yang didukung adalah Pemilik, Kasir, dan Operator. Pemilik memberi akun sta
 | FR-23 | Biaya beli persediaan memperbarui estimasi biaya rata-rata dan penggunaan resep menyimpan snapshot HPP untuk laporan | Penting | Tersedia (estimasi bahan) |
 | FR-24 | Pemilik dapat menambah atau mencabut akses cabang untuk akun staf yang sudah ada | Penting | Tersedia |
 | FR-25 | Percobaan masuk, daftar, pelacakan publik, dan verifikasi lisensi dibatasi lintas instance Vercel | Penting | Tersedia; fallback lokal saat Neon bermasalah |
+| FR-26 | Pengguna dapat mencari pesanan dan pelanggan dari header dengan scope cabang serta hasil terbatas | Penting | Tersedia |
+| FR-27 | Daftar pesanan dapat difilter menurut target hari ini/terlambat dan pembayaran lunas/belum lunas sesuai izin | Penting | Tersedia |
+| FR-28 | Dashboard merangkum pesanan terlambat, target hari ini, siap diambil, stok menipis, dan tagihan belum lunas | Penting | Tersedia; menggunakan data dashboard yang sudah dimuat |
 
 ## 6. Kebutuhan non-fungsional
 
@@ -151,3 +155,4 @@ Impor massal pesanan, API pembayaran bank/QRIS, penghitungan biaya tenaga kerja/
 | v0.14.0 | Penyelesaian modul operasional, layanan kg/pcs/pasang, akses berbasis peran, audit, dan laporan |
 | v0.15.0 | Akses lintas cabang untuk staf, ringkasan pemilik, pembatalan/refund, dan ekspor pesanan |
 | v0.16.0 | Resep dan HPP bahan, backup/restore manual, tren dashboard, rate limit Neon bersama, dan rekonsiliasi CSV transfer/QRIS |
+| v0.17.0 | Pencarian global, filter lanjutan pesanan, ringkasan peringatan operasional, dan filter ekspor yang mengikuti pilihan |

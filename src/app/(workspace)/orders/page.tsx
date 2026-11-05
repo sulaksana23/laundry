@@ -11,26 +11,32 @@ import { getOrderSummary } from "@/server/modules/workspace/operations";
 import { getServicesService } from "@/server/modules/services/services.runtime";
 import { isUuid } from "@/lib/uuid";
 import { hasPermission } from "@/server/modules/auth/permissions";
-import type { OrderUnit } from "@/features/orders/domain/order";
+import { orderStatuses, type OrderStatus, type OrderUnit } from "@/features/orders/domain/order";
 import { redactOrderForRole } from "@/server/modules/orders/order-access";
 
 export const metadata: Metadata = { title: "Pesanan" };
 export const dynamic = "force-dynamic";
 
-export default async function OrdersPage({ searchParams }: { searchParams: Promise<{ search?: string | string[]; customer?: string | string[] }> }) {
+export default async function OrdersPage({ searchParams }: { searchParams: Promise<{ search?: string | string[]; customer?: string | string[]; status?: string | string[]; due?: string | string[]; payment?: string | string[] }> }) {
   const params = await searchParams;
   const initialQuery = typeof params.search === "string" ? params.search.trim().slice(0, 100) : "";
   if (params.customer !== undefined && (typeof params.customer !== "string" || !isUuid(params.customer))) notFound();
   const customerId = typeof params.customer === "string" ? params.customer : undefined;
+  const initialStatus = typeof params.status === "string" && orderStatuses.some((status) => status === params.status)
+    ? params.status as OrderStatus
+    : undefined;
+  const initialDueFilter = params.due === "today" || params.due === "overdue" ? params.due : undefined;
+  const requestedPaymentFilter = params.payment === "unpaid" || params.payment === "paid" ? params.payment : undefined;
   const session = await getAuthSession();
   const productionDemo = process.env.VERCEL_ENV === "production" && !isAuthConfigured();
   if (!session && !productionDemo) redirect("/login");
   if (session && !hasPermission(session.role, "orders:read")) redirect("/");
+  const initialPaymentFilter = !session || hasPermission(session.role, "finance:read") ? requestedPaymentFilter : undefined;
   const databaseEnabled = Boolean(session) && isOrdersDatabaseEnabled();
   if (customerId && !databaseEnabled) notFound();
   const [ordersResult, servicesResult, databaseSummary] = session && databaseEnabled
     ? await Promise.all([
-        getOrdersService().list({ branchId: session.branchId, page: 1, pageSize: 25, search: initialQuery || undefined, customerId }),
+        getOrdersService().list({ branchId: session.branchId, page: 1, pageSize: 25, search: initialQuery || undefined, customerId, status: initialStatus, dueFilter: initialDueFilter, paymentFilter: initialPaymentFilter }),
         getServicesService().list(session.branchId),
         getOrderSummary(session.branchId),
       ])
@@ -55,7 +61,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
         <Card className="p-3.5"><p className="text-[11px] text-muted">Siap diambil</p><p className="mt-1 text-xl font-semibold">{summary.ready}</p></Card>
         {(!session || hasPermission(session.role, "finance:read")) && <Card className="p-3.5"><p className="text-[11px] text-muted">Belum lunas</p><p className="mt-1 text-xl font-semibold">{summary.unpaid}</p></Card>}
       </div>
-      <OrdersView key={customerId ?? "all"} initialOrders={safeOrders} initialTotal={ordersResult?.total ?? orders.length} initialQuery={initialQuery} customerId={customerId} databaseEnabled={databaseEnabled} availableServices={availableServices} canCreate={session ? hasPermission(session.role, "orders:create") : true} canAdvance={session ? hasPermission(session.role, "orders:advance") : true} canPay={session ? hasPermission(session.role, "payments:record") : true} canExport={session ? hasPermission(session.role, "orders:export") : true} canCancel={session?.role === "owner"} canViewFinance={session ? hasPermission(session.role, "finance:read") : true} />
+      <OrdersView key={[customerId ?? "all", initialQuery, initialStatus ?? "", initialDueFilter ?? "", initialPaymentFilter ?? ""].join("|")} initialOrders={safeOrders} initialTotal={ordersResult?.total ?? orders.length} initialQuery={initialQuery} initialStatus={initialStatus} initialDueFilter={initialDueFilter} initialPaymentFilter={initialPaymentFilter} todayLocal={todayKey} customerId={customerId} databaseEnabled={databaseEnabled} availableServices={availableServices} canCreate={session ? hasPermission(session.role, "orders:create") : true} canAdvance={session ? hasPermission(session.role, "orders:advance") : true} canPay={session ? hasPermission(session.role, "payments:record") : true} canExport={session ? hasPermission(session.role, "orders:export") : true} canCancel={session?.role === "owner"} canViewFinance={session ? hasPermission(session.role, "finance:read") : true} />
     </>
   );
 }

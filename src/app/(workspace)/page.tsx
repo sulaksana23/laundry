@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import Link from "next/link";
-import { ArrowRight, Banknote, CircleCheck, ClipboardList, Plus, Sparkles, Wallet } from "lucide-react";
+import { ArrowRight, Banknote, Bell, CircleCheck, ClipboardList, Plus, Sparkles, Wallet } from "lucide-react";
 import { DashboardSkeleton } from "@/components/dashboard/dashboard-skeleton";
 import { MetricCard } from "@/components/dashboard/metric-card";
 import { PageHeader } from "@/components/layout/page-header";
@@ -138,6 +138,13 @@ async function DashboardContent({ branchId, userId, databaseEnabled, branchName,
     mockOrders,
     new Intl.DateTimeFormat("en-CA", { timeZone: TIME_ZONE }).format(new Date()),
   );
+  const operationalAlerts = [
+    { label: "Pesanan terlambat", count: priorityOrders.overdue, href: "/orders?due=overdue", detail: "Target penyelesaian sudah lewat.", tone: "border-rose-300/20 bg-rose-300/5 text-rose-100" },
+    { label: "Target hari ini", count: priorityOrders.today, href: "/orders?due=today", detail: "Perlu dipantau hari ini.", tone: "border-amber-300/20 bg-amber-300/5 text-amber-100" },
+    { label: "Siap diambil", count: readyOrders, href: "/orders?status=ready", detail: "Menunggu diserahkan ke pelanggan.", tone: "border-accent/20 bg-accent/5 text-accent" },
+    ...(canViewInventory ? [{ label: "Stok menipis", count: lowStock.length, href: "/inventory", detail: "Barang sudah menyentuh batas minimum.", tone: "border-amber-300/20 bg-amber-300/5 text-amber-100" }] : []),
+    ...(canViewFinance ? [{ label: "Belum lunas", count: unpaidCount, href: "/orders?payment=unpaid", detail: formatCurrency(outstanding) + " tagihan tersisa.", tone: "border-border bg-surface-raised/60 text-foreground" }] : []),
+  ].filter((alert) => alert.count > 0);
 
   return (
     <>
@@ -149,6 +156,14 @@ async function DashboardContent({ branchId, userId, databaseEnabled, branchName,
       </section>
 
       {branchOverview.length > 1 && <Card className="mt-4 overflow-hidden"><CardHeader><div><CardTitle>Ringkasan seluruh cabang</CardTitle><p className="mt-1 text-[11px] text-muted">Hanya cabang yang terhubung ke akun pemilik ini.</p></div><Link href="/settings#branch-management" className="text-xs font-semibold text-accent">Kelola cabang →</Link></CardHeader><div className="divide-y divide-border/60">{branchOverview.map((branch) => <div key={branch.id} className="flex flex-wrap items-center gap-3 px-4 py-3 text-xs"><span className="min-w-40 flex-1 font-semibold">{branch.name}</span><span className="text-muted">{branch.activeOrders} aktif · {branch.readyOrders} siap</span><strong className="min-w-36 text-right">{formatCurrency(branch.monthlyIncome)}</strong></div>)}</div></Card>}
+
+      <section id="operational-alerts" aria-label="Peringatan operasional" className="mt-4 scroll-mt-20">
+        <Card className="overflow-hidden">
+          <CardHeader><div><CardTitle>Peringatan operasional</CardTitle><p className="mt-1 text-[11px] text-muted">Ringkasan langsung dari data cabang aktif.</p></div><span className="rounded-lg bg-surface-raised p-2 text-accent"><Bell size={15} /></span></CardHeader>
+          {operationalAlerts.length > 0 ? <ul className="grid gap-2 p-4 sm:grid-cols-2 xl:grid-cols-3">{operationalAlerts.map((alert) => <li key={alert.label}><Link href={alert.href} className={`flex h-full items-center justify-between gap-3 rounded-lg border p-3 transition hover:border-accent/40 ${alert.tone}`}><span><span className="block text-xs font-semibold">{alert.label}</span><span className="mt-1 block text-[10px] text-muted">{alert.detail}</span></span><span className="shrink-0 text-lg font-semibold tabular-nums">{alert.count}</span></Link></li>)}</ul>
+            : <p role="status" className="px-4 pb-4 text-xs text-muted">Belum ada hal yang memerlukan perhatian.</p>}
+        </Card>
+      </section>
 
       {canViewFinance && <section className="mt-4 grid gap-4 lg:grid-cols-[1.55fr_1fr]">
         <Card className="min-w-0">

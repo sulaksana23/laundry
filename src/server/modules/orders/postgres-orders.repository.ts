@@ -36,7 +36,8 @@ const ORDER_COLUMNS =
 
 const ORDER_JOINS =
   " FROM laundry_orders o " +
-  "JOIN laundry_customers c ON c.id = o.customer_id AND c.branch_id = o.branch_id";
+  "JOIN laundry_customers c ON c.id = o.customer_id AND c.branch_id = o.branch_id " +
+  "JOIN laundry_branches b ON b.id = o.branch_id";
 
 function toLaundryOrder(row: OrderRow): LaundryOrder {
   return {
@@ -74,6 +75,16 @@ export class PostgresOrdersRepository implements OrdersRepository {
     if (query.status) {
       parameters.push(query.status);
       conditions.push("o.status = $" + parameters.length);
+    }
+    if (query.dueFilter) {
+      conditions.push("o.status NOT IN ('completed', 'cancelled')");
+      conditions.push(query.dueFilter === "today"
+        ? "o.due_at = (now() AT TIME ZONE b.timezone)::date"
+        : "o.due_at < (now() AT TIME ZONE b.timezone)::date");
+    }
+    if (query.paymentFilter) {
+      conditions.push("o.status <> 'cancelled'");
+      conditions.push(query.paymentFilter === "unpaid" ? "o.paid_amount < o.amount" : "o.paid_amount >= o.amount");
     }
     const where = " WHERE " + conditions.join(" AND ");
     const sql = getNeonSql();

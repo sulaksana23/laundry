@@ -67,6 +67,14 @@
 - [x] Katalog stok mencatat biaya rata-rata tertimbang dan laporan menampilkan estimasi HPP bahan dengan jumlah biaya yang belum lengkap.
 - [x] Login, pendaftaran, tracking publik, dan verifikasi lisensi memakai rate limit Neon bersama, dengan fallback lokal saat Neon tidak tersedia.
 
+## Pembaruan v0.17.0 — 5 November 2026
+
+- [x] Pencarian global pesanan dan pelanggan tersedia di desktop dan ponsel, memakai sesi/cabang aktif, menunggu minimal dua karakter, dan membatasi hasil menjadi lima per jenis.
+- [x] Filter pesanan target hari ini/terlambat dan lunas/belum lunas berjalan di server; filter pembayaran hanya tersedia bagi peran yang memiliki izin keuangan.
+- [x] Ekspor pesanan mengikuti filter aktif, termasuk jatuh tempo dan pembayaran.
+- [x] Ikon lonceng membuka ringkasan peringatan Dashboard: target terlambat/hari ini, siap diambil, stok menipis, dan tagihan belum lunas.
+- [x] Ringkasan peringatan memakai data Dashboard yang sudah dimuat, sehingga tidak menambah query. Pencarian memakai satu query Neon setelah jeda input dan mengembalikan maksimal lima hasil per jenis.
+
 ## Pekerjaan yang masih perlu keputusan atau verifikasi
 
 - Tetapkan kebijakan operasional final untuk pembulatan berat, express, diskon, pembayaran, refund, pembatalan, dan jam usaha sebelum dipakai sebagai aturan baku.
