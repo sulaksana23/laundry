@@ -11,8 +11,9 @@ import { isOrdersDatabaseEnabled } from "@/server/db/mode";
 import { getAuthSession } from "@/server/modules/auth/auth.session";
 import { listInventory, listInventoryMovements, listServiceInventoryRecipes, type InventoryItem } from "@/server/modules/workspace/operations";
 import { getServicesService } from "@/server/modules/services/services.runtime";
-import { adjustInventory, createInventoryItem, deleteServiceInventoryRecipe, saveServiceInventoryRecipe } from "./actions";
+import { createInventoryItem, deleteServiceInventoryRecipe, saveServiceInventoryRecipe } from "./actions";
 import { hasPermission } from "@/server/modules/auth/permissions";
+import { InventoryTable } from "./inventory-table";
 
 export const metadata: Metadata = { title: "Persediaan" };
 export const dynamic = "force-dynamic";
@@ -34,6 +35,7 @@ export default async function InventoryPage() {
   const recipes = databaseEnabled && canManageInventory ? await listServiceInventoryRecipes(session!.branchId) : [];
   const lowStockCount = items.filter((item) => item.stock <= item.minStock).length;
   const valuation = items.reduce((total, item) => total + item.stock * item.price, 0);
+  const itemsForTable = canViewInventoryCost ? items : items.map((item) => ({ ...item, price: 0 }));
 
   return (
     <>
@@ -71,18 +73,7 @@ export default async function InventoryPage() {
         <p className="border-t border-border px-4 py-3 text-[10px] leading-5 text-muted">Jika pesanan dibatalkan setelah stok terpakai, koreksi jumlahnya secara manual melalui ledger stok agar jejak transaksi tetap jelas.</p>
       </Card>}
       {lowStockCount > 0 && <div className="mb-4 flex items-start gap-3 rounded-xl border border-amber-200/15 bg-amber-200/5 p-3.5"><AlertTriangle size={16} className="mt-0.5 shrink-0 text-amber-200" /><div><p className="text-xs font-semibold text-amber-100">Ada {lowStockCount} barang yang mencapai batas minimum</p><p className="mt-1 text-[11px] text-muted">Periksa jumlah stok sebelum menerima pesanan dalam jumlah besar.</p></div></div>}
-      <Card className="overflow-hidden">
-        <div className="border-b border-border p-4"><h2 className="text-sm font-semibold">Daftar persediaan</h2><p className="mt-1 text-[11px] text-muted">{databaseEnabled ? "Stok tersimpan per cabang di Neon" : "Data contoh"}</p></div>
-        <div className="overflow-x-auto"><table className="w-full min-w-[1080px] text-left text-xs">
-          <thead><tr className="bg-surface-raised/50 text-[10px] uppercase tracking-wide text-muted"><th className="px-4 py-3 font-medium">Barang</th><th className="px-3 py-3 font-medium">Kategori</th><th className="px-3 py-3 font-medium">Stok</th><th className="px-3 py-3 font-medium">Minimum</th>{canViewInventoryCost && <th className="px-3 py-3 font-medium">Biaya rata-rata/satuan</th>}<th className="px-3 py-3 font-medium">Kondisi</th><th className="px-4 py-3 font-medium">Penyesuaian</th></tr></thead>
-          <tbody>{items.map((item) => { const low = item.stock <= item.minStock; return <tr key={item.id} className="border-t border-border/70 hover:bg-surface-raised/50">
-            <td className="px-4 py-3"><p className="font-semibold">{item.name}</p><p className="mt-0.5 text-[10px] text-muted">{item.id}</p></td><td className="px-3 py-3 text-muted">{item.category}</td><td className="px-3 py-3 font-medium">{item.stock} {item.unit}</td><td className="px-3 py-3 text-muted">{item.minStock} {item.unit}</td>{canViewInventoryCost && <td className="px-3 py-3">{formatCurrency(item.price)}</td>}<td className="px-3 py-3"><span className={low ? "rounded-md bg-amber-200/10 px-2 py-1 text-[10px] font-medium text-amber-100" : "rounded-md bg-emerald-200/10 px-2 py-1 text-[10px] font-medium text-emerald-100"}>{low ? "Perlu dibeli" : "Aman"}</span></td>
-            <td className="px-4 py-3">{canManageInventory ? <form action={adjustInventory} className="flex min-w-[580px] items-center gap-1.5"><input type="hidden" name="id" value={item.id} /><Input name="delta" required type="number" step="0.001" placeholder="+/- jumlah" aria-label={"Jumlah pergerakan stok " + item.name} className="h-8 w-24" /><select name="movementType" defaultValue="adjustment" aria-label={"Jenis pergerakan stok " + item.name} className="h-8 rounded-md border border-border bg-surface px-2 text-[10px] text-foreground"><option value="purchase">Pembelian</option><option value="usage">Pemakaian</option><option value="adjustment">Penyesuaian</option></select><Input name="unitCost" type="number" min="0" step="1" placeholder="Biaya beli/satuan" aria-label={"Biaya beli per satuan " + item.name} className="h-8 w-32" /><Input name="note" required minLength={2} maxLength={200} placeholder="Alasan" aria-label={"Alasan penyesuaian stok " + item.name} className="h-8" /><FormSubmitButton pendingText="…" className="h-8 px-2 text-xs">Simpan</FormSubmitButton></form> : <span className="text-[10px] text-muted">Hanya lihat</span>}</td>
-          </tr>; })}</tbody>
-        </table>
-        {items.length === 0 && <p className="p-10 text-center text-xs text-muted">Belum ada barang persediaan. Tambahkan barang pertama di atas.</p>}
-        </div>
-      </Card>
+      <InventoryTable items={itemsForTable} canManageInventory={canManageInventory} canViewCost={canViewInventoryCost} canExport={databaseEnabled} />
       {databaseEnabled && <Card className="mt-4 overflow-hidden">
         <div className="border-b border-border p-4"><h2 className="text-sm font-semibold">Riwayat pergerakan stok</h2><p className="mt-1 text-[11px] text-muted">50 perubahan terbaru · cabang aktif. Biaya pemakaian adalah estimasi saat biaya stok sudah tercatat.</p></div>
         {movements.length === 0 ? <p className="p-8 text-center text-xs text-muted">Belum ada pergerakan stok tercatat.</p> : <div className="overflow-x-auto"><table className="w-full min-w-[760px] text-left text-xs"><thead><tr className="bg-surface-raised/50 text-[10px] uppercase tracking-wide text-muted"><th className="px-4 py-3 font-medium">Waktu</th><th className="px-3 py-3 font-medium">Barang</th><th className="px-3 py-3 font-medium">Jenis</th><th className="px-3 py-3 font-medium">Perubahan</th><th className="px-3 py-3 font-medium">Alasan</th><th className="px-4 py-3 font-medium">Pengguna</th></tr></thead><tbody>{movements.map((movement) => <tr key={movement.id} className="border-t border-border/70"><td className="px-4 py-3 text-muted">{formatShortDate(movement.createdAt)} · {new Date(movement.createdAt).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", timeZone: movement.timezone })} {movement.timezone}</td><td className="px-3 py-3 font-medium">{movement.itemName}</td><td className="px-3 py-3 text-muted">{movementLabels[movement.type] ?? movement.type}</td><td className={movement.delta > 0 ? "px-3 py-3 font-semibold text-emerald-200" : "px-3 py-3 font-semibold text-rose-200"}>{movement.delta > 0 ? "+" : ""}{movement.delta} {movement.unit}</td><td className="max-w-64 truncate px-3 py-3 text-muted" title={movement.note}>{movement.note}</td><td className="px-4 py-3 text-muted">{movement.actorName}</td></tr>)}</tbody></table></div>}

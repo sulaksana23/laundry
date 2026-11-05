@@ -75,6 +75,12 @@
 - [x] Ikon lonceng membuka ringkasan peringatan Dashboard: target terlambat/hari ini, siap diambil, stok menipis, dan tagihan belum lunas.
 - [x] Ringkasan peringatan memakai data Dashboard yang sudah dimuat, sehingga tidak menambah query. Pencarian memakai satu query Neon setelah jeda input dan mengembalikan maksimal lima hasil per jenis.
 
+## Pembaruan v0.18.0 — 5 November 2026
+
+- [x] Daftar persediaan dapat dicari berdasarkan nama, kategori, atau satuan dan difilter untuk menampilkan stok yang mencapai batas minimum.
+- [x] Ekspor CSV mengunduh daftar yang sedang difilter dari data halaman; kolom biaya rata-rata hanya tersedia bagi peran dengan izin keuangan.
+- [x] Filter dan ekspor berjalan di browser tanpa menambah query database, migrasi, layanan eksternal, atau biaya provider baru.
+
 ## Pekerjaan yang masih perlu keputusan atau verifikasi
 
 - Tetapkan kebijakan operasional final untuk pembulatan berat, express, diskon, pembayaran, refund, pembatalan, dan jam usaha sebelum dipakai sebagai aturan baku.

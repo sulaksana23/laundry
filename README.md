@@ -16,7 +16,7 @@ Daftar berikut adalah cakupan produk yang dituju. Status implementasi sebenarnya
 | Pesanan | Penerimaan cucian; layanan per kg/pcs/pasang; estimasi selesai; snapshot harga; status pengerjaan; riwayat perubahan; pembayaran penuh/parsial; pencarian, filter, pagination; nota cetak; pembatalan dan refund sesuai kebijakan. |
 | Pelanggan | Profil dan kontak; pencarian; riwayat transaksi; frekuensi dan nilai transaksi; pencegahan duplikasi berdasarkan aturan nomor kontak; catatan preferensi dengan kontrol akses. |
 | Layanan & harga | Katalog layanan per kg atau per item; harga, durasi, status aktif; layanan reguler/express; perubahan harga dengan snapshot agar invoice lama tetap akurat. |
-| Persediaan | Katalog bahan; saldo dan batas minimum; resep konsumsi otomatis per layanan/tahap; pembelian/pemakaian/penyesuaian beralasan melalui ledger; peringatan stok menipis; histori pergerakan. |
+| Persediaan | Katalog bahan; pencarian barang dan filter stok minimum; ekspor CSV stok yang mengikuti izin biaya; saldo dan batas minimum; resep konsumsi otomatis per layanan/tahap; pembelian/pemakaian/penyesuaian beralasan melalui ledger; peringatan stok menipis; histori pergerakan. |
 | Keuangan | Pemasukan dan pengeluaran; metode pembayaran; tagihan belum lunas; pembayaran parsial; refund/reversal; rekap kas dan rekonsiliasi berdasarkan periode. |
 | Laporan | Pemasukan tercatat, volume pesanan, pelanggan baru, layanan terlaris, dan metode pembayaran; filter tanggal; ekspor CSV berbasis periode. |
 | Pengaturan & akses | Profil usaha dan cabang; akun staf; role, hak akses; audit log; pengaturan notifikasi dan preferensi aplikasi. |
@@ -31,7 +31,7 @@ Daftar berikut adalah cakupan produk yang dituju. Status implementasi sebenarnya
 | Lacak pesanan (publik) | Halaman `/lacak` untuk pelanggan: cek status, tahapan pengerjaan, riwayat status, dan sisa tagihan dengan kode pesanan + nomor HP terdaftar (rate-limited, tanpa login); nota cetak memberi alamat halaman lacak | Pesan pelacakan otomatis |
 | Pelanggan | Tambah, cari, dan impor massal pelanggan dari CSV (validasi nomor, duplikat dilewati, laporan hasil per baris); ekspor CSV seluruh hasil pencarian; daftar Neon dibagi 25 pelanggan per halaman, ringkasan dihitung dari seluruh cabang, dan setiap pelanggan punya tautan ke riwayat pesanan | Profil lanjutan dan kontrol akses terperinci |
 | Layanan & harga | Katalog per cabang; layanan kg/pcs/pasang; harga tersimpan sebagai snapshot pesanan; riwayat perubahan tercatat di aktivitas | Histori harga khusus dan aturan harga otomatis |
-| Persediaan & keuangan | Ledger stok beralasan; resep pemakaian otomatis saat tahap pesanan yang dipilih; stok kurang menahan perubahan status; estimasi HPP; pembayaran/pengeluaran; refund dicatat terpisah; rekonsiliasi CSV manual dengan kecocokan nominal/metode/tanggal dan konfirmasi petugas | Rekonsiliasi otomatis via API penyedia pembayaran |
+| Persediaan & keuangan | Cari dan filter barang stok minimum, ekspor CSV yang mengikuti izin biaya, ledger stok beralasan; resep pemakaian otomatis saat tahap pesanan yang dipilih; stok kurang menahan perubahan status; estimasi HPP; pembayaran/pengeluaran; refund dicatat terpisah; rekonsiliasi CSV manual dengan kecocokan nominal/metode/tanggal dan konfirmasi petugas | Rekonsiliasi otomatis via API penyedia pembayaran |
 | Laporan | Rentang tanggal, perbandingan periode sebelumnya, layanan/pelanggan, berat/item, metode pembayaran, estimasi HPP bahan, ekspor CSV per periode, dan rekap pesanan/pemasukan semua cabang yang dapat diakses pemilik | Biaya tenaga kerja dan biaya tetap |
 | Pengaturan & aktivitas | Profil dan pembuatan cabang, pilihan cabang aktif, akses Pemilik/Kasir/Operator, staf aktif/nonaktif dan akses staf lintas cabang, audit aktivitas utama | Supervisor, izin per tindakan yang dapat dikustomisasi, dan retensi audit lanjutan |
 | Platform | Login/register, sesi bertanda tangan, pembatasan cabang dan peran di server, pencarian global dengan batas hasil, migrasi PostgreSQL, validasi request | Provider notifikasi otomatis, public API, dan observability terpusat |
@@ -43,7 +43,7 @@ Status rinci dan kriteria penerimaan ada di [docs/modules.md](docs/modules.md) d
 
 ## PRD dan flowchart
 
-Dokumen kebutuhan produk lengkap tersedia di **[docs/prd.md](docs/prd.md)** — latar belakang, persona, kebutuhan fungsional (FR-01 s.d. FR-28), kebutuhan non-fungsional, model data ringkas, keputusan terbuka, dan riwayat versi.
+Dokumen kebutuhan produk lengkap tersedia di **[docs/prd.md](docs/prd.md)** — latar belakang, persona, kebutuhan fungsional (FR-01 s.d. FR-29), kebutuhan non-fungsional, model data ringkas, keputusan terbuka, dan riwayat versi.
 
 Flowchart tersedia sebagai berkas **[draw.io](docs/flowcharts/laundryos-flowcharts.drawio)** (3 halaman diagram; buka dan edit di [app.diagrams.net](https://app.diagrams.net) atau ekstensi Draw.io Integration di VS Code). Pratinjau statisnya:
 
