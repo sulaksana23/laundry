@@ -62,3 +62,14 @@ export function parseCsv(text: string): ParsedCsv {
   const rows = rawRows.slice(1).map((row) => row.map((cell) => cell.trim()));
   return { headers, rows };
 }
+
+/**
+ * Satu sel CSV untuk ekspor. Teks yang diawali = + - @ (setelah spasi/tab)
+ * diberi awalan ' agar tidak dijalankan sebagai formula di Excel/Sheets.
+ * Angka dibiarkan apa adanya supaya nilai negatif tetap numerik.
+ */
+export function csvCell(value: unknown): string {
+  const text = value === null || value === undefined ? "" : String(value);
+  const safe = typeof value !== "number" && /^[\t\r\n ]*[=+\-@]/.test(text) ? "'" + text : text;
+  return '"' + safe.replaceAll('"', '""') + '"';
+}

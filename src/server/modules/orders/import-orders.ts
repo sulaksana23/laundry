@@ -22,6 +22,14 @@ function rowsOf<Row>(result: unknown): Row[] {
   return [];
 }
 
+/** Kesalahan isi berkas yang aman ditampilkan ke pengguna. */
+export class OrderImportError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "OrderImportError";
+  }
+}
+
 export async function importOrdersFromCsv(branchId: string, actorId: string, csvText: string): Promise<OrderImportReport> {
   const sql = getNeonSql();
   const serviceRows = rowsOf<{ id: string; name: string; unit: OrderImportService["unit"]; price_per_unit: string | number }>(
@@ -37,7 +45,7 @@ export async function importOrdersFromCsv(branchId: string, actorId: string, csv
     price: Number(service.price_per_unit),
   }));
   const analysis = analyzeOrderCsv(csvText, services);
-  if (analysis.fatalError) throw new Error(analysis.fatalError);
+  if (analysis.fatalError) throw new OrderImportError(analysis.fatalError);
 
   const report: OrderImportReport = {
     totalRows: analysis.totalRows,
