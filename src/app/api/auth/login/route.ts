@@ -31,14 +31,23 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Data masuk tidak valid." }, { status: 400 });
   }
 
-  const rateLimitKey = `login:${getClientIp(request)}`;
-  if (await consumeRateLimitAttempt(rateLimitKey)) {
+  // Dua penghitung: per IP (menahan tebakan massal) dan per IP+email (yang
+  // di-reset saat login berhasil). Penghitung per IP tidak pernah di-reset,
+  // sehingga login sukses ke akun sendiri tidak membuka kembali tebakan ke akun lain.
+  const clientIp = getClientIp(request);
+  const ipKey = `login:${clientIp}`;
+  const accountKey = `login:${clientIp}:${parsed.data.email.toLowerCase()}`;
+  const [ipLimited, accountLimited] = await Promise.all([
+    consumeRateLimitAttempt(ipKey),
+    consumeRateLimitAttempt(accountKey),
+  ]);
+  if (ipLimited || accountLimited) {
     return NextResponse.json({ error: "Terlalu banyak percobaan masuk. Coba lagi dalam beberapa menit." }, { status: 429 });
   }
 
   try {
     const user = await new AuthService().login(parsed.data.email, parsed.data.password);
-    await clearRateLimitAttempts(rateLimitKey);
+    await clearRateLimitAttempts(accountKey);
     await setAuthSession(user);
     return NextResponse.json({ user });
   } catch (error) {

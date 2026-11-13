@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { csvCell } from "@/lib/csv";
 import { isOrdersDatabaseEnabled } from "@/server/db/mode";
 import { getNeonSql } from "@/server/db/neon";
 import { getAuthSession } from "@/server/modules/auth/auth.session";
@@ -10,9 +11,6 @@ import { randomUUID } from "node:crypto";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function csvCell(value: unknown) {
-  return "\"" + String(value ?? "").replaceAll("\"", "\"\"") + "\"";
-}
 
 function validDate(value: string | null) {
   if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
