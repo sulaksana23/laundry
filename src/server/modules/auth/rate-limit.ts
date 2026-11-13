@@ -13,10 +13,16 @@ function hashKey(key: string) {
   return createHmac("sha256", secret).update(key).digest("hex");
 }
 
+/**
+ * IP klien untuk rate limit. Hanya header yang ditulis ulang oleh proxy
+ * tepercaya yang dipakai: default `x-real-ip` (diisi Vercel). Untuk deploy di
+ * luar Vercel, set LAUNDRY_CLIENT_IP_HEADER ke header yang diisi proxy Anda
+ * (mis. `cf-connecting-ip`). `x-forwarded-for` tidak dibaca karena bagian
+ * awalnya bisa diisi bebas oleh klien.
+ */
 export function getClientIp(request: Request) {
-  return request.headers.get("x-real-ip")?.trim() ||
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    "unknown";
+  const header = (process.env.LAUNDRY_CLIENT_IP_HEADER || "x-real-ip").trim().toLowerCase();
+  return request.headers.get(header)?.split(",")[0]?.trim() || "unknown";
 }
 
 function consumeLocally(keyHash: string) {
