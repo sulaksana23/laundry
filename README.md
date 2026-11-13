@@ -107,7 +107,7 @@ npm run typecheck
 npm run build
 ```
 
-`.env.example` berisi variabel untuk Neon. Modul operasional memakai Neon jika `DATABASE_URL` tersedia dan sesi `AUTH_SECRET` valid. Local development juga perlu `LAUNDRY_DATABASE_MODE=true`. Jangan masukkan rahasia ke `NEXT_PUBLIC_*`.
+`.env.example` berisi variabel untuk Neon. Modul operasional memakai Neon jika `DATABASE_URL` tersedia dan sesi `AUTH_SECRET` valid. Local development juga perlu `LAUNDRY_DATABASE_MODE=true`. Jangan masukkan rahasia ke `NEXT_PUBLIC_*`. Rate limit membaca IP klien dari header `x-real-ip` (diisi Vercel); di luar Vercel, set `LAUNDRY_CLIENT_IP_HEADER` ke header yang ditulis proxy Anda, misalnya `cf-connecting-ip`.
 
 ## Deploy ke Vercel + PostgreSQL (Neon)
 
