@@ -12,3 +12,4 @@ coverage/
 pnpm-debug.log*
 yarn-debug.log*
 npm-debug.log*
+*.tsbuildinfo

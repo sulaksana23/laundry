@@ -7,14 +7,10 @@ import { Card } from "@/components/ui/card";
 import { FormSubmitButton } from "@/components/ui/form-submit-button";
 import { Input } from "@/components/ui/input";
 import { formatCurrency } from "@/lib/format";
+import { csvCell } from "@/lib/csv";
 import type { InventoryItem } from "@/server/modules/workspace/operations";
 import { adjustInventory } from "./actions";
 
-function csvCell(value: string | number) {
-  const text = String(value);
-  const safe = /^[\t\r\n ]*[=+\-@]/.test(text) ? "'" + text : text;
-  return '"' + safe.replaceAll('"', '""') + '"';
-}
 
 export function InventoryTable({ items, canManageInventory, canViewCost, canExport }: {
   items: InventoryItem[];

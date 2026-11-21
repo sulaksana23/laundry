@@ -97,3 +97,12 @@ test("impor menyimpan batch dan pesanan dalam satu transaksi, lalu menolak file 
     delete process.env.DATABASE_URL;
   }
 });
+
+test("csvCell menetralkan formula pada teks, tetapi tidak pada angka", async () => {
+  const { csvCell } = await import("../src/lib/csv.ts");
+  assert.equal(csvCell("=HYPERLINK(\"x\")"), "\"'=HYPERLINK(\"\"x\"\")\"");
+  assert.equal(csvCell("  @SUM(A1)"), "\"'  @SUM(A1)\"");
+  assert.equal(csvCell(-5000), "\"-5000\"");
+  assert.equal(csvCell("Budi"), "\"Budi\"");
+  assert.equal(csvCell(null), "\"\"");
+});

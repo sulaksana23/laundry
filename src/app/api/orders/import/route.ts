@@ -3,7 +3,7 @@ import { z } from "zod";
 import { isOrdersDatabaseEnabled } from "@/server/db/mode";
 import { getAuthSession } from "@/server/modules/auth/auth.session";
 import { hasPermission } from "@/server/modules/auth/permissions";
-import { importOrdersFromCsv } from "@/server/modules/orders/import-orders";
+import { importOrdersFromCsv, OrderImportError } from "@/server/modules/orders/import-orders";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -29,7 +29,7 @@ export async function POST(request: Request) {
     const report = await importOrdersFromCsv(session.branchId, session.userId, parsed.data.csv);
     return NextResponse.json({ report });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Impor pesanan gagal diproses.";
-    return NextResponse.json({ error: message }, { status: 422 });
+    if (error instanceof OrderImportError) return NextResponse.json({ error: error.message }, { status: 422 });
+    return NextResponse.json({ error: "Impor pesanan gagal diproses. Coba lagi nanti." }, { status: 500 });
   }
 }

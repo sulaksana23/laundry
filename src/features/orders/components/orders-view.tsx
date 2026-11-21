@@ -12,6 +12,7 @@ import { OrderStatusBadge, PaymentStatusBadge } from "@/components/ui/status-bad
 import { Card } from "@/components/ui/card";
 import { createOrderSchema, orderStatusLabels, orderStatuses, type CreateOrderInput, type LaundryOrder, type OrderStatus, type OrderUnit } from "@/features/orders/domain/order";
 import { formatCurrency, formatShortDate } from "@/lib/format";
+import { csvCell } from "@/lib/csv";
 import { analyzeOrderCsv, type OrderImportAnalysis, type OrderImportRowError } from "@/lib/order-import";
 
 type OrderServiceOption = { id: string; name: string; unit: OrderUnit; price: number };
@@ -39,9 +40,6 @@ type OrderImportResult = { totalRows: number; validRows: number; inserted: numbe
 
 const orderCsvHeaders = ["nama", "no_hp", "layanan", "jumlah", "target_selesai", "biaya_express", "biaya_antar", "diskon", "catatan_internal"];
 
-function csvCell(value: string) {
-  return `"${value.replaceAll("\"", "\"\"")}"`;
-}
 
 function normalizeStoredOrder(value: unknown): LaundryOrder | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
