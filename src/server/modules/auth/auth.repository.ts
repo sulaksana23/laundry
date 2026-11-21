@@ -114,19 +114,36 @@ export class AuthRepository {
     } : null;
   }
 
-  async findActiveUserForBranch(userId: string, branchId: string): Promise<AuthUser | null> {
+  async getSessionVersion(userId: string): Promise<number> {
     const result = await getNeonSql().query(
-      "SELECT u.id AS user_id, u.email, u.full_name, b.id AS branch_id, b.name AS branch_name, u.role " +
+      "SELECT session_version FROM laundry_users WHERE id = $1::uuid LIMIT 1",
+      [userId],
+    );
+    return Number(resultRows<{ session_version: number }>(result)[0]?.session_version ?? 0);
+  }
+
+  /** Membatalkan semua sesi pengguna dengan menaikkan versi sesinya. */
+  async revokeSessions(userId: string): Promise<void> {
+    await getNeonSql().query(
+      "UPDATE laundry_users SET session_version = session_version + 1 WHERE id = $1::uuid",
+      [userId],
+    );
+  }
+
+  async findActiveUserForBranch(userId: string, branchId: string): Promise<(AuthUser & { sessionVersion: number }) | null> {
+    const result = await getNeonSql().query(
+      "SELECT u.id AS user_id, u.email, u.full_name, b.id AS branch_id, b.name AS branch_name, u.role, u.session_version " +
       "FROM laundry_users u JOIN laundry_user_branch_access access ON access.user_id = u.id " +
       "JOIN laundry_branches b ON b.id = access.branch_id " +
       "WHERE u.id = $1::uuid AND access.branch_id = $2 AND u.is_active = true " +
       "LIMIT 1",
       [userId, branchId],
     );
-    const row = resultRows<Omit<Parameters<typeof toCredentials>[0], "password_hash">>(result)[0];
+    const row = resultRows<Omit<Parameters<typeof toCredentials>[0], "password_hash"> & { session_version: number }>(result)[0];
     return row ? {
       userId: row.user_id, email: row.email, fullName: row.full_name,
       branchId: row.branch_id, branchName: row.branch_name, role: row.role,
+      sessionVersion: Number(row.session_version ?? 0),
     } : null;
   }
 

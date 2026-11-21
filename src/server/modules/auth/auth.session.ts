@@ -9,6 +9,8 @@ const SESSION_SECONDS = 60 * 60 * 24 * 7;
 
 export interface AuthSession extends AuthUser {
   expiresAt: number;
+  /** Versi sesi pengguna saat token dibuat; harus sama dengan nilai di DB. */
+  sessionVersion: number;
 }
 
 function secret(): string | null {
@@ -24,9 +26,10 @@ function signature(payload: string, secretValue: string): Buffer {
   return createHmac("sha256", secretValue).update(payload).digest();
 }
 
-function createToken(user: AuthUser, secretValue: string): string {
+function createToken(user: AuthUser, sessionVersion: number, secretValue: string): string {
   const session: AuthSession = {
     ...user,
+    sessionVersion,
     expiresAt: Math.floor(Date.now() / 1000) + SESSION_SECONDS,
   };
   const payload = Buffer.from(JSON.stringify(session)).toString("base64url");
@@ -51,6 +54,7 @@ function parseToken(token: string | undefined, secretValue: string): AuthSession
       !value.branchName ||
       !["owner", "cashier", "operator"].includes(value.role) ||
       !Number.isInteger(value.expiresAt) ||
+      !Number.isInteger(value.sessionVersion) ||
       value.expiresAt <= Math.floor(Date.now() / 1000)
     ) {
       return null;
@@ -69,7 +73,7 @@ export async function getAuthSession(): Promise<AuthSession | null> {
   if (!signedSession) return null;
   try {
     const user = await new AuthRepository().findActiveUserForBranch(signedSession.userId, signedSession.branchId);
-    if (!user) return null;
+    if (!user || user.sessionVersion !== signedSession.sessionVersion) return null;
     return { ...signedSession, ...user };
   } catch {
     return null;
@@ -79,8 +83,9 @@ export async function getAuthSession(): Promise<AuthSession | null> {
 export async function setAuthSession(user: AuthUser): Promise<void> {
   const secretValue = secret();
   if (!secretValue) throw new Error("AUTH_NOT_CONFIGURED");
+  const sessionVersion = await new AuthRepository().getSessionVersion(user.userId);
   const cookieStore = await cookies();
-  cookieStore.set(COOKIE_NAME, createToken(user, secretValue), {
+  cookieStore.set(COOKIE_NAME, createToken(user, sessionVersion, secretValue), {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
@@ -89,7 +94,20 @@ export async function setAuthSession(user: AuthUser): Promise<void> {
   });
 }
 
+/**
+ * Logout: hapus cookie dan batalkan semua token pengguna ini (termasuk
+ * salinan yang mungkin dicuri). Akibatnya pengguna keluar di semua perangkat.
+ */
 export async function clearAuthSession(): Promise<void> {
+  const secretValue = secret();
   const cookieStore = await cookies();
+  const session = secretValue ? parseToken(cookieStore.get(COOKIE_NAME)?.value, secretValue) : null;
+  if (session) {
+    try {
+      await new AuthRepository().revokeSessions(session.userId);
+    } catch {
+      // Cookie tetap dihapus; token lama kedaluwarsa sesuai SESSION_SECONDS.
+    }
+  }
   cookieStore.delete(COOKIE_NAME);
 }
