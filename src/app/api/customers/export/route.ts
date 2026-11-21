@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { csvCell } from "@/lib/csv";
 import { isOrdersDatabaseEnabled } from "@/server/db/mode";
 import { getAuthSession } from "@/server/modules/auth/auth.session";
 import { getCustomersService } from "@/server/modules/customers/customers.runtime";
@@ -8,11 +9,6 @@ import { hasPermission } from "@/server/modules/auth/permissions";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function csvCell(value: string | number | null) {
-  const text = value === null ? "" : String(value);
-  const safe = /^[\t\r\n ]*[=+\-@]/.test(text) ? "'" + text : text;
-  return '"' + safe.replaceAll('"', '""') + '"';
-}
 
 function csvRows(rows: CustomerSummary[]) {
   return rows.map((row) => [row.name, row.phone, row.orders, row.totalSpent, row.lastOrder]
